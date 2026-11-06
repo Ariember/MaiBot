@@ -2571,9 +2571,8 @@ describe('KnowledgeBasePage import workflow', () => {
       await openDetail()
       await user.click(within(screen.getByRole('dialog')).getByRole('tab', { name: /画像/ }))
       await user.click(await screen.findByText('person-action-1'))
-      // 人物画像已并入记忆查询：落到 tab=records 的人物画像切面
-      expect(window.location.search).toContain('tab=records')
-      expect(window.location.search).toContain('view=profiles')
+      // 人物画像位于记忆查询内，保留独立的 profiles 地址。
+      expect(window.location.search).toContain('tab=profiles')
       expect(window.location.search).toContain('person_id=person-action-1')
       // 跳到画像会直接展开详情弹窗；先关掉它再继续操作标签
       expect(await screen.findByRole('dialog', { name: '画像详情' })).toBeInTheDocument()
