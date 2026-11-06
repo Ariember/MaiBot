@@ -18,8 +18,9 @@ RUN bun run build
 # Only this separate service receives the Docker socket; it exposes no HTTP API.
 FROM docker:28-cli AS updater
 RUN apk add --no-cache python3
-WORKDIR /opt/maibot
-ENV PYTHONPATH=/opt/maibot
+# Keep the executor outside the host deployment mount (normally /opt/maibot).
+WORKDIR /usr/local/lib/maibot-updater
+ENV PYTHONPATH=/usr/local/lib/maibot-updater
 COPY src/common/self_update.py src/common/image_update.py src/common/update_errors.py src/common/instance_lock.py src/common/git_source.py src/common/paths.py src/common/version.py ./src/common/
 COPY scripts/image_updater.py ./scripts/
 ENTRYPOINT ["python3", "scripts/image_updater.py"]
