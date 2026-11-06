@@ -275,6 +275,10 @@ class V5ActionRequest(BaseModel):
     updated_by: str = "webui"
 
 
+class ClearMemoryRequest(BaseModel):
+    confirmation: Literal["清空全部记忆"]
+
+
 class DeleteActionRequest(BaseModel):
     mode: str = Field(..., min_length=1)
     selector: dict[str, Any] | str = Field(default_factory=dict)
@@ -4550,6 +4554,17 @@ async def forget_memory_v5(payload: V5ActionRequest):
 @router.post("/v5/restore")
 async def restore_memory_v5(payload: V5ActionRequest):
     return await _v5_action("restore", payload)
+
+
+@router.post("/clear")
+async def clear_all_memory(payload: ClearMemoryRequest):
+    try:
+        result = await a_memorix_host_service.clear_all_memory(payload.confirmation)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
 
 
 @router.post("/delete/preview")

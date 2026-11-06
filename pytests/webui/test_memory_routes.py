@@ -1,5 +1,6 @@
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -212,6 +213,45 @@ def client() -> TestClient:
     app.include_router(main_router)
     app.include_router(compat_router)
     return TestClient(app)
+
+
+@pytest.mark.parametrize("payload", [{}, {"confirmation": "确认"}, {"confirmation": True}])
+def test_clear_memory_requires_confirmation(client, monkeypatch, payload):
+    clear = AsyncMock()
+    monkeypatch.setattr(memory_router_module.a_memorix_host_service, "clear_all_memory", clear)
+    response = client.post("/api/webui/memory/clear", json=payload)
+    assert response.status_code == 422
+    clear.assert_not_awaited()
+
+
+def test_clear_memory_returns_success(client, monkeypatch):
+    clear = AsyncMock(return_value={"success": True})
+    monkeypatch.setattr(memory_router_module.a_memorix_host_service, "clear_all_memory", clear)
+    response = client.post("/api/webui/memory/clear", json={"confirmation": "清空全部记忆"})
+    assert response.status_code == 200
+    assert response.json() == {"success": True}
+    clear.assert_awaited_once_with("清空全部记忆")
+
+
+@pytest.mark.parametrize("busy", [True, False])
+def test_clear_memory_reports_failure(client, monkeypatch, busy):
+    clear = AsyncMock(return_value={"success": False, "error": "清空未完成，请重试"})
+    if busy:
+        clear.side_effect = RuntimeError("正在清空")
+    monkeypatch.setattr(memory_router_module.a_memorix_host_service, "clear_all_memory", clear)
+    response = client.post("/api/webui/memory/clear", json={"confirmation": "清空全部记忆"})
+    assert response.status_code == (409 if busy else 500)
+    assert "清空" in response.json()["detail"]
+
+
+def test_clear_memory_requires_authentication(monkeypatch):
+    clear = AsyncMock()
+    monkeypatch.setattr(memory_router_module.a_memorix_host_service, "clear_all_memory", clear)
+    app = FastAPI()
+    app.include_router(memory_router_module.router)
+    response = TestClient(app).post("/memory/clear", json={"confirmation": "清空全部记忆"})
+    assert response.status_code == 401
+    clear.assert_not_awaited()
 
 
 def _memory_record_store(tmp_path: Path) -> tuple[MetadataStore, dict[str, str]]:

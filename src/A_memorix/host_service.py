@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Set, Tuple
 
 import asyncio
 import base64
 import json
 import os
+import shutil
 import stat
 import time
 import uuid
@@ -26,7 +27,8 @@ from .core.runtime.admin_contracts import (
     is_admin_component,
     parse_admin_command,
 )
-from .paths import default_data_dir, repo_root, resolve_repo_path, schema_path
+from .core.runtime.runtime_writer_lock import RuntimeWriterLock
+from .paths import artifacts_root, default_data_dir, repo_root, resolve_repo_path, schema_path
 from .runtime_registry import set_runtime_kernel
 
 if TYPE_CHECKING:
@@ -110,6 +112,10 @@ class AMemorixHostService:
         self._config_cache: Dict[str, Any] | None = None
         self._config_reload_callback_suppressed_task: Optional[asyncio.Task[Any]] = None
         self._reload_callback_registered = False
+        self._resetting = False
+        self._reset_failed = False
+        self._clear_task: Optional[asyncio.Task[Dict[str, Any]]] = None
+        self._active_calls: Set[asyncio.Future[None]] = set()
 
     async def start(self) -> None:
         if not self.is_enabled():
@@ -123,6 +129,8 @@ class AMemorixHostService:
 
     async def reload(self) -> None:
         async with self._lock:
+            if self._resetting or self._reset_failed:
+                raise RuntimeError("长期记忆清空尚未完成，请完成清空后再重载配置")
             await self._shutdown_locked()
             self._config_cache = None
             config = self._read_config()
@@ -131,6 +139,85 @@ class AMemorixHostService:
             await self._ensure_startup_task()
         else:
             logger.info("A_Memorix 配置为未启用，运行时保持关闭")
+
+    async def clear_all_memory(self, confirmation: str) -> Dict[str, Any]:
+        """在主循环停止宿主运行时、清理记忆数据并重新启动。"""
+        if confirmation != "清空全部记忆":
+            raise ValueError("请输入“清空全部记忆”确认永久删除")
+        return await run_on_main_loop(self._request_clear_all_memory())
+
+    async def _request_clear_all_memory(self) -> Dict[str, Any]:
+        if self._clear_task is not None and not self._clear_task.done():
+            raise RuntimeError("长期记忆正在清空，请勿重复操作")
+        self._resetting = True
+        self._clear_task = asyncio.create_task(self._clear_all_memory(), name="A_Memorix.clear_all")
+        # 浏览器断开不能中断清理，否则工作线程仍在删文件时运行时可能重新启动。
+        return await asyncio.shield(self._clear_task)
+
+    async def _clear_all_memory(self) -> Dict[str, Any]:
+        try:
+            if self._active_calls:
+                await asyncio.gather(*(asyncio.shield(call) for call in list(self._active_calls)))
+            async with self._config_update_lock:
+                async with self._lock:
+                    set_runtime_kernel(None)
+                    if self._kernel is not None:
+                        # 超时请求的去重检索可能仍在后台强化记忆，必须等它退出。
+                        await asyncio.gather(*list(self._kernel._request_dedup_tasks.values()), return_exceptions=True)
+                    await self._shutdown_locked()
+                    async with self._queue_lock:
+                        await asyncio.to_thread(self._clear_memory_files)
+                        self._startup_queue_pending_count = 0
+                        self._startup_queue_cache_loaded = False
+                    self._startup_error = ""
+                    self._startup_error_stage = ""
+                    self._reset_failed = False
+            self._resetting = False
+            await self.start()
+            return {"success": True}
+        except Exception:
+            self._reset_failed = True
+            self._runtime_state = "failed"
+            self._startup_error = "长期记忆清空未完成，请重试清空；记忆读写已暂停"
+            self._startup_error_stage = "clear_memory"
+            logger.exception("长期记忆清空失败，已暂停记忆读写")
+            return {"success": False, "error": self._startup_error}
+        finally:
+            self._resetting = False
+
+    def _clear_memory_files(self) -> None:
+        data_dir = self.get_runtime_data_dir().resolve()
+        # 仅删除记忆运行时拥有的路径，storage.data_dir 可能与其他业务共用。
+        names = (
+            "metadata", "graph", "vectors", "images/assets", "images/vectors", "imports",
+            "vector_quarantine", "vector_reconciliation_evidence", "vector_recovery.json",
+            "import_manifest.json", "web_import_reports",
+            "startup_write_queue.jsonl", "startup_write_queue.done.jsonl", "startup_write_queue.failed.jsonl",
+        )
+        targets = [(data_dir, data_dir / name) for name in names]
+        targets.append((artifacts_root().resolve(), artifacts_root() / "retrieval_tuning"))
+        pending = data_dir / ".memory_clear_pending"
+        lock_path = data_dir / ".a_memorix_runtime_writer.lock"
+        # 在任何删除发生前验证全部边界，拒绝指向数据目录外的链接。
+        for root, path in targets + [(data_dir, pending), (data_dir, lock_path)]:
+            resolved = path.resolve()
+            if resolved == root or not resolved.is_relative_to(root) or path.is_symlink() or path.is_junction():
+                raise ValueError(f"拒绝清空越界的记忆路径: {path.name}")
+        writer_lock = RuntimeWriterLock(lock_path)
+        writer_lock.acquire()
+        try:
+            with pending.open("w", encoding="utf-8") as handle:
+                handle.write("clear_all_memory")
+                handle.flush()
+                os.fsync(handle.fileno())
+            for _, path in targets:
+                if path.is_dir():
+                    shutil.rmtree(path)
+                else:
+                    path.unlink(missing_ok=True)
+            pending.unlink()
+        finally:
+            writer_lock.release()
 
     def get_config_path(self) -> Path:
         return _get_bot_config_path()
@@ -233,15 +320,23 @@ class AMemorixHostService:
         本层负责启动状态、宿主参数适配、共享聊天范围、启动期写入排队和管理命令
         分发；检索、写入及维护操作的业务语义由内核服务负责。
         """
-        if timeout_ms is None:
-            return await self._invoke(component_name, args)
-        if not isinstance(timeout_ms, int) or isinstance(timeout_ms, bool) or timeout_ms <= 0:
-            raise ValueError("timeout_ms 必须是正整数")
+        if self._resetting or self._reset_failed:
+            return {"success": False, "error": "长期记忆清空尚未完成，暂不可读写"}
+        completed = asyncio.get_running_loop().create_future()
+        self._active_calls.add(completed)
         try:
-            async with asyncio.timeout(timeout_ms / 1000):
+            if timeout_ms is None:
                 return await self._invoke(component_name, args)
-        except TimeoutError as exc:
-            raise TimeoutError(f"A_Memorix 调用超时: component={component_name}, timeout_ms={timeout_ms}") from exc
+            if not isinstance(timeout_ms, int) or isinstance(timeout_ms, bool) or timeout_ms <= 0:
+                raise ValueError("timeout_ms 必须是正整数")
+            try:
+                async with asyncio.timeout(timeout_ms / 1000):
+                    return await self._invoke(component_name, args)
+            except TimeoutError as exc:
+                raise TimeoutError(f"A_Memorix 调用超时: component={component_name}, timeout_ms={timeout_ms}") from exc
+        finally:
+            self._active_calls.discard(completed)
+            completed.set_result(None)
 
     async def _invoke(self, component_name: str, args: Dict[str, Any] | None = None) -> Any:
         payload = args or {}
@@ -348,8 +443,20 @@ class AMemorixHostService:
             return self._kernel
 
     async def _ensure_startup_task(self) -> None:
+        if self._resetting or self._reset_failed:
+            return
+        # 清空中途进程退出后保持停用，重试清空才能重新开放读写。
+        pending = self.get_runtime_data_dir() / ".memory_clear_pending"
+        if await asyncio.to_thread(pending.exists):
+            self._reset_failed = True
+            self._runtime_state = "failed"
+            self._startup_error = "上次长期记忆清空未完成，请重试清空；记忆读写已暂停"
+            self._startup_error_stage = "clear_memory"
+            return
         await self._ensure_startup_queue_cache()
         async with self._lock:
+            if self._resetting or self._reset_failed:
+                return
             if self._kernel is not None and self._runtime_state == "ready":
                 return
             if self._startup_task is not None and not self._startup_task.done():

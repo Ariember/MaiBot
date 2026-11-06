@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { RotateCcw, Trash2, X } from 'lucide-react'
 
 import { MemoryMiniTabs } from '@/components/memory/MemoryMiniTabs'
+import { MemoryClearButton } from '@/components/memory/MemoryClearButton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -111,6 +112,7 @@ export function DeleteTab({ delete: memoryDelete }: DeleteTabProps) {
 
   return (
     <TabsContent value="delete" className="space-y-4">
+      <MemoryClearButton />
       {/* 来源删除与删除记录恢复左右并排，窄屏时自动堆叠 */}
       <div className="grid min-w-0 gap-4 xl:grid-cols-2 xl:items-start">
       <Card>

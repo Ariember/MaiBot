@@ -6,6 +6,13 @@ import type { HttpMethod } from '@/lib/http'
 
 const API_BASE = '/api/webui/memory'
 
+export function clearAllMemory(confirmation: string): Promise<{ success: boolean; error?: string }> {
+  return requestJson('/clear', {
+    method: 'POST',
+    body: { confirmation },
+  })
+}
+
 interface MemoryRequestOptions {
   method?: HttpMethod
   /** 请求体：对象走 JSON 序列化，FormData 原样发送 */
