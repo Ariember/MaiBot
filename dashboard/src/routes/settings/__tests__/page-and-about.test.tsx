@@ -65,15 +65,15 @@ describe('独立 WebUI 设置页与关于页', () => {
 
   it('关于页展示版本、技术栈、许可证和安全的外部链接属性', () => {
     render(<AboutTab />)
-    expect(screen.getByText(/MaiBot Dashboard/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'settings.about.aboutApp' })).toBeInTheDocument()
     expect(screen.getByText('React 19.2.0')).toBeInTheDocument()
     expect(screen.getByText('GPLv3')).toBeInTheDocument()
     expect(screen.getByText('TypeScript')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /settings.about.visitGitHub/ })).toHaveAttribute(
       'href',
-      'https://github.com/Mai-with-u/MaiBot'
+      'https://github.com/Ariember/MaiBot'
     )
-    expect(screen.getByRole('link', { name: '@MotricSeven' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '@Ariember' })).toHaveAttribute(
       'rel',
       'noopener noreferrer'
     )

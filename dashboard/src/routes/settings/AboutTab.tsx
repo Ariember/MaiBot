@@ -39,7 +39,7 @@ export function AboutTab() {
             </p>
             <Button asChild>
               <a
-                href="https://github.com/Mai-with-u/MaiBot"
+                href="https://github.com/Ariember/MaiBot"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -77,26 +77,24 @@ export function AboutTab() {
 
       {/* 应用信息 */}
       <Card className="p-4 sm:p-6">
-        <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t('settings.about.aboutApp')} {APP_NAME}</h3>
+        <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t('settings.about.aboutApp', { appName: APP_NAME })}</h3>
         <div className="space-y-2 text-xs sm:text-sm text-muted-foreground">
           <p>{t('settings.about.version')} {APP_VERSION}</p>
           <p>{t('settings.about.appDesc')}</p>
         </div>
       </Card>
 
-      {/* 作者信息 */}
+      {/* 分支维护者 */}
       <Card className="p-4 sm:p-6">
         <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t('settings.about.author')}</h3>
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <p className="text-sm font-medium">{t('settings.about.maimaiCore')}</p>
-            <p className="text-xs sm:text-sm text-muted-foreground">Mai-with-u</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium">WebUI</p>
-            <p className="text-xs sm:text-sm text-muted-foreground">Mai-with-u <a href="https://github.com/DrSmoothl" target="_blank" rel="noopener noreferrer" className="text-primary underline">@MotricSeven</a></p>
-          </div>
-        </div>
+        <a
+          href="https://github.com/Ariember"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs sm:text-sm text-primary underline"
+        >
+          @Ariember
+        </a>
       </Card>
 
       {/* 技术栈 */}

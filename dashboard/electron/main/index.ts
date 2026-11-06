@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, protocol, session } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
+import icon from '../../resources/icon.png?asset'
 import { registerAppProtocol } from './protocol'
 import {
   addBackend,
@@ -83,6 +84,7 @@ function createWindow() {
   const bounds = getWindowBounds()
 
   mainWindow = new BrowserWindow({
+    icon,
     x: bounds.x,
     y: bounds.y,
     width: bounds.width,

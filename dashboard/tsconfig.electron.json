@@ -6,7 +6,7 @@
     "lib": ["ES2020"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": ["electron"],
+    "types": ["electron", "electron-vite/node"],
     "skipLibCheck": true,
 
     /* Module resolution */

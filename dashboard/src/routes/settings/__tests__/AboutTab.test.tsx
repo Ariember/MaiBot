@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { APP_NAME, APP_VERSION } from '@/lib/version'
+import { APP_VERSION } from '@/lib/version'
 
 import { AboutTab } from '../AboutTab'
 
@@ -60,23 +60,22 @@ const LIBRARY_ITEMS: Array<[name: string, license: string]> = [
 ]
 
 describe('AboutTab', () => {
-  it('展示应用版本、作者外链和分区标题', () => {
+  it('展示应用版本、维护者外链和分区标题', () => {
     render(<AboutTab />)
 
     expect(
-      screen.getByRole('heading', { name: `settings.about.aboutApp ${APP_NAME}` }),
+      screen.getByRole('heading', { name: 'settings.about.aboutApp' }),
     ).toBeInTheDocument()
     expect(screen.getByText(`settings.about.version ${APP_VERSION}`)).toBeInTheDocument()
     expect(screen.getByText('settings.about.appDesc')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.maimaiCore')).toBeInTheDocument()
-    expect(screen.getByText('WebUI')).toBeInTheDocument()
 
     const githubLink = screen.getByRole('link', { name: /settings.about.visitGitHub/ })
+    expect(githubLink).toHaveAttribute('href', 'https://github.com/Ariember/MaiBot')
     expect(githubLink).toHaveAttribute('target', '_blank')
     expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer')
 
-    const authorLink = screen.getByRole('link', { name: '@MotricSeven' })
-    expect(authorLink).toHaveAttribute('href', 'https://github.com/DrSmoothl')
+    const authorLink = screen.getByRole('link', { name: '@Ariember' })
+    expect(authorLink).toHaveAttribute('href', 'https://github.com/Ariember')
     expect(authorLink).toHaveAttribute('target', '_blank')
     expect(authorLink).toHaveAttribute('rel', 'noopener noreferrer')
 
