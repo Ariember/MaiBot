@@ -1,5 +1,7 @@
 # GitHub-Side Localization Workflow Report
 
+> This report documents the upstream Crowdin setup. This fork does not use Crowdin and has removed its sync/bootstrap workflows; committed translations and i18n CI validation remain active.
+
 ## Scope
 
 This document defines the repository-side localization workflow for Option B.

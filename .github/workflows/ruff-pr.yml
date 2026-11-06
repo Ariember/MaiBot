@@ -1,17 +1,11 @@
 name: Ruff PR Check
 on:
   pull_request:
-    paths:
-      - "*.py"
-      - "**/*.py"
-      - "pyproject.toml"
-      - "ruff.toml"
-      - ".ruff.toml"
-      - "setup.cfg"
-      - "tox.ini"
-      - ".pre-commit-config.yaml"
-      - ".github/scripts/check_ruff_format_regressions.py"
-      - ".github/workflows/ruff-pr.yml"
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   ruff:
     runs-on: ubuntu-24.04
@@ -29,6 +23,6 @@ jobs:
         shell: pwsh
       - name: Run Ruff Format Check
         env:
-          BASE_REF: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'HEAD^' }}
         run: python .github/scripts/check_ruff_format_regressions.py --baseline-ref "$env:BASE_REF"
         shell: pwsh

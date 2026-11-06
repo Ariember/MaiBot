@@ -87,15 +87,19 @@ export function ComputerDesktop() {
     if (!result.success) throw new Error(result.error || result.capture_error || JSON.stringify(result))
   })
 
-  const click = (event: MouseEvent<HTMLImageElement>, button: 'left' | 'right') => {
+  const click = (event: MouseEvent<HTMLButtonElement>, button: 'left' | 'right') => {
     event.preventDefault()
     if (!status?.takeover || busy) return
-    const image = event.currentTarget
+    const image = event.currentTarget.querySelector('img')!
     const bounds = image.getBoundingClientRect()
+    // 键盘触发按钮时没有鼠标坐标，点击画面中心。
+    const keyboardClick = event.type === 'click' && event.detail === 0
+    const x = keyboardClick ? bounds.left + bounds.width / 2 : event.clientX
+    const y = keyboardClick ? bounds.top + bounds.height / 2 : event.clientY
     void input([{
       action: 'click', button,
-      x: Math.min(image.naturalWidth - 1, Math.max(0, Math.floor((event.clientX - bounds.left) * image.naturalWidth / bounds.width))),
-      y: Math.min(image.naturalHeight - 1, Math.max(0, Math.floor((event.clientY - bounds.top) * image.naturalHeight / bounds.height))),
+      x: Math.min(image.naturalWidth - 1, Math.max(0, Math.floor((x - bounds.left) * image.naturalWidth / bounds.width))),
+      y: Math.min(image.naturalHeight - 1, Math.max(0, Math.floor((y - bounds.top) * image.naturalHeight / bounds.height))),
     }])
   }
 
@@ -119,9 +123,11 @@ export function ComputerDesktop() {
       <p className="mb-3 text-xs text-muted-foreground">{t('chat.computer.help')}</p>
       {(error || connectionError) && <p role="alert" className="mb-3 whitespace-pre-wrap break-words text-sm text-destructive">{error || connectionError}</p>}
       {frame ? (
-        <img src={frame} alt={t('chat.computer.screen')} draggable={false}
-          className={cn('block h-auto w-full rounded-lg border bg-muted', status?.takeover && 'cursor-crosshair ring-2 ring-primary')}
-          onClick={event => click(event, 'left')} onContextMenu={event => click(event, 'right')} />
+        <button type="button" disabled={!status?.takeover || busy}
+          className={cn('block w-full shrink-0 overflow-hidden rounded-lg border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', status?.takeover && 'cursor-crosshair ring-2 ring-primary')}
+          onClick={event => click(event, 'left')} onContextMenu={event => click(event, 'right')}>
+          <img src={frame} alt={t('chat.computer.screen')} draggable={false} className="block h-auto w-full" />
+        </button>
       ) : <div className="flex min-h-48 items-center justify-center rounded-lg border bg-muted/30 text-sm text-muted-foreground">{t(`chat.computer.${state}`)}</div>}
       <form className="my-3 flex flex-wrap gap-2" onSubmit={event => {
         event.preventDefault()
