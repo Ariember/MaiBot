@@ -28,13 +28,25 @@ async def test_clear_removes_all_memory_stores_and_reopens_empty(host, tmp_path)
     store.connect()
     store.add_paragraph("old memory", source="chat_summary:test")
     store.close()
-    for name in ("graph", "vectors", "images/assets", "images/vectors", "imports",
-                 "vector_quarantine", "vector_reconciliation_evidence"):
+    for name in (
+        "graph",
+        "vectors",
+        "images/assets",
+        "images/vectors",
+        "imports",
+        "vector_quarantine",
+        "vector_reconciliation_evidence",
+    ):
         folder = root / name
         folder.mkdir(parents=True)
         (folder / "old-memory").write_text("old", encoding="utf-8")
-    for name in ("startup_write_queue.jsonl", "startup_write_queue.done.jsonl",
-                 "startup_write_queue.failed.jsonl", "vector_recovery.json", "import_manifest.json"):
+    for name in (
+        "startup_write_queue.jsonl",
+        "startup_write_queue.done.jsonl",
+        "startup_write_queue.failed.jsonl",
+        "vector_recovery.json",
+        "import_manifest.json",
+    ):
         (root / name).write_text("old", encoding="utf-8")
     artifacts = tmp_path / "artifacts" / "retrieval_tuning"
     artifacts.mkdir(parents=True)
@@ -54,7 +66,11 @@ async def test_clear_removes_all_memory_stores_and_reopens_empty(host, tmp_path)
     assert not host._startup_queue_cache_loaded
     assert not artifacts.exists()
     assert {path.name for path in root.iterdir()} == {
-        ".a_memorix_runtime_writer.lock", "images", "MaiBot.db", "bot_config.toml", "unrelated.txt",
+        ".a_memorix_runtime_writer.lock",
+        "images",
+        "MaiBot.db",
+        "bot_config.toml",
+        "unrelated.txt",
     }
     assert list((root / "images").iterdir()) == [root / "images" / "original.jpg"]
     for name in ("MaiBot.db", "bot_config.toml", "unrelated.txt"):
