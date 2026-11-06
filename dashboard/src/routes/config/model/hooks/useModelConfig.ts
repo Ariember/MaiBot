@@ -39,6 +39,7 @@ import type { ConfigSchema } from '@/types/config-schema'
 
 import type { ModelInfo, ModelPricePeriod, ModelTaskConfig, ProviderConfig, TaskConfig } from '../types'
 import { serializeModel } from '../serializeModel'
+import { MODEL_PRICE_FIELDS } from '../modelPricing'
 import type { APIProvider, DeleteConfirmState } from '../../modelProvider/types'
 import { cleanProviderData } from '../../modelProvider/utils'
 import { PROVIDER_TEMPLATES } from '../../providerTemplates'
@@ -1180,6 +1181,46 @@ export function useModelConfig() {
     toast,
   ])
 
+  const handleBatchAddModels = useCallback(async (additions: ModelInfo[]): Promise<boolean> => {
+    if (saving || additions.length === 0) return false
+    try {
+      const names = new Set(models.map((model) => model.name))
+      const identifiers = new Set(models.map((model) => JSON.stringify([model.api_provider, model.model_identifier.trim()])))
+      const prepared = additions.map((model) => {
+        const name = model.name.trim()
+        const identifier = model.model_identifier.trim()
+        if (!name || !identifier) throw new Error('模型名称和标识符不能为空')
+        if (!providers.includes(model.api_provider)) throw new Error(`模型 ${name} 的 API 提供商不存在，请重新选择`)
+        if (!['llm', 'embedding', 'image_embedding'].includes(model.model_type)) throw new Error(`模型 ${name} 的类型无效`)
+        if (names.has(name)) throw new Error(`模型名称 ${name} 已存在，请修改名称`)
+        const key = JSON.stringify([model.api_provider, identifier])
+        if (identifiers.has(key)) throw new Error(`提供商 ${model.api_provider} 已添加模型 ${identifier}`)
+        for (const field of MODEL_PRICE_FIELDS) {
+          const value = model[field]
+          if (value != null && (!Number.isFinite(value) || value < 0)) throw new Error(`模型 ${name} 的价格必须为非负数`)
+        }
+        names.add(name)
+        identifiers.add(key)
+        return serializeModel({ ...model, name, model_identifier: identifier })
+      })
+      setSaving(true)
+      const nextModels = [...models, ...prepared]
+      const result = await persistModelConfigDraft(nextModels, taskConfig, apiProviders)
+      if (result.applyModels) {
+        setModels(nextModels)
+        setModelNames(nextModels.map((model) => model.name))
+      }
+      if (result.applyModels && result.applyTaskConfig) checkTaskConfigIssues(taskConfig, nextModels)
+      toast({ title: '批量添加成功', description: `已保存 ${prepared.length} 个模型` })
+      return true
+    } catch (error) {
+      toast({ title: '批量添加失败', description: (error as Error).message, variant: 'destructive' })
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }, [apiProviders, checkTaskConfigIssues, models, persistModelConfigDraft, providers, saving, taskConfig, toast])
+
   // 处理编辑对话框关闭
   const handleEditDialogClose = useCallback(
     (open: boolean) => {
@@ -1567,6 +1608,7 @@ export function useModelConfig() {
     setFormErrors,
     openEditDialog,
     handleSaveEdit,
+    handleBatchAddModels,
     handleEditDialogClose,
     deleteDialogOpen,
     setDeleteDialogOpen,

@@ -24,6 +24,26 @@ function renderFetcher(
 }
 
 describe('useModelFetcher', () => {
+  it('切换提供商后忽略迟到的请求，清空也会废弃未完成请求', async () => {
+    let finishOld!: (models: { id: string; name: string }[]) => void
+    vi.mocked(fetchProviderModels)
+      .mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve }))
+      .mockResolvedValueOnce([{ id: 'new', name: 'new' }])
+    const { result } = renderFetcher(() => openaiProvider)
+    let pending!: Promise<void>
+    act(() => { pending = result.current.fetchModelsForProvider('old') })
+    await act(async () => { await result.current.fetchModelsForProvider('new') })
+    await act(async () => { finishOld([{ id: 'old', name: 'old' }]); await pending })
+    expect(result.current.availableModels).toEqual([{ id: 'new', name: 'new' }])
+    expect(result.current.fetchingModels).toBe(false)
+
+    vi.mocked(fetchProviderModels).mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve }))
+    act(() => { pending = result.current.fetchModelsForProvider('old', true) })
+    act(() => { result.current.clearModels() })
+    await act(async () => { finishOld([{ id: 'old', name: 'old' }]); await pending })
+    expect(result.current.availableModels).toEqual([])
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     modelListCache.clear()

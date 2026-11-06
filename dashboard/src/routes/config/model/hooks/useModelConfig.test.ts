@@ -185,6 +185,51 @@ function lastToast() {
   return toastMock.mock.calls.at(-1)?.[0]
 }
 
+describe('批量添加模型', () => {
+  it('一次保存整批并保留已有模型和任务，价格 0 不被覆盖', async () => {
+    const { result } = await renderLoadedHook()
+    await act(async () => {
+      expect(await result.current.handleBatchAddModels([
+        model('new-a', 'main', { price_in: 0, cache_price_in: 0 }),
+        model('new-b', 'spare'),
+      ])).toBe(true)
+    })
+    expect(updateModelConfigMock).toHaveBeenCalledTimes(1)
+    expect(updateModelConfigMock.mock.calls[0][0]).toMatchObject({
+      models: [model('chat'), model('new-a', 'main', { price_in: 0, cache_price_in: 0 }), model('new-b', 'spare')],
+      model_task_config: defaultTaskConfig(),
+    })
+    expect(result.current.models).toHaveLength(3)
+  })
+
+  it.each([
+    [model('chat')],
+    [model('duplicate', 'main', { model_identifier: 'chat-id' })],
+    [model('new', 'missing')],
+    [model('')],
+    [model('new', 'main', { price_in: -1 })],
+    [model('new', 'main', { price_out: Infinity })],
+    [model('new', 'main', { cache_price_in: NaN })],
+    [model('new'), model('new')],
+  ])('校验失败不写入配置：%j', async (...additions) => {
+    const { result } = await renderLoadedHook()
+    await act(async () => { expect(await result.current.handleBatchAddModels(additions)).toBe(false) })
+    expect(updateModelConfigMock).not.toHaveBeenCalled()
+    expect(result.current.models).toHaveLength(1)
+    expect(lastToast()).toMatchObject({ title: '批量添加失败' })
+  })
+
+  it('保存失败保留旧状态，允许重试', async () => {
+    updateModelConfigMock.mockRejectedValueOnce(new Error('写入失败'))
+    const { result } = await renderLoadedHook()
+    await act(async () => { expect(await result.current.handleBatchAddModels([model('new')])).toBe(false) })
+    expect(result.current.models).toHaveLength(1)
+    expect(result.current.saving).toBe(false)
+    await act(async () => { expect(await result.current.handleBatchAddModels([model('new')])).toBe(true) })
+    expect(result.current.models).toHaveLength(2)
+  })
+})
+
 beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {})
   stubConfig()

@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export type ModelCreationType = 'llm' | 'embedding'
+export type ModelCreationType = 'llm' | 'embedding' | 'batch'
 
 interface AddModelMenuProps {
   onAdd: (type: ModelCreationType) => void
@@ -28,6 +28,7 @@ export function AddModelMenu({ onAdd, className, dataTour }: AddModelMenuProps) 
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => onAdd('llm')}>添加 LLM 模型</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onAdd('embedding')}>添加嵌入模型</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onAdd('batch')}>批量添加模型</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

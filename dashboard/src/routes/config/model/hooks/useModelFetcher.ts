@@ -1,7 +1,7 @@
 /**
  * 模型列表获取 Hook
  */
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { fetchProviderModels, type ModelListItem } from '@/lib/config-api'
 import { resolveModelFetcherTemplate, type ProviderTemplate } from '../../providerTemplates'
 import { modelListCache, CACHE_TTL } from '../constants'
@@ -37,9 +37,14 @@ export function useModelFetcher(options: UseModelFetcherOptions): UseModelFetche
   const [fetchingModels, setFetchingModels] = useState(false)
   const [modelFetchError, setModelFetchError] = useState<string | null>(null)
   const [matchedTemplate, setMatchedTemplate] = useState<ProviderTemplate | null>(null)
+  const requestId = useRef(0)
+
+  useEffect(() => () => { requestId.current += 1 }, [])
 
   // 清空模型列表和错误状态
   const clearModels = useCallback(() => {
+    requestId.current += 1
+    setFetchingModels(false)
     setAvailableModels([])
     setModelFetchError(null)
     setMatchedTemplate(null)
@@ -48,6 +53,9 @@ export function useModelFetcher(options: UseModelFetcherOptions): UseModelFetche
   // 获取提供商的模型列表
   const fetchModelsForProvider = useCallback(
     async (providerName: string, forceRefresh = false) => {
+      const currentRequest = ++requestId.current
+      setFetchingModels(false)
+      setAvailableModels([])
       const config = getProviderConfig(providerName)
       if (!config?.base_url) {
         setAvailableModels([])
@@ -94,10 +102,12 @@ export function useModelFetcher(options: UseModelFetcherOptions): UseModelFetche
           template.modelFetcher.parser,
           template.modelFetcher.endpoint
         )
+        if (currentRequest !== requestId.current) return
         setAvailableModels(models)
         // 更新缓存
         modelListCache.set(cacheKey, { models, timestamp: Date.now() })
       } catch (error) {
+        if (currentRequest !== requestId.current) return
         console.error('获取模型列表失败:', error)
         const errorMessage = (error as Error).message || '获取模型列表失败'
         // 根据错误类型提供更友好的提示
@@ -118,7 +128,7 @@ export function useModelFetcher(options: UseModelFetcherOptions): UseModelFetche
         }
         setAvailableModels([])
       } finally {
-        setFetchingModels(false)
+        if (currentRequest === requestId.current) setFetchingModels(false)
       }
     },
     [getProviderConfig]

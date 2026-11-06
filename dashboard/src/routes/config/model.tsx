@@ -85,6 +85,9 @@ import { RestartProvider, useRestart } from '@/lib/restart-context'
 import { ExtraParamsDialog } from '@/components/ui/extra-params-dialog'
 import { TaskConfigCard, ModelTable, ModelCardList } from './model/components'
 import type { ModelCreationType } from './model/components/AddModelMenu'
+import { BatchAddModelsDialog } from './model/components/BatchAddModelsDialog'
+import { ModelPriceHint } from './model/components/ModelPriceHint'
+import { applyModelPriceDefaults, type ModelPriceField } from './model/modelPricing'
 import { EmbeddingBuildProgress } from './model/components/EmbeddingBuildProgress'
 import { TaskRuntimeSummary } from './model/components/TaskRuntimeSummary'
 import { TaskUsageStats } from './model/components/TaskUsageStats'
@@ -341,6 +344,8 @@ function ModelConfigPageContent() {
   const [modelComboboxOpen, setModelComboboxOpen] = useState(false)
   // 用户是否手动编辑过模型名称；编辑过后，名称不再跟随模型标识符自动填充
   const [modelNameTouched, setModelNameTouched] = useState(false)
+  const modelPriceTouched = useRef(new Set<ModelPriceField>())
+  const [batchAddOpen, setBatchAddOpen] = useState(false)
   const [createVersionDialogOpen, setCreateVersionDialogOpen] = useState(false)
   const [manageVersionsDialogOpen, setManageVersionsDialogOpen] = useState(false)
   const reduceTaskMotion = useReducedMotion()
@@ -583,11 +588,30 @@ function ModelConfigPageContent() {
     modelType: ModelInfo['model_type'] = 'llm'
   ) => {
     setModelNameTouched(false)
+    modelPriceTouched.current = new Set()
     mc.openEditDialog(model, index, () => setAdvancedModelSettingsVisible(false), preferredProvider, modelType)
   }
 
   const openAddModelDialog = (type: ModelCreationType) => {
+    if (type === 'batch') {
+      setBatchAddOpen(true)
+      return
+    }
     openEditDialog(null, null, modelProviderFilter || undefined, type)
+  }
+
+  const updateModelIdentifier = (identifier: string) => {
+    setEditingModel((previous) => {
+      if (!previous) return null
+      // 新建时名称随标识符填充，手动编辑过名称或已有模型则保留。
+      const next = {
+        ...previous,
+        model_identifier: identifier,
+        ...(!modelNameTouched && editingIndex === null ? { name: identifier } : {}),
+      }
+      return editingIndex === null ? applyModelPriceDefaults(next, modelPriceTouched.current) : next
+    })
+    setFormErrors((previous) => ({ ...previous, model_identifier: undefined }))
   }
 
   const openProviderDialog = (provider: APIProvider | null, index: number | null) => {
@@ -1481,13 +1505,14 @@ function ModelConfigPageContent() {
           // 始终拦截 outside-interaction，避免内层弹窗关闭后的延迟触摸事件击穿外层。
           preventOutsideClose
           confirmOnEnter
-          // 无描述文案，显式置空避免 Radix 的 aria-describedby 缺失告警
-          aria-describedby={undefined}
         >
           <DialogHeader>
             <DialogTitle>
               {editingIndex !== null ? '编辑模型' : editingModelIsEmbedding ? '添加嵌入模型' : '添加 LLM 模型'}
             </DialogTitle>
+            <DialogDescription>
+              {editingIndex !== null ? '调整模型连接、计费与生成参数。' : '选择提供商和模型，确认价格后添加。也可以从上游一次导入多个模型。'}
+            </DialogDescription>
             {/* 「高级」开关浮在右上角，与 DialogContent 内置的关闭按钮同行 */}
             {!editingModelIsEmbedding && (
             <Button
@@ -1504,6 +1529,15 @@ function ModelConfigPageContent() {
 
           <DialogBody viewportClassName="min-h-0 flex-1 pr-3 sm:pr-4 [&>div]:!block">
           <div className="grid gap-3 py-2 sm:gap-4 sm:py-4">
+            {editingIndex === null && <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
+              <div>
+                <p className="text-sm font-medium">单个添加</p>
+                <p className="mt-1 text-xs text-muted-foreground">从上游选择或手动输入标识符，自动填入参考价格。</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => { setEditDialogOpen(false); setBatchAddOpen(true) }}>
+                <Plus className="mr-2 h-4 w-4" />批量添加模型
+              </Button>
+            </div>}
             {editingModelIsEmbedding && (
             <div className="grid gap-2">
               <Label htmlFor="model_type">模型类型</Label>
@@ -1522,7 +1556,7 @@ function ModelConfigPageContent() {
               </Select>
             </div>
             )}
-            <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+            <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 md:grid-cols-2 md:gap-4">
               <div className="grid gap-2" data-tour="model-name-input">
                 <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                   <Label
@@ -1681,16 +1715,7 @@ function ModelConfigPageContent() {
                                 value={model.id}
                                 className="group/model-option pr-8"
                                 onSelect={() => {
-                                  setEditingModel((prev) => {
-                                    if (!prev) return null
-                                    // 名称留空且用户未手动编辑过时，名称跟随标识符自动填充
-                                    const shouldFillName = !prev.name && !modelNameTouched
-                                    return {
-                                      ...prev,
-                                      model_identifier: model.id,
-                                      ...(shouldFillName ? { name: model.id } : {}),
-                                    }
-                                  })
+                                  updateModelIdentifier(model.id)
                                   setModelComboboxOpen(false)
                                 }}
                               >
@@ -1719,19 +1744,7 @@ function ModelConfigPageContent() {
                   id="model_identifier"
                   value={editingModel?.model_identifier || ''}
                   onChange={(e) => {
-                    setEditingModel((prev) => {
-                      if (!prev) return null
-                      // 名称留空且用户未手动编辑过时，名称跟随标识符自动填充
-                      const shouldFillName = !prev.name && !modelNameTouched
-                      return {
-                        ...prev,
-                        model_identifier: e.target.value,
-                        ...(shouldFillName ? { name: e.target.value } : {}),
-                      }
-                    })
-                    if (formErrors.model_identifier) {
-                      setFormErrors((prev) => ({ ...prev, model_identifier: undefined }))
-                    }
+                    updateModelIdentifier(e.target.value)
                   }}
                   placeholder={matchedTemplate?.modelFetcher ? '手动输入模型标识符' : 'Qwen/Qwen3-30B-A3B-Instruct-2507'}
                   className={`${matchedTemplate?.modelFetcher ? 'sm:flex-1' : 'w-full'} ${formErrors.model_identifier ? 'border-destructive focus-visible:ring-destructive' : ''}`}
@@ -1781,22 +1794,24 @@ function ModelConfigPageContent() {
             </div>
             )}
 
-            <fieldset className={`grid min-w-0 grid-cols-1 gap-3 sm:gap-4 ${editingModelIsEmbedding ? '' : 'md:grid-cols-3'}`}>
+            <fieldset className={`grid min-w-0 grid-cols-1 gap-3 rounded-lg border p-3 sm:gap-4 ${editingModelIsEmbedding ? '' : 'md:grid-cols-3'}`}>
               <legend className="mb-2 text-sm font-medium">默认价格</legend>
+              {editingIndex === null && <div className="md:col-span-full"><ModelPriceHint identifier={editingModel?.model_identifier ?? ''} /></div>}
               <div className="grid gap-2">
                 <Label htmlFor="price_in">输入价格 (¥/M token)</Label>
                 <Input
                   id="price_in"
                   type="number"
-                  step="0.1"
+                  step="any"
                   min="0"
                   value={editingModel?.price_in ?? ''}
                   onChange={(e) => {
+                    modelPriceTouched.current.add('price_in')
                     const val = e.target.value === '' ? null : parseFloat(e.target.value)
                     setEditingModel((prev) => {
                       if (!prev) return null
-                      // 缓存价格未被手动改过时（当前值仍等于修改前的输入价）跟随输入价格
-                      const cacheFollowsInput = (prev.cache_price_in ?? 0) === (prev.price_in ?? 0)
+                      // 仅未手动编辑且仍等于输入价的缓存价格跟随输入价。
+                      const cacheFollowsInput = !modelPriceTouched.current.has('cache_price_in') && (prev.cache_price_in ?? 0) === (prev.price_in ?? 0)
                       return {
                         ...prev,
                         price_in: val,
@@ -1819,6 +1834,7 @@ function ModelConfigPageContent() {
                   min="0"
                   value={editingModel?.price_out ?? ''}
                   onChange={(e) => {
+                    modelPriceTouched.current.add('price_out')
                     const val = e.target.value === '' ? null : parseFloat(e.target.value)
                     setEditingModel((prev) =>
                       prev
@@ -1839,6 +1855,7 @@ function ModelConfigPageContent() {
                   min="0"
                   value={editingModel?.cache_price_in ?? ''}
                   onChange={(e) => {
+                    modelPriceTouched.current.add('cache_price_in')
                     const val = e.target.value === '' ? null : parseFloat(e.target.value)
                     setEditingModel((prev) =>
                       prev
@@ -2528,6 +2545,15 @@ function ModelConfigPageContent() {
           onSave={mc.saveWebConfig}
         />
       )}
+      {batchAddOpen && <BatchAddModelsDialog
+        providers={providers}
+        models={models}
+        initialProvider={modelProviderFilter || providers[0] || ''}
+        getProviderConfig={getProviderConfig}
+        onSave={mc.handleBatchAddModels}
+        onClose={() => setBatchAddOpen(false)}
+      />}
+
       {/* 手机页头右上角的「+」：添加模型、厂商与联网服务 */}
       <MobileHeaderActions>
         <MobileAddMenu
@@ -2535,6 +2561,7 @@ function ModelConfigPageContent() {
           items={[
             { label: '添加 LLM 模型', onSelect: () => openAddModelDialog('llm') },
             { label: '添加嵌入模型', onSelect: () => openAddModelDialog('embedding') },
+            { label: '批量添加模型', onSelect: () => openAddModelDialog('batch') },
             { label: '添加 LLM 模型提供商', onSelect: () => openProviderDialog(null, null) },
             { label: '添加联网搜索', onSelect: () => setWebSearchEditor({ name: null }) },
           ]}

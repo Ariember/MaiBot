@@ -363,6 +363,76 @@ async function openConfigurationTab(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('ModelConfigPage 特征化', () => {
+  it('新建模型自动填价且保留手动输入的 0；未知模型未修改的价格归零', async () => {
+    const user = userEvent.setup()
+    await renderModelPage()
+    await openConfigurationTab(user)
+    await user.click(document.querySelector<HTMLButtonElement>('[data-tour="add-model-button"]')!)
+    await user.click(screen.getByRole('menuitem', { name: '添加 LLM 模型' }))
+    const dialog = await screen.findByRole('dialog')
+    const identifier = within(dialog).getByLabelText('模型标识符 *')
+    fireEvent.change(identifier, { target: { value: 'deepseek-flash' } })
+    expect(within(dialog).getByLabelText('输入价格 (¥/M token)')).toHaveValue(2)
+    expect(within(dialog).getByLabelText('输出价格 (¥/M token)')).toHaveValue(8)
+    expect(within(dialog).getByLabelText('缓存价格 (¥/M token)')).toHaveValue(0.04)
+    fireEvent.change(within(dialog).getByLabelText('输出价格 (¥/M token)'), { target: { value: '0' } })
+    fireEvent.change(within(dialog).getByLabelText('缓存价格 (¥/M token)'), { target: { value: '2' } })
+    fireEvent.change(within(dialog).getByLabelText('输入价格 (¥/M token)'), { target: { value: '4' } })
+    expect(within(dialog).getByLabelText('缓存价格 (¥/M token)')).toHaveValue(2)
+    fireEvent.change(identifier, { target: { value: 'deepseek-v4-pro' } })
+    expect(within(dialog).getByLabelText('输入价格 (¥/M token)')).toHaveValue(4)
+    expect(within(dialog).getByLabelText('输出价格 (¥/M token)')).toHaveValue(0)
+    expect(within(dialog).getByLabelText('缓存价格 (¥/M token)')).toHaveValue(2)
+    expect(within(dialog).getByLabelText('模型名称 *')).toHaveValue('deepseek-v4-pro')
+
+    clickDialogAction(dialog, '取消')
+    await user.click(document.querySelector<HTMLButtonElement>('[data-tour="add-model-button"]')!)
+    await user.click(screen.getByRole('menuitem', { name: '添加 LLM 模型' }))
+    const freshDialog = await screen.findByRole('dialog')
+    fireEvent.change(within(freshDialog).getByLabelText('模型标识符 *'), { target: { value: 'deepseek-flash' } })
+    fireEvent.change(within(freshDialog).getByLabelText('模型标识符 *'), { target: { value: 'unknown-model' } })
+    expect(within(freshDialog).getByLabelText('输入价格 (¥/M token)')).toHaveValue(0)
+    expect(within(freshDialog).getByLabelText('输出价格 (¥/M token)')).toHaveValue(0)
+  })
+
+  it('批量添加支持去重、搜索全选、保留编辑并一次保存，失败不关闭面板', async () => {
+    const user = userEvent.setup()
+    vi.mocked(configApi.fetchProviderModels).mockResolvedValue([
+      { id: 'gpt-4', name: 'Existing' },
+      { id: 'deepseek-flash', name: 'DeepSeek' },
+      { id: 'deepseek-flash', name: 'Duplicate' },
+      { id: 'unknown-model', name: 'Unknown' },
+    ])
+    await renderModelPage()
+    await openConfigurationTab(user)
+    await user.click(document.querySelector<HTMLButtonElement>('[data-tour="add-model-button"]')!)
+    await user.click(screen.getByRole('menuitem', { name: '批量添加模型' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('button', { name: '添加所选模型 (0)' })).toBeDisabled()
+    await user.click(within(dialog).getByRole('button', { name: '获取上游模型' }))
+    expect(await within(dialog).findByRole('checkbox', { name: '选择 gpt-4' })).toBeDisabled()
+    expect(within(dialog).getAllByRole('checkbox', { name: '选择 deepseek-flash' })).toHaveLength(1)
+    fireEvent.change(within(dialog).getByLabelText('搜索上游模型'), { target: { value: 'deepseek' } })
+    await user.click(within(dialog).getByRole('button', { name: '全选搜索结果 (1)' }))
+    expect(within(dialog).getByLabelText('deepseek-flash 输入价格')).toHaveValue(2)
+    fireEvent.change(within(dialog).getByLabelText('deepseek-flash 输入价格'), { target: { value: '0' } })
+    fireEvent.change(within(dialog).getByLabelText('搜索上游模型'), { target: { value: '' } })
+    await user.click(within(dialog).getByRole('checkbox', { name: '选择 unknown-model' }))
+    expect(within(dialog).getByLabelText('unknown-model 输入价格')).toHaveValue(0)
+    await user.click(within(dialog).getByRole('button', { name: '获取上游模型' }))
+    expect(await within(dialog).findByLabelText('deepseek-flash 输入价格')).toHaveValue(0)
+    vi.mocked(configApi.updateModelConfig).mockRejectedValueOnce(new Error('保存失败'))
+    await user.click(within(dialog).getByRole('button', { name: '添加所选模型 (2)' }))
+    await waitFor(() => expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ title: '批量添加失败' })))
+    expect(dialog).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('deepseek-flash 输入价格')).toHaveValue(0)
+    await user.click(within(dialog).getByRole('button', { name: '添加所选模型 (2)' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    const saved = vi.mocked(configApi.updateModelConfig).mock.calls.at(-1)?.[0] as { models: ModelInfo[] }
+    expect(saved.models).toHaveLength(3)
+    expect(saved.models.find((model) => model.model_identifier === 'deepseek-flash')).toMatchObject({ price_in: 0, price_out: 8, api_provider: 'openai' })
+  })
+
   it('初始加载调用 getModelConfigCached + getModelConfigSchema 并渲染', async () => {
     await renderModelPage()
     expect(configApi.getModelConfigCached).toHaveBeenCalled()
