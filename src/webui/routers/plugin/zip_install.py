@@ -1,17 +1,21 @@
-"""ZIP 插件安装：隔离解压并校验，通过后才发布到 plugins。"""
+"""ZIP 插件安装及更新：隔离解压并校验，通过后才发布到 plugins。"""
 
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 from typing import Any, BinaryIO, Dict, List, Tuple
+from uuid import uuid4
 from zipfile import BadZipFile, ZipFile, ZipInfo
 
 from fastapi import APIRouter, Cookie, File, HTTPException, UploadFile
+import asyncio
 import shutil
 import stat
 
+from src.common.runtime_loop import run_on_main_loop
 from src.plugin_runtime.runner.manifest_validator import ManifestValidator
 
-from .management import _reserve_plugin_operation
+from .management import _read_required_manifest, _reserve_plugin_operation
+from .release_install import _check_tree, _preserve_user_files, _resume_runtime, _stop_runtime, _work_directory
 from .support import (
     get_plugin_candidate_paths,
     get_plugins_dir,
@@ -64,6 +68,50 @@ def _archive_entries(archive: ZipFile) -> List[Tuple[ZipInfo, PurePosixPath]]:
     return entries
 
 
+def _update_zip_plugin(candidate: Path, target: Path, plugin_id: str) -> Path:
+    from src.plugin_runtime.integration import get_plugin_runtime_manager
+
+    if _read_required_manifest(target).get("id") != plugin_id:
+        raise HTTPException(status_code=409, detail="已安装插件的 ID 大小写与 ZIP 不一致，请检查插件包")
+    _check_tree(target)
+    backup = _work_directory(target.parent, ".update_backups") / f"{target.name}.{uuid4().hex}"
+
+    def replace_files() -> None:
+        _preserve_user_files(target, candidate)
+        target.rename(backup)
+        try:
+            candidate.rename(target)
+        except Exception:
+            backup.rename(target)
+            raise
+
+    async def replace_and_reload() -> None:
+        stopped: List[str] = []
+        failure = None
+        try:
+            stopped = await _stop_runtime(plugin_id)
+            await asyncio.to_thread(replace_files)
+        except Exception as exc:
+            failure = exc
+            raise
+        finally:
+            if stopped:
+                try:
+                    await _resume_runtime(stopped)
+                except Exception as resume_error:
+                    if failure is not None:
+                        detail = failure.detail if isinstance(failure, HTTPException) else str(failure)
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"ZIP 更新失败：{detail}；恢复插件运行也失败：{resume_error}",
+                        ) from failure
+                    raise
+
+    # 同步端点在工作线程等待，文件事务仍交给主循环串行调度，避免源码监听中途重启插件。
+    asyncio.run(run_on_main_loop(get_plugin_runtime_manager().run_plugin_file_update(replace_and_reload)))
+    return backup
+
+
 def install_zip_archive(source: BinaryIO) -> Dict[str, Any]:
     source.seek(0, 2)
     if source.tell() > MAX_ZIP_BYTES:
@@ -107,9 +155,22 @@ def install_zip_archive(source: BinaryIO) -> Dict[str, Any]:
             raise HTTPException(status_code=400, detail=f"插件校验失败：{'；'.join(validator.errors)}")
         with _reserve_plugin_operation(manifest.id, "install"):
             target, old_target = get_plugin_candidate_paths(manifest.id)
-            if target.exists() or old_target.exists() or resolve_installed_plugin_path(manifest.id) is not None:
-                raise HTTPException(status_code=409, detail=f"插件 {manifest.id} 已安装，请先卸载后再从 ZIP 安装")
-            candidate.rename(target)
+            existing = resolve_installed_plugin_path(manifest.id)
+            try:
+                if existing is not None:
+                    backup = _update_zip_plugin(candidate, existing, manifest.id)
+                    return {
+                        "success": True,
+                        "plugin_id": manifest.id,
+                        "updated": True,
+                        "backup_path": str(backup),
+                        "message": f"{manifest.name} 更新成功，已保留配置和数据，请重启麦麦使其完全生效",
+                    }
+                if target.exists() or old_target.exists():
+                    raise HTTPException(status_code=409, detail="插件目标目录已存在且未匹配到相同 ID，请先处理现有目录")
+                candidate.rename(target)
+            except OSError as exc:
+                raise HTTPException(status_code=500, detail=f"ZIP 插件文件替换失败：{exc}") from exc
         return {"success": True, "plugin_id": manifest.id, "message": f"{manifest.name} 安装成功，请重启麦麦使其生效"}
 
 

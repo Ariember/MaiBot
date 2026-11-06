@@ -27,17 +27,17 @@ export function ZipInstallDialog({ open, onOpenChange, onInstalled }: ZipInstall
     try {
       const body = new FormData()
       body.append('file', file)
-      const result = await backendApi.post<{ message: string }>('/api/webui/plugins/install-zip', {
+      const result = await backendApi.post<{ message: string; updated?: boolean }>('/api/webui/plugins/install-zip', {
         body,
-        errorMessage: '从 ZIP 安装插件失败',
+        errorMessage: '从 ZIP 安装或更新插件失败',
       })
-      toast({ title: '安装成功', description: result.message })
+      toast({ title: result.updated ? '更新成功' : '安装成功', description: result.message })
       onOpenChange(false)
       setFile(null)
       await getInstalledPlugins({ forceRefresh: true })
       await onInstalled()
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '从 ZIP 安装插件失败')
+      setError(cause instanceof Error ? cause.message : '从 ZIP 安装或更新插件失败')
     } finally {
       setInstalling(false)
     }
@@ -52,9 +52,9 @@ export function ZipInstallDialog({ open, onOpenChange, onInstalled }: ZipInstall
     }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>从 ZIP 安装插件</DialogTitle>
+          <DialogTitle>从 ZIP 安装或更新插件</DialogTitle>
           <DialogDescription>
-            选择可信来源的插件 ZIP（最大 100 MB）。压缩包根目录或一层插件目录中需包含 _manifest.json 和 plugin.py，校验通过后安装到 plugins 文件夹。已安装的插件需先卸载。
+            选择可信来源的插件 ZIP（最大 100 MB）。压缩包根目录或一层插件目录中需包含 _manifest.json 和 plugin.py。相同 ID 的已安装插件会直接更新，保留配置及 data 目录，并备份旧版本，无需先卸载。完成后请重启麦麦。
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -80,7 +80,7 @@ export function ZipInstallDialog({ open, onOpenChange, onInstalled }: ZipInstall
           }}>取消</Button>
           <Button disabled={!file || installing} onClick={install}>
             {installing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {installing ? '正在校验并安装...' : '安装插件'}
+            {installing ? '正在校验并安装或更新...' : '安装或更新插件'}
           </Button>
         </DialogFooter>
       </DialogContent>

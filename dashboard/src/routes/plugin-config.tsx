@@ -1777,7 +1777,7 @@ function PluginConfigPageContent() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setZipInstallOpen(true)} disabled={isRestarting}>
-                <FileArchive className="mr-2 h-4 w-4" />从 ZIP 安装插件
+                <FileArchive className="mr-2 h-4 w-4" />从 ZIP 安装或更新插件
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => triggerRestart()} disabled={isRestarting}>
