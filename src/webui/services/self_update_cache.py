@@ -7,6 +7,8 @@ import time
 
 from src.common.logger import get_logger
 from src.common.self_update import LocalState, UpdateCheck, check_for_update, inspect_local
+from src.common import image_update
+from src.common.paths import get_instance_root
 
 logger = get_logger("webui_self_update")
 CACHE_TTL = 60 * 60
@@ -54,7 +56,11 @@ class SelfUpdateCache:
         ) != (local.branch, local.commit, local.version, local.deployment_type):
             return UpdateCheck(local=local)
         # 未提交文件可能在缓存期内变化，始终使用当前工作区状态。
-        blockers = [item for item in cached.blockers if item != "dirty_worktree"]
+        blockers = [item for item in cached.blockers if item not in {"dirty_worktree", "image_update_busy", "image_recovery_required"}]
+        if local.deployment_type == "image":
+            blocker = image_update.update_blocker(get_instance_root() / "data" / "self_update")
+            if blocker:
+                blockers.append(blocker)
         if local.dirty_files:
             blockers.append("dirty_worktree")
         return replace(cached, local=local, blockers=blockers)
@@ -82,7 +88,7 @@ class SelfUpdateCache:
                 self._source_id = source_id
                 self._custom_prefix = custom_prefix
             elif self._check is None:
-                self._source_id = "pypi" if local.deployment_type == "package" else "github"
+                self._source_id = "ghcr" if local.deployment_type == "image" else "github"
             try:
                 check = check_for_update(
                     source_id=self._source_id, custom_prefix=self._custom_prefix, on_progress=on_progress,

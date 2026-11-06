@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -10,6 +10,8 @@ const api = vi.hoisted(() => ({
   getSelfUpdateStatus: vi.fn(),
   checkSelfUpdate: vi.fn(),
   applySelfUpdate: vi.fn(),
+  getSelfUpdateCustomPrefix: () => '',
+  SELF_UPDATE_STATUS_EVENT: 'maibot-self-update-status',
 }))
 const triggerRestart = vi.hoisted(() => vi.fn())
 const toast = vi.hoisted(() => vi.fn())
@@ -33,7 +35,7 @@ const TARGET = 'b'.repeat(40)
 function makeStatus(overrides: Partial<SelfUpdateStatus> = {}): SelfUpdateStatus {
   return {
     supported: true,
-    repository_url: 'https://github.com/Mai-with-u/MaiBot.git',
+    repository_url: 'https://github.com/Ariember/MaiBot.git',
     current_version: '1.3.7',
     current_commit: 'a'.repeat(40),
     branch: 'main',
@@ -76,18 +78,50 @@ beforeEach(() => {
   vi.clearAllMocks()
   sessionStorage.clear()
 })
-afterEach(() => cleanup())
+afterEach(() => { cleanup(); vi.useRealTimers() })
 
 async function chooseSourceAndCheck() {
   fireEvent.click(screen.getByRole('button', { name: 'settings.selfUpdate.check' }))
   expect(screen.getByRole('button', { name: '检查更新' })).toBeDisabled()
   fireEvent.keyDown(screen.getByRole('combobox', { name: '更新源' }), { key: 'ArrowDown' })
-  fireEvent.click(await screen.findByRole('option', { name: 'GitHub 官方源' }))
+  fireEvent.click(await screen.findByRole('option', { name: 'GitHub · Ariember/MaiBot' }))
   fireEvent.click(screen.getByRole('button', { name: '检查更新' }))
   await waitFor(() => expect(screen.queryByRole('dialog', { name: '选择本体更新源' })).not.toBeInTheDocument())
 }
 
 describe('SelfUpdateCard', () => {
+  it('镜像更新只提供 GHCR，并等待本次执行结果而不是旧容器的健康响应', async () => {
+    vi.useFakeTimers()
+    const digest = `sha256:${'b'.repeat(64)}`
+    const image = makeStatus({
+      ...available, deployment_type: 'image', latest_commit: digest,
+      current_commit: `sha256:${'a'.repeat(64)}`, source_id: 'ghcr', branch: 'latest',
+    })
+    api.getSelfUpdateStatus.mockResolvedValue(image)
+    api.checkSelfUpdate.mockResolvedValue(image)
+    api.applySelfUpdate.mockResolvedValue({ success: true, message: 'queued', requested_at: 100 })
+    await act(async () => { render(<SelfUpdateCard />) })
+    fireEvent.click(screen.getByRole('button', { name: 'settings.selfUpdate.check' }))
+    expect(screen.queryByText('PyPI 官方')).not.toBeInTheDocument()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '检查更新' })) })
+    fireEvent.click(screen.getByRole('button', { name: 'settings.selfUpdate.apply' }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'settings.selfUpdate.confirmAction' })) })
+    expect(api.applySelfUpdate).toHaveBeenCalledWith(digest, { source_id: 'ghcr' })
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+    expect(triggerRestart).not.toHaveBeenCalled()
+    const result = {
+      success: true, started_at: 100, finished_at: 99, branch: 'latest', from_commit: image.current_commit!,
+      to_commit: digest, from_version: '1.3.7', to_version: '1.3.8', stage: 'done', error_code: '', error: '',
+      rolled_back: false, rollback_error: '', dependencies_synced: false, source_name: 'GHCR',
+    }
+    api.getSelfUpdateStatus.mockResolvedValue({ ...image, last_result: result })
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+    expect(triggerRestart).not.toHaveBeenCalled()
+    api.getSelfUpdateStatus.mockResolvedValue({ ...image, last_result: { ...result, finished_at: 101 } })
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+    expect(triggerRestart).toHaveBeenCalledTimes(1)
+  })
+
   it('检查到新版本后，确认即按界面上的提交发起更新并等待重启', async () => {
     api.getSelfUpdateStatus.mockResolvedValue(makeStatus())
     api.checkSelfUpdate.mockResolvedValue(available)

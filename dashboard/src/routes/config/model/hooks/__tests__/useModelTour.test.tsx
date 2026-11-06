@@ -189,8 +189,7 @@ describe('useModelTour', () => {
     expect(view.fns.goToStep).toHaveBeenCalledWith(2)
   })
 
-  it('步骤 2 点击命中目标元素包围盒时也推进步骤（特征化坐标兜底）', () => {
-    // jsdom 中元素包围盒全为 0，点击坐标 (0,0) 会被判定为命中目标
+  it('步骤 2 点击目标之外不会因为零尺寸包围盒而误推进', () => {
     vi.useFakeTimers()
     const view = setup(runningState(2))
     addTourElement('add-provider-button')
@@ -198,10 +197,10 @@ describe('useModelTour', () => {
     document.body.appendChild(outside)
 
     outside.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 0, clientY: 0 }))
-    expect(view.callbacks.onOpenProviderDialog).toHaveBeenCalledTimes(1)
+    expect(view.callbacks.onOpenProviderDialog).not.toHaveBeenCalled()
 
     vi.advanceTimersByTime(300)
-    expect(view.fns.goToStep).toHaveBeenCalledWith(3)
+    expect(view.fns.goToStep).not.toHaveBeenCalled()
   })
 
   it('步骤 17 点击模型取消按钮后关闭编辑对话框并跳到步骤 18', () => {

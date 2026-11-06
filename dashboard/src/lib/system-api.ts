@@ -107,11 +107,10 @@ export async function getUpdateHistory(
 }
 
 export type SelfUpdateBlocker =
-  | 'uv_missing'
-  | 'not_uv_tool'
-  | 'package_runner_missing'
-  | 'other_instances_running'
-  | 'package_busy'
+  | 'package_update_removed'
+  | 'image_updater_unavailable'
+  | 'image_update_busy'
+  | 'image_recovery_required'
   | 'git_missing'
   | 'not_git_repo'
   | 'detached_head'
@@ -143,11 +142,12 @@ export interface SelfUpdateResult {
   rollback_error: string
   dependencies_synced: boolean
   source_name: string
+  backup_path?: string
 }
 
 export interface SelfUpdateStatus {
   supported: boolean
-  deployment_type?: 'git' | 'package'
+  deployment_type?: 'git' | 'image' | 'package'
   repository_url: string
   current_version: string
   current_commit: string | null
@@ -226,7 +226,7 @@ export async function getSelfUpdateStatus(): Promise<SelfUpdateStatus> {
 }
 
 export interface SelfUpdateSourceSelection {
-  source_id: 'cnb' | 'github' | 'custom' | 'pypi' | 'tuna' | 'aliyun'
+  source_id: 'github' | 'custom' | 'ghcr'
   custom_prefix?: string
 }
 
@@ -317,10 +317,9 @@ export async function checkSelfUpdateOnStartup(): Promise<SelfUpdateStatus> {
   const request = (async () => {
     const local = await getSelfUpdateStatus()
     if (!local.supported) return local
-    // 包安装沿用现有 PyPI 检查，Git 镜像仅适用于源码部署。
-    if (local.deployment_type === 'package') return checkSelfUpdate({ source_id: 'pypi' }, false)
+    if (local.deployment_type === 'image') return checkSelfUpdate({ source_id: 'ghcr' }, false)
 
-    // 后端并发读取 GitHub / CNB 元数据，采用先成功的结果；下载源在执行更新时选择。
+    // 源码版本信息与下载均固定跟随本 fork。
     return checkSelfUpdate({ source_id: 'github' }, false)
   })()
   startupUpdateChecks.set(baseUrl, request)
@@ -331,11 +330,11 @@ export async function checkSelfUpdateOnStartup(): Promise<SelfUpdateStatus> {
 export async function applySelfUpdate(
   expectedCommit: string,
   source: SelfUpdateSourceSelection
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; requested_at: number }> {
   if (getMockSelfUpdateStatus()) {
     throw new Error('当前使用本地模拟更新源，仅供 UI 预览，不会执行更新或重启。')
   }
-  return backendApi.post<{ success: boolean; message: string }>(
+  return backendApi.post<{ success: boolean; message: string; requested_at: number }>(
     '/api/webui/system/self-update/apply',
     {
       body: { expected_commit: expectedCommit, ...source },

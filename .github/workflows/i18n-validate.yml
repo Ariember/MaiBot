@@ -2,17 +2,6 @@ name: i18n Validate
 
 on:
   pull_request:
-    paths:
-      - "locales/**/*.json"
-      - "prompts/**/*.prompt"
-      - "dashboard/src/i18n/index.ts"
-      - "dashboard/src/i18n/locales/*.json"
-      - "scripts/i18n_validate.py"
-      - ".github/scripts/check_i18n_regressions.py"
-      - ".github/workflows/i18n-validate.yml"
-      - "src/common/i18n/**/*.py"
-      - "src/common/prompt_i18n.py"
-      - "src/prompt/prompt_manager.py"
   push:
     branches:
       - main

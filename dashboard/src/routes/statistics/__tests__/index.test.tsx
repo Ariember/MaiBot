@@ -474,8 +474,8 @@ describe('StatisticsPage', () => {
     expect(screen.getByText('1.5万')).toBeInTheDocument()
     expect(screen.getByText('1万')).toBeInTheDocument()
     expect(screen.getAllByText('N/A').length).toBeGreaterThan(0)
-    expect(screen.getByText('broken-model')).toBeInTheDocument()
-    expect(screen.getAllByText('0.0s').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('broken-model').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('0.0±0.0s').length).toBeGreaterThan(0)
 
     await user.click(screen.getByRole('tab', { name: 'statisticsPage.breakdowns.chats' }))
     expect(screen.getByText('私聊用户')).toBeInTheDocument()

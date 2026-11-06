@@ -6,11 +6,9 @@ Worker（WebUI）只负责检查更新与登记更新请求；真正改动代码
 本模块会被 Runner 加载，只能依赖标准库。
 """
 
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from threading import Lock
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -28,26 +26,15 @@ import time
 import tomllib
 
 from .git_source import GitSource
-from .package_update import (
-    PACKAGE_INDEXES,
-    PACKAGE_RUNNER_ENV,
-    SelfUpdateError,
-    ensure_other_instances_stopped,
-    fetch_releases,
-    latest_release,
-    package_index,
-    release_exists,
-    run_update,
-    tool_environment,
-    version_tuple,
-)
+from . import image_update
 from .paths import PACKAGED_INSTALL, SOURCE_ROOT, get_instance_root
+from .update_errors import SelfUpdateError
 from .version import read_project_version
 
 PROJECT_ROOT = get_instance_root() if PACKAGED_INSTALL else SOURCE_ROOT
 
-# 更新只拉取官方仓库或用户本次选择的镜像，不读取本地 remote 或插件市场设置。
-OFFICIAL_REPOSITORY_PATH = "Mai-with-u/MaiBot"
+# 更新固定跟随本 fork，不读取插件市场设置或切回上游。
+OFFICIAL_REPOSITORY_PATH = "Ariember/MaiBot"
 OFFICIAL_REPOSITORY_URL = f"https://github.com/{OFFICIAL_REPOSITORY_PATH}.git"
 OFFICIAL_SOURCE_ID = "github"
 SUPPORTED_BRANCHES: Tuple[str, ...] = ("main", "dev")
@@ -67,13 +54,12 @@ _GIT_STALL_OPTIONS = ("-c", "http.lowSpeedLimit=1000", "-c", "http.lowSpeedTime=
 _COMMIT_FIELD_SEPARATOR = "\x1f"
 
 BLOCKER_MESSAGES: Dict[str, str] = {
-    "uv_missing": "未找到 uv，请将 uv 加入 MaiBot 启动环境的 PATH",
-    "not_uv_tool": "当前不是 PyPI 来源的 uv tool 安装，请使用原安装工具更新",
-    "package_runner_missing": "请通过 maibot run 启动，才能自动更新并重启",
-    "other_instances_running": "同一工具环境还有其他实例运行，请先停止它们再更新",
-    "package_busy": "工具环境正在更新，请稍后重试",
+    "package_update_removed": "Python 包自更新已移除，请迁移到本 fork 的 GHCR 镜像部署",
+    "image_updater_unavailable": "镜像更新服务未就绪，请检查 updater 容器日志",
+    "image_update_busy": "镜像正在更新，请等待完成",
+    "image_recovery_required": "上次镜像更新中断，请按部署文档恢复后再更新",
     "git_missing": "未找到 Git，无法自更新",
-    "not_git_repo": "当前部署不是 Git 仓库（如 Docker 镜像或压缩包），请按对应部署方式更新",
+    "not_git_repo": "当前部署不是 Git 仓库，请使用本 fork 的 GHCR 镜像或 Git 部署",
     "detached_head": "当前不在任何分支上（分离头指针），无法自更新",
     "unsupported_branch": f"仅支持在 {' / '.join(SUPPORTED_BRANCHES)} 分支上自更新",
     "dirty_worktree": "存在未提交的本地改动，请先提交或还原后再更新",
@@ -169,6 +155,7 @@ class UpdateResult:
     rollback_error: str = ""
     dependencies_synced: bool = False
     source_name: str = ""
+    backup_path: str = ""
 
 
 def _state_dir(root: Path) -> Path:
@@ -348,14 +335,15 @@ def _sync_dependencies(root: Path, tool: str, logger: Any = None) -> None:
 def inspect_local(root: Path = PROJECT_ROOT) -> LocalState:
     """读取本地仓库状态；只执行只读的 Git 命令。"""
 
-    if PACKAGED_INSTALL:
-        state = LocalState(version=read_project_version(), dependency_tool="uv", deployment_type="package")
+    if image_update.image_install():
+        state = LocalState(version=read_project_version(), deployment_type="image", branch=image_update.image_channel())
         try:
-            environment = tool_environment()
-            ensure_other_instances_stopped(environment, root)
+            state.commit = image_update.read_status(_state_dir(root))["digest"]
         except SelfUpdateError as exc:
             state.blocker = exc.code
         return state
+    if PACKAGED_INSTALL:
+        return LocalState(version=read_project_version(), deployment_type="package", blocker="package_update_removed")
     version, _ = _parse_pyproject((root / "pyproject.toml").read_text(encoding="utf-8"))
     state = LocalState(version=version, dependency_tool=detect_dependency_tool(root))
     if shutil.which("git") is None:
@@ -400,13 +388,12 @@ def _collect_apply_blockers(root: Path, local: LocalState, target: str, changed:
 def evaluate_update(local: LocalState, target: str, checked_at: float, root: Path = PROJECT_ROOT) -> UpdateCheck:
     """基于已经取回的目标提交计算更新结论，不联网。"""
 
-    if local.deployment_type == "package":
-        newer = version_tuple(target) > version_tuple(local.version)
+    if local.deployment_type == "image":
         return UpdateCheck(
-            local=local, checked_at=checked_at, latest_commit=target, latest_version=target,
-            behind=int(newer), dependencies_changed=newer,
-            blockers=[local.blocker] if local.blocker else [],
-            source=UpdateSource(id="pypi", name="PyPI", url="https://pypi.org/project/maibot/"),
+            local=local, checked_at=checked_at, latest_commit=target,
+            behind=int(target != local.commit),
+            blockers=[blocker] if (blocker := local.blocker or image_update.update_blocker(_state_dir(root))) else [],
+            source=UpdateSource(id="ghcr", name="GitHub Container Registry", url=image_update.IMAGE_PAGE),
         )
     if local.commit is None:
         raise ValueError("本地仓库状态缺少当前提交，无法评估更新")
@@ -427,10 +414,12 @@ def evaluate_update(local: LocalState, target: str, checked_at: float, root: Pat
 
 
 def select_update_source(source_id: str, custom_prefix: str = "") -> UpdateSource:
-    """本体源码只允许单个 CNB、GitHub 或自定义 HTTPS 前缀。"""
+    """本 fork 的源码只从 GitHub 或用户选择的 HTTPS 前缀下载。"""
     try:
+        if source_id not in {"github", "custom"}:
+            raise ValueError("源码更新只支持 GitHub 或自定义 HTTPS 前缀")
         source = GitSource.select(source_id, custom_prefix)
-        return UpdateSource(source.id, source.name, source.clone_url("Mai-with-u", "MaiBot"))
+        return UpdateSource(source.id, source.name, source.clone_url(*OFFICIAL_REPOSITORY_PATH.split("/")))
     except ValueError as exc:
         raise SelfUpdateError("invalid_source", str(exc)) from exc
 
@@ -440,13 +429,8 @@ def _fetch_branch_head(
 ) -> Tuple[str, UpdateSource]:
     """只从本次选择的来源取回指定分支，失败不自动换源。"""
     source = select_update_source(source_id, custom_prefix)
-    # CNB 公开镜像匿名读取，避免凭据管理器里的过期 Token 把公开请求变成认证失败。
-    anonymous_options = (
-        "-c", "credential.helper=", "-c", "http.extraHeader=",
-        "-c", "http.https://cnb.cool/.extraHeader=",
-    ) if source_id == "cnb" else ()
     try:
-        _git(root, *anonymous_options, *_GIT_STALL_OPTIONS, "fetch", "--no-tags", "--quiet", source.url,
+        _git(root, *_GIT_STALL_OPTIONS, "fetch", "--no-tags", "--quiet", source.url,
              f"refs/heads/{branch}", timeout=GIT_FETCH_TIMEOUT_SECONDS)
     except SelfUpdateError as exc:
         raise SelfUpdateError("fetch_failed", f"{source.name} 获取更新失败：{exc.message}") from exc
@@ -458,12 +442,9 @@ def _get_update_json(path: str, api_source: str, deadline: float) -> Dict[str, A
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise SelfUpdateError("fetch_failed", "检查更新超时（60 秒）")
-    if api_source == "cnb":
-        url = f"https://cnb.cool/Mai-with-u/maibot/-/git/{path}"
-    else:
-        url = GitSource.select("github").api_url("Mai-with-u", "MaiBot", path)
+    url = GitSource.select("github").api_url(*OFFICIAL_REPOSITORY_PATH.split("/"), path)
     try:
-        # CNB 需要明确的 JSON Accept，避免返回网页 HTML。
+        # 明确要求 JSON，避免把网页 HTML 当成更新元数据。
         request = Request(url, headers={"Accept": "application/json", "User-Agent": "MaiBot"})
         with urlopen(request, timeout=remaining) as response:
             payload = json.load(response)
@@ -512,18 +493,11 @@ def _check_source_api(
             return check
         report("比较本地与远端提交")
         comparison = read(f"compare/{local.commit}...{target}?per_page=100")
-        if api_source == "cnb":
-            check.behind = int(comparison["total_commits"])
-            # CNB 没有 behind_by；只有分叉或本地领先时才反向比较。
-            if comparison["merge_base_commit"]["sha"] != local.commit:
-                report("检查分支是否分叉")
-                check.ahead = int(read(f"compare/{target}...{local.commit}")["total_commits"])
-        else:
-            check.behind = int(comparison["ahead_by"])
-            check.ahead = int(comparison["behind_by"])
+        check.behind = int(comparison["ahead_by"])
+        check.ahead = int(comparison["behind_by"])
         if check.ahead:
             check.blockers.append("diverged")
-        changed = {item["path" if api_source == "cnb" else "filename"] for item in comparison["files"]}
+        changed = {item["filename"] for item in comparison["files"]}
         check.dependencies_changed = bool(DEPENDENCY_FILES & changed)
         if check.dependencies_changed and local.dependency_tool is None:
             check.blockers.append("no_dependency_tool")
@@ -532,18 +506,8 @@ def _check_source_api(
             for item in comparison["commits"][:MAX_LISTED_COMMITS]
         ]
         report("读取远端版本与依赖要求")
-        if api_source == "cnb":
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise SelfUpdateError("fetch_failed", "检查更新超时（60 秒）")
-            url = GitSource.select("cnb").raw_url("Mai-with-u", "MaiBot", target, "pyproject.toml")
-            try:
-                project = GitSource.read_text(url, timeout=remaining)
-            except (OSError, ValueError) as exc:
-                raise SelfUpdateError("fetch_failed", f"请求 {url} 失败：{type(exc).__name__}: {exc}") from exc
-        else:
-            contents = read(f"contents/pyproject.toml?ref={target}")
-            project = base64.b64decode(contents["content"]).decode("utf-8")
+        contents = read(f"contents/pyproject.toml?ref={target}")
+        project = base64.b64decode(contents["content"]).decode("utf-8")
         check.latest_version, requires_python = _parse_pyproject(project)
         if _parse_pyproject((root / "pyproject.toml").read_text(encoding="utf-8"))[1] != requires_python:
             check.blockers.append("python_requirement_changed")
@@ -566,56 +530,16 @@ def check_for_update(
     local = inspect_local(root)
     if local.blocker is not None:
         return UpdateCheck(local=local, blockers=[local.blocker])
-    if local.deployment_type == "package":
-        selected = source_id or "pypi"
-        index = package_index(selected)
+    if local.deployment_type == "image":
+        if source_id not in {None, "ghcr"}:
+            raise SelfUpdateError("invalid_source", "镜像部署只能从本 fork 的 GHCR 更新")
         if on_progress is not None:
-            on_progress(f"{PACKAGE_INDEXES[selected][0]}：读取正式版本列表")
-        check = evaluate_update(local, latest_release(local.version, selected), time.time(), root)
-        check.source = UpdateSource(selected, PACKAGE_INDEXES[selected][0], index)
-        return check
+            on_progress(f"GHCR：读取 {local.branch} 镜像摘要")
+        return evaluate_update(local, image_update.fetch_digest(image_update.image_channel()), time.time(), root)
     if local.branch is None:
         raise ValueError("本地仓库状态缺少当前分支，无法检查更新")
     source = select_update_source(source_id or "github", custom_prefix)
-    # 两个源同时检查，失败的一路不掩盖另一路的有效结果；不等待慢源退出。
-    deadline = time.monotonic() + 60
-    executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="update-check")
-    progress = {name: "等待查询" for name in ("github", "cnb")}
-    progress_lock = Lock()
-
-    def report(name: str, message: str) -> None:
-        # 两路并行查询共享诊断快照，超时时保留失败原因和仍在等待的阶段。
-        with progress_lock:
-            progress[name] = message
-        if on_progress is not None:
-            on_progress(f"{name}：{message}")
-
-    def check_source(name: str) -> UpdateCheck:
-        try:
-            result = _check_source_api(local, root, source, name, deadline, lambda message: report(name, message))
-        except (SelfUpdateError, OSError, ValueError, KeyError, TypeError) as exc:
-            report(name, f"失败：{exc}")
-            raise
-        report(name, "检查完成")
-        return result
-
-    pending = {executor.submit(check_source, name) for name in progress}
-    errors: List[str] = []
-    try:
-        while pending:
-            done, pending = wait(pending, timeout=max(0, deadline - time.monotonic()), return_when=FIRST_COMPLETED)
-            if not done:
-                with progress_lock:
-                    details = "；".join(f"{name}：{message}" for name, message in progress.items())
-                raise SelfUpdateError("fetch_failed", f"检查更新超时（60 秒）。各源最后状态：{details}")
-            for future in done:
-                try:
-                    return future.result()
-                except (SelfUpdateError, OSError, ValueError, KeyError, TypeError) as exc:
-                    errors.append(str(exc))
-        raise SelfUpdateError("fetch_failed", "GitHub 和 CNB 检查均失败：" + "；".join(errors))
-    finally:
-        executor.shutdown(wait=False, cancel_futures=True)
+    return _check_source_api(local, root, source, "github", time.monotonic() + 60, on_progress)
 
 
 def request_update(
@@ -626,25 +550,12 @@ def request_update(
     expected_commit 是用户在界面上确认过的目标提交；Runner 只会更新到这个提交。
     """
 
+    if image_update.image_install():
+        if source_id not in {None, "ghcr"}:
+            raise SelfUpdateError("invalid_source", "镜像部署只能从本 fork 的 GHCR 更新")
+        return PendingUpdate(**image_update.request_image_update(_state_dir(root), expected_commit))
     if PACKAGED_INSTALL:
-        selected = source_id or "pypi"
-        package_index(selected)
-        local = inspect_local(root)
-        if local.blocker:
-            raise SelfUpdateError(local.blocker, BLOCKER_MESSAGES[local.blocker])
-        if version_tuple(expected_commit) <= version_tuple(local.version):
-            raise SelfUpdateError("already_up_to_date", "目标版本必须高于当前版本")
-        if not release_exists(fetch_releases(selected), expected_commit):
-            raise SelfUpdateError("unknown_version", "所选包源没有这个可用的正式版本，请重新检查")
-        pending = PendingUpdate(expected_commit, local.version, "pypi", time.time(), selected)
-        path = _pending_path(root)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with path.open("x", encoding="utf-8") as output:
-                json.dump(asdict(pending), output)
-        except FileExistsError as exc:
-            raise SelfUpdateError("package_busy", "已有更新请求，请等待更新完成") from exc
-        return pending
+        raise SelfUpdateError("package_update_removed", BLOCKER_MESSAGES["package_update_removed"])
     selected = source_id or "github"
     select_update_source(selected, custom_prefix)
     if _COMMIT_PATTERN.fullmatch(expected_commit) is None:
@@ -775,6 +686,9 @@ def apply_pending_update(logger: Any, root: Path = PROJECT_ROOT) -> Optional[Upd
     更新成功后，调用方应让新代码的 Runner 接手（见 process_runner.run_runner）。
     """
 
+    # 镜像更新由外部执行器处理；旧包安装留下的请求也不能再执行。
+    if image_update.image_install() or PACKAGED_INSTALL:
+        return None
     pending_path = _pending_path(root)
     if not pending_path.is_file():
         return None
@@ -789,25 +703,10 @@ def apply_pending_update(logger: Any, root: Path = PROJECT_ROOT) -> Optional[Upd
         result.branch = pending.branch
         result.from_commit = pending.base_commit
         result.to_commit = pending.target_commit
-        if PACKAGED_INSTALL:
-            result.from_version = pending.base_commit
-            result.to_version = pending.target_commit
-            # 包安装没有 Git 提交，结果显示只使用版本号。
-            result.from_commit = result.to_commit = ""
-            if pending.branch != "pypi" or not 0 <= time.time() - pending.requested_at <= PENDING_MAX_AGE_SECONDS:
-                raise SelfUpdateError("stale_request", "更新请求已过期或不属于包安装，请重新检查更新")
-            if os.environ.get(PACKAGE_RUNNER_ENV) != "1":
-                raise SelfUpdateError("package_runner_missing", BLOCKER_MESSAGES["package_runner_missing"])
-            result = UpdateResult(**run_update(
-                root, pending.base_commit, pending.target_commit, asdict(result), pending.source_id or "pypi"
-            ))
-        else:
-            _execute_update(pending, result, logger, root)
+        _execute_update(pending, result, logger, root)
     except SelfUpdateError as exc:
         result.error_code = exc.code
         result.error = exc.message
-        if PACKAGED_INSTALL and exc.code == "package_updater_failed":
-            result.rollback_error = "独立更新进程未返回结果，无法确认环境状态，请手动检查工具环境"
     except (OSError, TypeError, ValueError, subprocess.SubprocessError) as exc:
         result.error_code = "unexpected_error"
         result.error = f"{type(exc).__name__}: {exc}"

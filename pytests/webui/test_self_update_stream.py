@@ -5,7 +5,27 @@ import json
 import pytest
 
 from src.common.self_update import LocalState, SelfUpdateError, UpdateCheck
+from src.common.self_update import PendingUpdate
 from src.webui.routers import self_update as module
+
+
+@pytest.mark.asyncio
+async def test_image_apply_queues_without_restarting_worker(monkeypatch):
+    pending = PendingUpdate("sha256:" + "2" * 64, "sha256:" + "1" * 64, "latest", 123.0, "ghcr")
+    monkeypatch.setattr(module, "request_update", lambda *args, **kwargs: pending)
+
+    def restart():
+        pytest.fail("镜像更新不能先重启旧 Worker")
+
+    monkeypatch.setattr(module, "schedule_restart", restart)
+    response = await module.apply_self_update(module.SelfUpdateApplyRequest(source_id="ghcr", expected_commit=pending.target_commit))
+    assert response.success and response.requested_at == 123.0
+
+
+@pytest.mark.parametrize("source", ["pypi", "tuna", "aliyun", "cnb"])
+def test_removed_sources_are_rejected(source):
+    with pytest.raises(ValueError):
+        module.SelfUpdateCheckRequest(source_id=source)
 
 
 @pytest.mark.asyncio
@@ -20,7 +40,7 @@ async def test_stream_delivers_progress_before_check_finishes(monkeypatch):
 
     monkeypatch.setattr(module.self_update_cache, "get", check)
     monkeypatch.setattr(module, "read_last_result", lambda: None)
-    stream = module._stream_check_events(module.SelfUpdateCheckRequest(source_id="cnb"))
+    stream = module._stream_check_events(module.SelfUpdateCheckRequest(source_id="github"))
     try:
         first = json.loads(await asyncio.wait_for(anext(stream), timeout=1))
         assert first == {"type": "progress", "message": "cnb：读取 dev 分支信息"}
@@ -44,7 +64,7 @@ async def test_stream_retains_error_details(monkeypatch):
 
     monkeypatch.setattr(module.self_update_cache, "get", check)
     events = [json.loads(line) async for line in module._stream_check_events(
-        module.SelfUpdateCheckRequest(source_id="cnb"),
+        module.SelfUpdateCheckRequest(source_id="github"),
     )]
     assert [event["type"] for event in events] == ["progress", "error"]
     assert events[-1]["message"] == message
@@ -63,7 +83,7 @@ async def test_disconnect_drops_late_worker_events(monkeypatch):
         raise SelfUpdateError("fetch_failed", "timed out")
 
     monkeypatch.setattr(module.self_update_cache, "get", check)
-    stream = module._stream_check_events(module.SelfUpdateCheckRequest(source_id="cnb"))
+    stream = module._stream_check_events(module.SelfUpdateCheckRequest(source_id="github"))
     try:
         await asyncio.wait_for(anext(stream), timeout=1)
         await stream.aclose()

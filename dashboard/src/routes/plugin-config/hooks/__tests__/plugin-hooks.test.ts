@@ -877,13 +877,20 @@ describe('usePluginLifecycle', () => {
     })
     expect(updatePlugin).toHaveBeenCalledTimes(1)
     act(() => result.current.closeUpdatePluginDialog())
-    expect(result.current.updateDialogOpen).toBe(true)
+    expect(result.current.updateDialogOpen).toBe(false)
+    expect(vi.mocked(updatePlugin).mock.calls[0][4]?.aborted).toBe(true)
 
     await act(async () => {
       deferred.resolve({ success: true })
     })
+    expect(result.current.updateProgress).toBeNull()
+    expect(options.onChanged).not.toHaveBeenCalled()
+
+    act(() => result.current.openUpdatePluginDialog(plugin, makeClickEvent()))
+    vi.mocked(updatePlugin).mockResolvedValueOnce({ success: true } as never)
+    await act(async () => { await result.current.handleConfirmUpdatePlugin() })
     await waitFor(() => expect(result.current.updateProgress?.stage).toBe('success'))
-    expect(updatePlugin).toHaveBeenCalledWith('test.emoji', 'https://example.com/emoji.git', 'main')
+    expect(updatePlugin).toHaveBeenLastCalledWith('test.emoji', 'https://example.com/emoji.git', 'main', undefined, expect.any(AbortSignal))
     expect(toastMock).toHaveBeenCalledWith({
       title: '更新插件成功',
       description: 'Emoji Plugin 已完成更新/升级',

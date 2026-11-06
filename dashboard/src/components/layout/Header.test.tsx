@@ -10,6 +10,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Header } from './Header'
+import { ThemeProviderContext } from '@/lib/theme-context'
+import { loadThemeConfig } from '@/lib/theme/storage'
 import type { WebUIExtension } from '@/lib/plugin-webui'
 
 const mocks = vi.hoisted(() => ({
@@ -290,7 +292,7 @@ describe('Header', () => {
     vi.useRealTimers()
   })
 
-  it('触发顶栏主要操作、工作区切换、语言和主题变更', async () => {
+  it('触发顶栏主要操作、工作区切换和主题变更', async () => {
     const props = makeProps()
     render(<Header {...props} />)
 
@@ -298,18 +300,15 @@ describe('Header', () => {
     expect(document.querySelector('[data-dashboard-header="true"]')).toHaveClass('bg-background')
     expect(document.querySelector('[data-dashboard-header="true"]')).not.toHaveClass('bg-card/80')
 
-    fireEvent.click(screen.getByRole('button', { name: 'a11y.closeMenu' }))
     const sidebarModeButton = screen.getByRole('button', {
       name: 'header.switchSidebarToHover',
     })
     expect(sidebarModeButton.querySelector('svg')).toHaveClass('lucide-chevron-left', 'h-5', 'w-5')
     fireEvent.click(sidebarModeButton)
-    fireEvent.click(screen.getByRole('button', { name: 'header.collapseTopbar' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'header.collapseTopbar' })[0])
     fireEvent.click(screen.getByRole('button', { name: 'header.searchPlaceholder' }))
     fireEvent.click(screen.getByRole('button', { name: 'header.viewDocs' }))
     fireEvent.click(screen.getAllByRole('button', { name: 'header.switchToLight' })[0])
-    fireEvent.click(screen.getAllByRole('button', { name: 'English' })[0])
-    fireEvent.click(screen.getByRole('button', { name: 'header.logout' }))
     fireEvent.click(screen.getByRole('tab', { name: 'workspace.logs' }))
 
     expect(props.onSidebarToggle).toHaveBeenCalledOnce()
@@ -317,8 +316,6 @@ describe('Header', () => {
     expect(props.onSearchOpenChange).toHaveBeenCalledWith(true)
     expect(window.open).toHaveBeenCalledWith('https://docs.mai-mai.org', '_blank')
     expect(mocks.toggleTheme).toHaveBeenCalledWith('light', props.onThemeChange, expect.anything())
-    expect(mocks.changeLanguage).toHaveBeenCalledWith('en')
-    expect(mocks.logout).toHaveBeenCalledOnce()
     expect(props.onWorkspaceNavigate).toHaveBeenCalledWith('/logs')
   })
 
@@ -372,32 +369,21 @@ describe('Header', () => {
     expect(document.querySelectorAll('[data-layout-id="topbar-selection-pill"]')).toHaveLength(1)
   })
 
-  it('语言菜单打开时高亮语言按钮，并支持日韩切换', () => {
+  it('设置入口指向设置页，语言切换由设置页负责', () => {
     render(<Header {...makeProps()} />)
-
-    fireEvent.click(screen.getByRole('button', { name: '打开语言菜单' }))
-    expect(document.querySelector('[data-header-action-highlighted="true"]')).toHaveAttribute(
-      'aria-label',
-      'header.switchLanguage'
-    )
-
-    fireEvent.click(screen.getAllByRole('button', { name: '日本語' })[0])
-    fireEvent.click(screen.getAllByRole('button', { name: '한국어' })[0])
-    expect(mocks.changeLanguage).toHaveBeenCalledWith('ja')
-    expect(mocks.changeLanguage).toHaveBeenCalledWith('ko')
+    expect(screen.getByTitle('sidebar.menu.settings')).toHaveAttribute('href', '/settings')
+    expect(screen.queryByRole('button', { name: 'header.switchLanguage' })).not.toBeInTheDocument()
   })
 
-  it('亮色主题走夜间切换，移动端更多菜单也能改主题并登出', () => {
+  it('亮色主题走夜间切换，移动端更多菜单也能改主题', () => {
     const props = makeProps({ actualTheme: 'light' })
     render(<Header {...props} />)
 
     fireEvent.click(screen.getAllByRole('button', { name: 'header.switchToDark' })[0])
     fireEvent.click(screen.getAllByRole('button', { name: 'header.switchToDark' })[1])
-    fireEvent.click(screen.getByRole('button', { name: 'header.logoutLabel' }))
 
     expect(mocks.toggleTheme).toHaveBeenCalledTimes(2)
     expect(mocks.toggleTheme).toHaveBeenNthCalledWith(1, 'dark', props.onThemeChange, expect.anything())
-    expect(mocks.logout).toHaveBeenCalledOnce()
     expect(screen.getByRole('button', { name: 'header.moreActions' })).toBeInTheDocument()
   })
 
@@ -535,7 +521,17 @@ describe('Header', () => {
     switcher.dataset.logViewerSwitcherCompact = 'true'
     document.body.appendChild(switcher)
 
-    const { rerender, unmount } = render(<Header {...makeProps({ workspaceMode: 'logs' })} />)
+    const { rerender, unmount } = render(<Header {...makeProps({ workspaceMode: 'logs' })} />, {
+      wrapper: ({ children }) => (
+        <ThemeProviderContext.Provider value={{
+          theme: 'light', resolvedTheme: 'light', setTheme: vi.fn(),
+          themeConfig: { ...loadThemeConfig(), dashboardStyle: 'future-retro' },
+          updateThemeConfig: vi.fn(), resetTheme: vi.fn(),
+        }}>
+          {children}
+        </ThemeProviderContext.Provider>
+      ),
+    })
     const tabs = document.querySelector('[data-dashboard-workspace-tabs="true"]') as HTMLElement
     const measure = document.querySelector(
       '[data-dashboard-workspace-tabs-measure="true"]'
@@ -662,16 +658,14 @@ describe('Header', () => {
     })
   })
 
-  it('顶栏按钮悬停定时器可被再次进入打断，并触发工作区/语言/文档等剩余回调', () => {
+  it('顶栏按钮悬停定时器可被再次进入打断，并触发工作区/文档等剩余回调', () => {
     vi.useFakeTimers()
     const props = makeProps()
     render(<Header {...props} />)
 
     const settingsAction = screen.getByTitle('sidebar.menu.settings')
     const docsButton = screen.getByRole('button', { name: 'header.viewDocs' })
-    const languageButton = screen.getByRole('button', { name: 'header.switchLanguage' })
     const themeButton = screen.getAllByRole('button', { name: 'header.switchToLight' })[0]
-    const logoutButton = screen.getByRole('button', { name: 'header.logout' })
     const settingsLink = screen.getByRole('tab', { name: 'workspace.settings' })
 
     fireEvent.pointerEnter(settingsAction)
@@ -686,17 +680,11 @@ describe('Header', () => {
 
     fireEvent.pointerEnter(docsButton)
     fireEvent.pointerLeave(docsButton)
-    fireEvent.pointerEnter(languageButton)
-    fireEvent.click(languageButton)
     fireEvent.pointerEnter(themeButton)
     fireEvent.pointerLeave(themeButton)
-    fireEvent.pointerEnter(logoutButton)
-    fireEvent.pointerLeave(logoutButton)
     fireEvent.click(settingsLink)
-    fireEvent.click(screen.getAllByRole('button', { name: 'English' })[1])
 
     expect(settingsLink).toHaveAttribute('href', '/')
-    expect(mocks.changeLanguage).toHaveBeenCalledWith('en')
 
     act(() => {
       vi.advanceTimersByTime(600)
@@ -749,12 +737,6 @@ describe('Header', () => {
     )
   })
 
-  it('语言代码为空时回退中文并勾选中文项', () => {
-    mocks.language = ''
-    render(<Header {...makeProps()} />)
-    const zhItem = screen.getAllByRole('button', { name: /中文/ })[0]
-    expect(zhItem.querySelector('svg')).toBeTruthy()
-  })
 })
 
 function makeDomRect(overrides: Partial<DOMRect>): DOMRect {

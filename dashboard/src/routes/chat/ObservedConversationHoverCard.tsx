@@ -45,6 +45,7 @@ export function ObservedConversationHoverCard({
     <Popover open={open} onOpenChange={(value) => { clearTimer(); setOpen(value) }}>
       <PopoverAnchor asChild>
         <div
+          role="presentation"
           data-conversation-hover-anchor="true"
           onPointerEnter={(event) => { if (event.pointerType === 'mouse') schedule(true) }}
           onPointerLeave={() => schedule(false)}

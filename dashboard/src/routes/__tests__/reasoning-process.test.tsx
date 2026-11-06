@@ -667,7 +667,7 @@ describe('ReasoningProcessPage 浏览筛选与分页', () => {
     expect(screen.getAllByText('输入 10 / 输出 5 / 总计 15 Token').length).toBeGreaterThan(0)
     expect(screen.getByText('2 条记录')).toBeInTheDocument()
     expect(screen.getAllByText('未选择记录').length).toBeGreaterThan(0)
-    expect(screen.getByText('从左侧列表选择一条记录')).toBeInTheDocument()
+    expect(screen.getByText('从记录列表选择一条记录')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '类型' }))
     await screen.findByText('主流程')
@@ -1238,20 +1238,18 @@ describe('ReasoningProcessPage 深链与嵌入', () => {
     expect(screen.queryByRole('button', { name: '返回观察' })).not.toBeInTheDocument()
   })
 
-  it('嵌入模式把刷新放入顶栏，浏览时在侧栏提供会话筛选', async () => {
+  it('嵌入模式由日志页提供刷新，浏览时在侧栏提供会话筛选', async () => {
     const onToolbarContentVisibleChange = vi.fn()
     const user = userEvent.setup()
     renderPage({ onToolbarContentVisibleChange }, { toolbar: true })
 
     const topbar = document.getElementById('rp-topbar')
-    await waitFor(() => {
-      expect(topbar && within(topbar).getByRole('button', { name: '刷新' })).toBeTruthy()
-    })
+    expect(topbar && within(topbar).queryByRole('button', { name: '刷新' })).toBeNull()
     expect(onToolbarContentVisibleChange).toHaveBeenCalledWith(false)
 
     await enterStage(user, 'planner')
     await screen.findByText('晚饭计划')
-    expect(onToolbarContentVisibleChange).toHaveBeenCalledWith(true)
+    expect(onToolbarContentVisibleChange).toHaveBeenLastCalledWith(true)
 
     const sessionTrigger = screen.getByText('自动选择最近会话')
     await user.click(sessionTrigger)

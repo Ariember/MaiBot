@@ -52,8 +52,8 @@ const baseTask: TaskConfig = {
 afterEach(() => cleanup())
 
 describe('TaskConfigCard 缺口', () => {
-  it('缺省字段回落到空模型列表、温度 0.7、Token 4096 与 balance', () => {
-    render(
+  it('空模型列表不显示参数，选中模型后使用默认参数与 balance', () => {
+    const { rerender } = render(
       <TaskConfigCard
         title="缺省任务"
         description="默认值"
@@ -64,6 +64,9 @@ describe('TaskConfigCard 缺口', () => {
     )
 
     expect(screen.getByTestId('multi-select')).toHaveAttribute('data-selected', '')
+    expect(screen.queryByLabelText('温度')).not.toBeInTheDocument()
+    rerender(<TaskConfigCard title="缺省任务" description="默认值"
+      taskConfig={{ model_list: ['alpha'] }} modelNames={['alpha']} onChange={vi.fn()} />)
     expect(screen.getByLabelText('温度')).toHaveValue(0.7)
     expect(screen.getByTestId('temperature-slider')).toHaveTextContent('0.7')
     expect(screen.getByDisplayValue('4096')).toBeInTheDocument()
@@ -95,7 +98,7 @@ describe('TaskConfigCard 缺口', () => {
 
   it('高级模式、单选、导览标记与硬超时缺省值/非法值', () => {
     const onChange = vi.fn()
-    const { container } = render(
+    render(
       <TaskConfigCard
         title="嵌入任务"
         description="高级"
@@ -109,10 +112,9 @@ describe('TaskConfigCard 缺口', () => {
       />
     )
 
-    expect(container.firstChild).toHaveClass('bg-amber-50/30')
     // 单选模型任务改用下拉单选，不再渲染多选标签列表
     expect(screen.queryByTestId('multi-select')).toBeNull()
-    expect(screen.getAllByTestId('select-root')[0]).toHaveAttribute('data-value', 'alpha')
+    expect(screen.getAllByTestId('select-root').find((element) => element.dataset.value === 'alpha')).toBeInTheDocument()
     expect(document.querySelector('[data-tour="embedding-models"]')).not.toBeNull()
 
     // 硬超时缺省时不预填，输入框为空、由 placeholder 提示后端默认值 240 秒

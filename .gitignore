@@ -387,3 +387,6 @@ agentlite/
 /MaiMaiFocusPet-Godot/
 start_mac.command
 /.dsh-maibot-manager.lock
+/docker-update-state/
+/docker-backups/
+/docker-compose.override.yml

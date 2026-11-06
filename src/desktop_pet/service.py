@@ -240,7 +240,7 @@ class DesktopPetService:
             )
             current = runtime.get_desktop_pet_button_plugins()
             buttons: List[Dict[str, Any]] = []
-            for (plugin_id, contribution), result in zip(plugins.items(), results):
+            for (plugin_id, contribution), result in zip(plugins.items(), results, strict=True):
                 if current.get(plugin_id) != contribution:
                     continue  # 请求期间已卸载或重载的贡献不能重新出现在窗口里。
                 if isinstance(result, BaseException):

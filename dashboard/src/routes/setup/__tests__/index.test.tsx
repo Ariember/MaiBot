@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => {
     loadPersonalityConfig: vi.fn(),
     loadApiProviderSetupConfig: vi.fn(),
     loadModelSetupConfig: vi.fn(),
+    fetchSetupModels: vi.fn(),
     saveBotBasicConfig: vi.fn(),
     savePersonalityConfig: vi.fn(),
     saveApiProviderSetupConfig: vi.fn(),
@@ -60,6 +61,7 @@ vi.mock('../api', () => ({
   loadPersonalityConfig: mocks.loadPersonalityConfig,
   loadApiProviderSetupConfig: mocks.loadApiProviderSetupConfig,
   loadModelSetupConfig: mocks.loadModelSetupConfig,
+  fetchSetupModels: mocks.fetchSetupModels,
   saveBotBasicConfig: mocks.saveBotBasicConfig,
   savePersonalityConfig: mocks.savePersonalityConfig,
   saveApiProviderSetupConfig: mocks.saveApiProviderSetupConfig,
@@ -164,6 +166,7 @@ beforeEach(() => {
   mocks.loadPersonalityConfig.mockResolvedValue({ ...defaultPersonality })
   mocks.loadApiProviderSetupConfig.mockResolvedValue({ ...defaultApiProvider })
   mocks.loadModelSetupConfig.mockResolvedValue({ ...defaultModelSetup })
+  mocks.fetchSetupModels.mockResolvedValue([{ id: 'deepseek-flash', name: 'deepseek-flash' }])
   mocks.saveBotBasicConfig.mockResolvedValue({ success: true })
   mocks.savePersonalityConfig.mockResolvedValue({ success: true })
   mocks.saveApiProviderSetupConfig.mockResolvedValue({ success: true })
@@ -401,7 +404,7 @@ describe('SetupPage 自定义 Token 步骤', () => {
     expect(screen.getByRole('button', { name: 'setupPage.actions.saveToken' })).toBeInTheDocument()
   })
 
-  it('Token 不满足真实校验规则时提示失败规则且不提交', async () => {
+  it('Token 不满足真实校验规则时禁用保存且不提交', async () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
@@ -410,15 +413,7 @@ describe('SetupPage 自定义 Token 步骤', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.saveToken' }))
 
-    await waitFor(() => {
-      expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.validationFailedTitle',
-        description: `setupPage.validation.customTokenInvalid:${JSON.stringify({
-          failedRules: '长度至少 10 位, 包含大写字母, 包含特殊符号',
-        })}`,
-        variant: 'destructive',
-      })
-    })
+    expect(screen.getByRole('button', { name: 'setupPage.actions.saveToken' })).toBeDisabled()
     expect(mocks.updateAccessToken).not.toHaveBeenCalled()
   })
 
@@ -579,6 +574,8 @@ describe('SetupPage 错误态与空态', () => {
   })
 
   it('完成时 planner 模型标识符为空则拦截且不标记完成', async () => {
+    mocks.loadApiProviderSetupConfig.mockResolvedValue({ ...defaultApiProvider, base_url: 'https://custom.example/v1' })
+    mocks.fetchSetupModels.mockRejectedValue(new Error('模型列表暂不可用'))
     mocks.loadModelSetupConfig.mockResolvedValue({
       ...defaultModelSetup,
       planner_model_identifier: '   ',
@@ -586,6 +583,8 @@ describe('SetupPage 错误态与空态', () => {
     render(<SetupPage />)
     await waitLoadingDone()
     await goToLastStep()
+
+    await screen.findAllByPlaceholderText('手动输入模型标识符')
 
     fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.complete' }))
 
@@ -604,6 +603,8 @@ describe('SetupPage 错误态与空态', () => {
     render(<SetupPage />)
     await waitLoadingDone()
     await goToLastStep()
+
+    await screen.findAllByRole('combobox', { name: /identifier.label/ })
 
     fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.complete' }))
 
@@ -646,6 +647,7 @@ it('完成模型配置后进入带试聊引导的聊天页', async () => {
   await waitLoadingDone()
   fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.next' }))
   await screen.findByRole('button', { name: 'setupPage.actions.complete' })
+  await screen.findAllByRole('combobox', { name: /identifier.label/ })
   fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.complete' }))
   await waitFor(() => {
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/chat', search: { setupTrial: true } })

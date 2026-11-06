@@ -2,17 +2,13 @@ services:
   core:
     container_name: maim-bot-core
     stop_grace_period: 70s # Runner 最多等待 Worker 60 秒，再保留强制退出时间
-    #### prod ####
-    image: sengokucola/maibot:latest
-    # image: infinitycat/maibot:latest
-    #### dev ####
-    # image: sengokucola/maibot:dev
-    # image: infinitycat/maibot:dev
+    image: ghcr.io/ariember/maibot:${MAIBOT_IMAGE_CHANNEL:-latest}
     environment:
       - TZ=Asia/Shanghai
       - MAIBOT_LEGACY_0X_UPGRADE_CONFIRMED=1 # Docker 无法交互确认旧版升级迁移，默认跳过确认提示
       - MAIBOT_STATISTICS_REPORT_PATH=/MaiMBot/data/maibot_statistics.html # 统计数据输出到共享目录，首次运行可自动创建文件
       - HTTP_HOST=0.0.0.0 # Docker 中需要监听全部容器网卡，宿主机才能通过端口映射访问 WebUI
+      - MAIBOT_IMAGE_CHANNEL=${MAIBOT_IMAGE_CHANNEL:-latest}
     ports:
       - "18001:8001" # webui端口
 #      - "8000:8000"
@@ -20,15 +16,28 @@ services:
       # 监听地址和端口会用于生成或迁移 ./docker-config/mmc/bot_config.toml 的 maim_message 与 webui 配置段
       - ./docker-config/mmc:/MaiMBot/config # 持久化bot配置文件
       - ./data/MaiMBot:/MaiMBot/data # 共享目录
+      - ./docker-update-state:/MaiMBot/data/self_update # 更新器队列，独立于业务数据备份
       - ./data/MaiMBot-plugin-data:/MaiMBot/data/plugins # 插件持久数据目录，与插件源码目录隔离
       - ./data/MaiMBot/emoji:/data/emoji # 持久化表情包
       - ./data/MaiMBot/plugins:/MaiMBot/plugins # 插件目录
       - ./data/MaiMBot/logs:/MaiMBot/logs # 日志目录
       - ./depends-data:/MaiMBot/depends-data # 运行时资源文件
-      # - site-packages:/usr/local/lib/python3.13/site-packages # 持久化Python包，需要时启用
     restart: always
     networks:
       - maim_bot
+
+  updater:
+    image: ghcr.io/ariember/maibot-updater:${MAIBOT_IMAGE_CHANNEL:-latest}
+    restart: unless-stopped
+    environment:
+      - MAIBOT_DEPLOY_DIR=${MAIBOT_DEPLOY_DIR:?请在 .env 中设置部署目录的绝对路径，见 docs/docker-deployment.md}
+      - MAIBOT_IMAGE_CHANNEL=${MAIBOT_IMAGE_CHANNEL:-latest}
+    volumes:
+      # 路径必须与宿主机一致，否则 Compose 会把相对挂载解析到错误的数据目录。
+      - ${MAIBOT_DEPLOY_DIR}:${MAIBOT_DEPLOY_DIR}
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - core
 
   # 启用 HTTPS 时，建议注释掉 core 服务中的 "18001:8001" 端口映射，
   # 然后取消注释此 Caddy 反向代理示例块，并按 dashboard/docs/Caddyfile.docker.example 修改域名。
@@ -90,8 +99,7 @@ services:
   #   networks:
   #     - maim_bot
   
-# volumes:         #  若需要持久化Python包时启用
-#   site-packages:
+# volumes:
 #   caddy_data:
 #   caddy_config:
 networks:

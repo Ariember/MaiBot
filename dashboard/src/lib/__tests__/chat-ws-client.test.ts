@@ -105,6 +105,7 @@ describe('chatWsClient', () => {
       session: 'tab-1',
       data: {
         content: '看看这张图',
+        files: [],
         emojis: [],
         images: [
           {
@@ -129,6 +130,7 @@ describe('chatWsClient', () => {
       session: 'tab-2',
       data: {
         content: '你好',
+        files: [],
         emojis: [],
         images: [],
         user_name: 'Bob',

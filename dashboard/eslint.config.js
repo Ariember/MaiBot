@@ -43,6 +43,11 @@ export default tseslint.config(
       // jsx-a11y: 降级为 warn 避免阻塞构建，后续 Task 17 逐步修复
       'jsx-a11y/anchor-ambiguous-text': 'warn',
       'jsx-a11y/no-autofocus': 'warn',
+      // 这些 Radix 封装渲染可关联 label 的原生按钮。
+      'jsx-a11y/label-has-associated-control': ['error', {
+        controlComponents: ['Checkbox', 'RadioGroupItem', 'Switch'],
+        depth: 4,
+      }],
     },
   },
   {

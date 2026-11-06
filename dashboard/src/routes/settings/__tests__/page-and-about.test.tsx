@@ -20,6 +20,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('../AppearanceTab', () => ({ AppearanceTab: () => <div>外观页内容</div> }))
+vi.mock('../GeneralTab', () => ({ GeneralTab: () => <div>常规页内容</div> }))
 vi.mock('../SecurityTab', () => ({ SecurityTab: () => <div>安全页内容</div> }))
 vi.mock('../OtherTab', () => ({ OtherTab: () => <div>其他页内容</div> }))
 vi.mock('../MobileAccountCard', () => ({ MobileAccountCard: () => null }))
@@ -46,19 +47,19 @@ describe('独立 WebUI 设置页与关于页', () => {
     expect(screen.getByText('其他页内容')).toBeInTheDocument()
   })
 
-  it('缺省或未知标签显示外观页，滚动由主内容区管理', () => {
+  it('缺省或未知标签显示常规页，滚动由主内容区管理', () => {
     const view = render(<SettingsPage />)
-    expect(screen.getByText('外观页内容')).toBeInTheDocument()
+    expect(screen.getByText('常规页内容')).toBeInTheDocument()
     routerState.searchStr = '?tab=unknown'
     view.rerender(<SettingsPage />)
-    expect(screen.getByText('外观页内容')).toBeInTheDocument()
+    expect(screen.getByText('常规页内容')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'settings.title' })).not.toBeInTheDocument()
   })
 
-  it('切回外观页删除 tab 与旧版 mode 参数，回到独立设置页', async () => {
+  it('切回常规页删除 tab 与旧版 mode 参数，回到独立设置页', async () => {
     routerState.searchStr = '?tab=about&mode=webui'
     render(<SettingsPage />)
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'settings.tabs.appearance' }))
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'settings.tabs.general' }))
     expect(navigateMock).toHaveBeenCalledWith({ href: '/settings', replace: true })
   })
 
@@ -70,7 +71,7 @@ describe('独立 WebUI 设置页与关于页', () => {
     expect(screen.getByText('TypeScript')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /settings.about.visitGitHub/ })).toHaveAttribute(
       'href',
-      'https://github.com/Mai-with-u/MaiBot-Dashboard'
+      'https://github.com/Mai-with-u/MaiBot'
     )
     expect(screen.getByRole('link', { name: '@MotricSeven' })).toHaveAttribute(
       'rel',
