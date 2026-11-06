@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, protocol, session } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-import icon from '../../resources/icon.png?asset'
+import icon from '../resources/icon.png?asset'
 import { registerAppProtocol } from './protocol'
 import {
   addBackend,
