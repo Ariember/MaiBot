@@ -16,6 +16,7 @@ import asyncio
 import json
 
 from src.common.logger import get_logger
+from src.common.image_update import IMAGE_PAGE
 from src.common.self_update import (
     OFFICIAL_REPOSITORY_URL,
     SelfUpdateError,
@@ -73,6 +74,7 @@ class SelfUpdateResultResponse(BaseModel):
     rollback_error: str
     dependencies_synced: bool
     source_name: str
+    backup_path: str = ""
 
 
 class SelfUpdateStatusResponse(BaseModel):
@@ -102,7 +104,7 @@ class SelfUpdateStatusResponse(BaseModel):
 
 
 class SelfUpdateSourceRequest(BaseModel):
-    source_id: Literal["cnb", "github", "custom", "pypi", "tuna", "aliyun"]
+    source_id: Literal["github", "custom", "ghcr"]
     custom_prefix: str = Field("", max_length=2048)
 
     def validate_prefix(self) -> None:
@@ -122,7 +124,7 @@ class SelfUpdateCheckRequest(SelfUpdateSourceRequest):
 class SelfUpdateApplyRequest(SelfUpdateSourceRequest):
     """执行更新请求。"""
 
-    expected_commit: str = Field(description="界面确认的更新目标：源码版为提交 SHA，包安装版为正式版本号")
+    expected_commit: str = Field(max_length=71, description="界面确认的提交 SHA 或完整镜像 SHA-256 摘要")
 
 
 class SelfUpdateApplyResponse(BaseModel):
@@ -130,15 +132,16 @@ class SelfUpdateApplyResponse(BaseModel):
 
     success: bool
     message: str
+    requested_at: float
 
 
 def _build_status_response(check: UpdateCheck) -> SelfUpdateStatusResponse:
     local = check.local
     last_result = read_last_result()
     return SelfUpdateStatusResponse(
-        supported=local.blocker is None,
+        supported=local.blocker is None or local.deployment_type == "image",
         deployment_type=local.deployment_type,
-        repository_url="https://pypi.org/project/maibot/" if local.deployment_type == "package" else OFFICIAL_REPOSITORY_URL,
+        repository_url=IMAGE_PAGE if local.deployment_type == "image" else OFFICIAL_REPOSITORY_URL,
         current_version=local.version,
         current_commit=local.commit,
         branch=local.branch,
@@ -175,7 +178,7 @@ def get_self_update_status() -> SelfUpdateStatusResponse:
 def check_self_update(request: SelfUpdateCheckRequest) -> SelfUpdateStatusResponse:
     """自动检查优先复用 60 分钟缓存，手动检查强制联网。"""
 
-    # 检查缓存与插件市场独立；源码元数据并发查询，下载仍保留本次所选来源。
+    # 检查缓存与插件市场独立，下载保留本次所选来源。
     try:
         request.validate_prefix()
         check = self_update_cache.get(
@@ -257,6 +260,8 @@ async def apply_self_update(request: SelfUpdateApplyRequest) -> SelfUpdateApplyR
         raise HTTPException(status_code=409, detail=e.message) from e
 
     logger.info(f"WebUI 触发自更新: {pending.base_commit[:10]} -> {pending.target_commit[:10]}")
+    if pending.source_id == "ghcr":
+        return SelfUpdateApplyResponse(success=True, message="镜像更新已排队，执行器将备份并替换容器", requested_at=pending.requested_at)
     try:
         schedule_restart()
     except Exception:
@@ -264,4 +269,4 @@ async def apply_self_update(request: SelfUpdateApplyRequest) -> SelfUpdateApplyR
         clear_pending_update()
         raise
 
-    return SelfUpdateApplyResponse(success=True, message="麦麦正在更新并重启...")
+    return SelfUpdateApplyResponse(success=True, message="麦麦正在更新并重启...", requested_at=pending.requested_at)

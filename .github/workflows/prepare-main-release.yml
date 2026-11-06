@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   prepare-dashboard-release:
+    if: github.repository == 'Mai-with-u/MaiBot'
     name: Prepare Dashboard Stable Release
     runs-on: ubuntu-24.04
     environment: webui

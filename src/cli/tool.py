@@ -56,11 +56,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     os.environ.pop("MAIBOT_INITIALIZE_ONLY", None)
     if PACKAGED_INSTALL and (Path(sys.prefix) / "uv-receipt.toml").is_file():
-        from src.common.package_update import PACKAGE_RUNNER_ENV, register_instance
+        from src.common.instance_lock import register_instance
 
         # 只有最外层 CLI 持有租约；Runner/Worker 重启沿用实例环境。
         with register_instance(directory):
-            os.environ[PACKAGE_RUNNER_ENV] = "1"
             runpy.run_module("src.runtime", run_name="__main__")
     else:
         runpy.run_module("src.runtime", run_name="__main__")

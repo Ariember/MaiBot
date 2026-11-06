@@ -46,7 +46,7 @@ function formatTime(timestamp: number): string {
 }
 
 function formatRevision(version: string, commit: string): string {
-  return commit ? `${version} (${commit.slice(0, 8)})` : version
+  return commit ? `${version} (${commit.replace(/^sha256:/, '').slice(0, 12)})` : version
 }
 
 /** 主程序自更新卡片：检查官方仓库的新版本，并在确认后更新、重启。 */
@@ -79,6 +79,45 @@ function SelfUpdateCardContent() {
   const [sourceId, setSourceId] = useState<SelfUpdateSourceSelection['source_id'] | ''>('')
   const [customPrefix, setCustomPrefix] = useState(getSelfUpdateCustomPrefix)
   const [checkedSource, setCheckedSource] = useState<SelfUpdateSourceSelection | null>(null)
+  const [imageRequest, setImageRequest] = useState<{ commit: string; requestedAt: number } | null>(null)
+
+  useEffect(() => {
+    if (!imageRequest) return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout>
+    const deadline = Date.now() + 45 * 60 * 1000
+    const poll = async () => {
+      try {
+        const next = await getSelfUpdateStatus()
+        if (cancelled) return
+        const result = next.last_result
+        if (result?.to_commit === imageRequest.commit && result.finished_at >= imageRequest.requestedAt) {
+          setStatus(next)
+          setImageRequest(null)
+          setApplying(false)
+          if (result.success) {
+            markSelfUpdatePending(imageRequest.commit)
+            await triggerRestart({ skipApiCall: true, maxAttempts: UPDATE_HEALTH_CHECK_ATTEMPTS })
+          } else {
+            setOperationError(result.error)
+          }
+          return
+        }
+      } catch {
+        // 容器替换期间连接会断开；以执行器结果确认完成，不能把旧容器仍在线当成成功。
+      }
+      if (cancelled) return
+      if (Date.now() >= deadline) {
+        setImageRequest(null)
+        setApplying(false)
+        setOperationError(t('settings.selfUpdate.imageTimeout'))
+        return
+      }
+      timer = setTimeout(poll, 2000)
+    }
+    timer = setTimeout(poll, 2000)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [imageRequest, t, triggerRestart])
 
   useEffect(() => {
     if (!checking) return
@@ -148,7 +187,11 @@ function SelfUpdateCardContent() {
     setApplying(true)
     setOperationError(null)
     try {
-      await applySelfUpdate(targetCommit, checkedSource)
+      const response = await applySelfUpdate(targetCommit, checkedSource)
+      if (status.deployment_type === 'image') {
+        setImageRequest({ commit: targetCommit, requestedAt: response.requested_at })
+        return
+      }
     } catch (error) {
       setOperationError(errorMessage(error))
       toast({
@@ -175,8 +218,8 @@ function SelfUpdateCardContent() {
             <p className="mt-1 text-xs sm:text-sm text-muted-foreground break-all">
               {t('settings.selfUpdate.current', { version: status.current_version })}
               {status.branch && ` · ${status.branch}`}
-              {status.deployment_type === 'package'
-                ? ' · PyPI'
+              {status.deployment_type === 'image'
+                ? ` · GHCR · ${status.current_commit?.replace(/^sha256:/, '').slice(0, 12) ?? ''}`
                 : status.current_commit && ` · ${status.current_commit.slice(0, 8)}`}
             </p>
           )}
@@ -185,7 +228,7 @@ function SelfUpdateCardContent() {
           variant="outline"
           size="sm"
           onClick={() => {
-            setSourceId('')
+            setSourceId(status?.deployment_type === 'image' ? 'ghcr' : '')
             setCustomPrefix(getSelfUpdateCustomPrefix())
             setSourceDialogOpen(true)
           }}
@@ -204,7 +247,7 @@ function SelfUpdateCardContent() {
         <DialogContent preventOutsideClose={checking} className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>选择本体更新源</DialogTitle>
-            <DialogDescription>下载使用所选来源；源码版本信息同时查询 GitHub 和 CNB，采用先完成的结果。</DialogDescription>
+            <DialogDescription>{t('settings.selfUpdate.sourceHint')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -213,13 +256,10 @@ function SelfUpdateCardContent() {
                 onValueChange={(value: SelfUpdateSourceSelection['source_id']) => setSourceId(value)}>
                 <SelectTrigger id="self-update-source"><SelectValue placeholder="请选择本次更新使用的来源" /></SelectTrigger>
                 <SelectContent>
-                  {status?.deployment_type === 'package' ? <>
-                    <SelectItem value="pypi">PyPI 官方</SelectItem>
-                    <SelectItem value="tuna">清华镜像</SelectItem>
-                    <SelectItem value="aliyun">阿里镜像</SelectItem>
+                  {status?.deployment_type === 'image' ? <>
+                    <SelectItem value="ghcr">GitHub Container Registry</SelectItem>
                   </> : <>
-                    <SelectItem value="cnb">CNB 镜像</SelectItem>
-                    <SelectItem value="github">GitHub 官方源</SelectItem>
+                    <SelectItem value="github">GitHub · Ariember/MaiBot</SelectItem>
                     <SelectItem value="custom">自定义源</SelectItem>
                   </>}
                 </SelectContent>
@@ -230,7 +270,7 @@ function SelfUpdateCardContent() {
               <Input id="self-update-custom-source" value={customPrefix} disabled={checking}
                 onChange={(event) => setCustomPrefix(event.target.value)}
                 placeholder="https://example.com/https://github.com" />
-              <p className="text-sm text-muted-foreground">只填写一个源前缀，后面会追加 /Mai-with-u/MaiBot.git。</p>
+              <p className="text-sm text-muted-foreground">只填写一个源前缀，后面会追加 /Ariember/MaiBot.git。</p>
             </div>}
           </div>
           {(checking || checkProgress.length > 0) && (
@@ -311,10 +351,10 @@ interface AvailableUpdateProps {
 
 function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdateProps) {
   const { t } = useTranslation()
-  const packaged = status.deployment_type === 'package'
+  const image = status.deployment_type === 'image'
   const versionChanged =
     status.latest_version !== null && status.latest_version !== status.current_version
-  const targetLabel = packaged ? status.latest_version ?? status.current_version : formatRevision(
+  const targetLabel = image ? status.latest_commit ?? '' : formatRevision(
     status.latest_version ?? status.current_version,
     status.latest_commit ?? ''
   )
@@ -323,16 +363,17 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
     <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
       <div>
         <p className="font-medium text-foreground">
-          {versionChanged
+          {image ? t('settings.selfUpdate.newImage') : versionChanged
             ? t('settings.selfUpdate.newVersion', { version: status.latest_version })
             : t('settings.selfUpdate.newCommits', { count: status.behind })}
         </p>
-        {!packaged && <p className="text-muted-foreground">
+        {!image && <p className="text-muted-foreground">
           {t('settings.selfUpdate.behind', { branch: status.branch, count: status.behind })}
         </p>}
       </div>
 
-      {!packaged && <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md bg-background/60 p-2">
+      {image && <p className="break-all font-mono text-xs">{status.latest_commit}</p>}
+      {!image && <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md bg-background/60 p-2">
         {status.commits.map((commit) => (
           <li key={commit.short_id} className="flex gap-2">
             <code className="shrink-0 text-muted-foreground">{commit.short_id}</code>
@@ -387,8 +428,8 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
             <AlertDialogTitle>
               {t('settings.selfUpdate.confirmTitle', { version: targetLabel })}
             </AlertDialogTitle>
-            <AlertDialogDescription>{t(packaged
-              ? 'settings.selfUpdate.packageConfirmDesc'
+            <AlertDialogDescription>{t(image
+              ? 'settings.selfUpdate.imageConfirmDesc'
               : 'settings.selfUpdate.confirmDesc')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -433,6 +474,7 @@ function LastResult({ result }: { result: SelfUpdateResult }) {
       {result.rolled_back && (
         <p className="text-muted-foreground">{t('settings.selfUpdate.rolledBack')}</p>
       )}
+      {result.backup_path && <p className="break-all">{t('settings.selfUpdate.imageBackup', { path: result.backup_path })}</p>}
       {result.rollback_error && (
         <p className="text-destructive">
           {t('settings.selfUpdate.rollbackFailed', { error: result.rollback_error })}

@@ -54,10 +54,11 @@ permissions:
 jobs:
   build-and-check:
     if: >-
+      github.repository == 'Mai-with-u/MaiBot' && (
       github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
        startsWith(github.event.pull_request.head.ref, 'release/') &&
-       (github.event.action != 'closed' || github.event.pull_request.merged == true))
+       (github.event.action != 'closed' || github.event.pull_request.merged == true)))
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.manifest.outputs.version }}

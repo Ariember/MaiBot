@@ -18,6 +18,8 @@ permissions:
 
 jobs:
   build-and-publish:
+    # This fork ships its dashboard inside GHCR images, not the upstream PyPI package.
+    if: github.repository == 'Mai-with-u/MaiBot'
     outputs:
       webui_version: ${{ steps.package_version.outputs.webui_version }}
     runs-on: ubuntu-24.04
