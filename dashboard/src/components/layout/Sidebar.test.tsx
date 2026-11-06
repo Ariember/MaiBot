@@ -8,12 +8,16 @@ import { Sidebar } from './Sidebar'
 
 const SIDEBAR_HOVER_EXPAND_DELAY_MS = 180
 
+vi.mock('@/components/use-theme', () => ({
+  useTheme: () => ({ themeConfig: { dashboardStyle: 'future-retro' } }),
+}))
+
 const mocks = vi.hoisted(() => ({
   inheritedFrom: 'sidebar',
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { resolvedLanguage: 'zh', language: 'zh' } }),
 }))
 
 vi.mock('@/hooks/use-background', () => ({

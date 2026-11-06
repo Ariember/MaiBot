@@ -54,6 +54,8 @@ vi.mock('@/routes/resource/knowledge-graph/index.tsx', () => ({ KnowledgeGraphPa
 vi.mock('@/routes/resource/knowledge-base', () => ({ KnowledgeBasePage: StubPage }))
 vi.mock('@/routes/monitor/index.tsx', () => ({ PlannerMonitorPage: StubPage }))
 vi.mock('@/routes/chat/index', () => ({ ChatPage: StubPage }))
+vi.mock('@/routes/computer', () => ({ ComputerPage: StubPage }))
+vi.mock('@/routes/manage', () => ({ ManagePage: StubPage }))
 vi.mock('@/routes/chat-management', () => ({ ChatManagementPage: StubPage }))
 vi.mock('@/routes/chat/embed', () => ({ ChatEmbedPage: StubPage }))
 vi.mock('@/routes/plugins/embed', () => ({ PluginMarketplaceEmbedPage: StubPage }))
@@ -97,6 +99,10 @@ const expectedPaths = [
   '/model-presets',
   '/plugin-config',
   '/adapter-management',
+  '/agent',
+  '/computer',
+  '/files',
+  '/manage',
   '/plugin-mirrors',
   '/mcp-settings',
   '/data-transfer',
@@ -189,6 +195,8 @@ describe('router 路由表', () => {
     for (const path of expectedPaths.filter(
       (path) =>
         ![
+          '/agent',
+          '/files',
           '/mcp-settings',
           '/settings',
           '/extensions',
@@ -350,6 +358,8 @@ describe('router 路由表', () => {
     for (const path of expectedPaths.filter(
       (path) =>
         ![
+          '/agent',
+          '/files',
           '/mcp-settings',
           '/settings',
           '/extensions',

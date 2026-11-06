@@ -97,7 +97,7 @@ describe('RenderMessageSegment', () => {
   it.each<[MessageSegment, string]>([
     [{ type: 'face', data: 123 }, 'chat.media.face:123'],
     [{ type: 'music', data: '' }, 'chat.media.music'],
-    [{ type: 'file', data: '报告.pdf' }, 'chat.media.file:报告.pdf'],
+    [{ type: 'file', data: '报告.pdf' }, '报告.pdf'],
     [{ type: 'forward', data: '' }, 'chat.media.forward'],
     [{ type: 'unknown', data: '', original_type: 'xml' }, 'chat.media.unknown:xml'],
     // 无 original_type 时退回未知消息文案

@@ -147,13 +147,14 @@ describe('ToolCallsCollapsible', () => {
     await user.click(screen.getByRole('button', { name: '工具调用 · 2 个' }))
     expect(await screen.findByText('lookup')).toBeInTheDocument()
     expect(screen.queryByText('推理中调用')).not.toBeInTheDocument()
-    expect(screen.getByText('call-1')).toBeInTheDocument()
+    expect(screen.queryByText('call-1')).not.toBeInTheDocument()
     expect(screen.getByText(/"q": "晚饭"/)).toBeInTheDocument()
     expect(screen.getByText('silent')).toBeInTheDocument()
     expect(screen.queryByText('正文调用')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '完整工具调用 JSON' }))
     expect(await screen.findByText(/"source": "reasoning"/)).toBeInTheDocument()
+    expect(screen.getByText(/"id": "call-1"/)).toBeInTheDocument()
   })
 })
 
@@ -224,7 +225,8 @@ describe('ContextItemCard', () => {
     expect(await screen.findByText(/"item_type": "FunctionCallItem"/)).toBeInTheDocument()
   })
 
-  it('渲染用户消息、自身高亮、turn/phase 徽标和 call_id', () => {
+  it('渲染用户消息、自身高亮和阶段，技术标识保留在 JSON 中', async () => {
+    const user = userEvent.setup()
     render(
       <ContextItemCard
         index={2}
@@ -246,12 +248,13 @@ describe('ContextItemCard', () => {
     expect(article.className).toContain('orange')
     expect(screen.getByText('#3')).toBeInTheDocument()
     expect(screen.getByText('user')).toBeInTheDocument()
-    expect(screen.getByText('turn turn-9')).toBeInTheDocument()
     expect(screen.getByText('phase: reply')).toBeInTheDocument()
     expect(screen.getByText('text')).toBeInTheDocument()
     expect(screen.getByText('ok')).toBeInTheDocument()
-    expect(screen.getByText('call_id: call-user')).toBeInTheDocument()
     expect(screen.getByText('我自己说的')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '完整 Item JSON' }))
+    expect(await screen.findByText(/"logical_turn_id": "turn-9"/)).toBeInTheDocument()
+    expect(screen.getByText(/"call_id": "call-user"/)).toBeInTheDocument()
   })
 
   it.each([
@@ -343,11 +346,13 @@ describe('ContextItemCard', () => {
       />
     )
 
-    expect(screen.getByText('call_id: tool-call-9')).toBeInTheDocument()
+    expect(screen.queryByText('call_id: tool-call-9')).not.toBeInTheDocument()
     expect(screen.queryByText('此 Item 没有可见文本；完整字段见 Item JSON。')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '工具调用 · 1 个' }))
     expect(await screen.findByText('lookup')).toBeInTheDocument()
-    expect(screen.getByText('正文调用')).toBeInTheDocument()
+    expect(screen.queryByText('正文调用')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '完整 Item JSON' }))
+    expect(await screen.findByText(/"call_id": "tool-call-9"/)).toBeInTheDocument()
   })
 
   it('加载图片预览，卸载后忽略迟到的 URL', async () => {
