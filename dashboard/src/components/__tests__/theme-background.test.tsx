@@ -245,6 +245,22 @@ describe('ThemeProvider', () => {
     )
   })
 
+  it.each([0, 2])('远端风格 %s 使用原版，兼容已移除皮肤的配置', async (style) => {
+    mocks.loadThemeConfig.mockReturnValue(makeThemeConfig({ dashboardStyle: 'future-retro' }))
+    mocks.getBotConfig.mockResolvedValue({ webui: { webui_style: style } })
+    render(
+      <ThemeProvider>
+        <ThemeProbe />
+      </ThemeProvider>
+    )
+
+    await waitFor(() =>
+      expect(screen.getByTestId('theme-state')).toHaveTextContent('system:light:modern')
+    )
+    expect(mocks.saveThemePartial).toHaveBeenCalledWith({ dashboardStyle: 'modern' })
+    expect(mocks.updateBotConfigSection).not.toHaveBeenCalled()
+  })
+
   it('重置主题时清理自定义 CSS，并把默认风格同步到远端', async () => {
     mocks.loadThemeConfig
       .mockReturnValueOnce(makeThemeConfig({ dashboardStyle: 'future-retro' }))

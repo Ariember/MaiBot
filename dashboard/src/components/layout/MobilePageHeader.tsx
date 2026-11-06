@@ -21,8 +21,7 @@ interface MobilePageHeaderProps {
 }
 
 /**
- * 手机端的大标题页头：手机上隐藏了顶栏，由页面自己显示标题与返回按钮；
- * 千禧风格下由 millennium.css 画成像素字丝印与键帽。桌面端不显示。
+ * 手机端的大标题页头：手机上隐藏了顶栏，由页面自己显示标题与返回按钮。桌面端不显示。
  */
 export function MobilePageHeader({
   title,

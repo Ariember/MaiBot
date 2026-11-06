@@ -58,20 +58,6 @@
   padding: 12px;
   border-bottom: 1px solid var(--surface-line);
 }
-:root[data-dashboard-style='millennium'] [data-browser-header='true'] h1 {
-  font-family: var(--mil-font-pixel);
-}
-:root[data-dashboard-style='millennium'] [data-metric-strip='true'] .tabular-nums {
-  font-family: var(--mil-font-pixel);
-}
-:root[data-dashboard-style='millennium'] [data-status-indicator='true'][data-status-variant='panel'] {
-  border-width: 2px;
-  box-shadow: var(--mil-bevel);
-}
-:root[data-dashboard-style='millennium'] [data-browser-toolbar='true'] {
-  border-bottom: 2px solid var(--mil-lo);
-  box-shadow: 0 2px 0 var(--mil-hi);
-}
 @media (max-width: 1023px) {
   [data-browser-layout='true'],
   [data-browser-layout='true']:has(> [data-collapsed='true']) {

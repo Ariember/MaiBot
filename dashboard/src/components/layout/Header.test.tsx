@@ -230,6 +230,18 @@ vi.mock('@/lib/runtime', () => ({
   isElectron: () => mocks.electron,
 }))
 
+function FutureRetroTheme({ children }: { children: ReactNode }) {
+  return (
+    <ThemeProviderContext.Provider value={{
+      theme: 'light', resolvedTheme: 'light', setTheme: vi.fn(),
+      themeConfig: { ...loadThemeConfig(), dashboardStyle: 'future-retro' },
+      updateThemeConfig: vi.fn(), resetTheme: vi.fn(),
+    }}>
+      {children}
+    </ThemeProviderContext.Provider>
+  )
+}
+
 function makeProps(
   overrides: Partial<Parameters<typeof Header>[0]> = {}
 ): Parameters<typeof Header>[0] {
@@ -294,7 +306,7 @@ describe('Header', () => {
 
   it('触发顶栏主要操作、工作区切换和主题变更', async () => {
     const props = makeProps()
-    render(<Header {...props} />)
+    render(<Header {...props} />, { wrapper: FutureRetroTheme })
 
     expect(screen.getByTestId('background-header')).toBeInTheDocument()
     expect(document.querySelector('[data-dashboard-header="true"]')).toHaveClass('bg-background')
@@ -389,7 +401,7 @@ describe('Header', () => {
 
   it('日志工作区隐藏侧栏切换，日志槽位可见；手机导航交给底部标签栏，顶栏不再有菜单按钮', () => {
     const props = makeProps({ workspaceMode: 'logs', sidebarOpen: true })
-    render(<Header {...props} />)
+    render(<Header {...props} />, { wrapper: FutureRetroTheme })
 
     expect(screen.queryByRole('button', { name: 'a11y.closeMenu' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'header.switchSidebarToHover' })).toHaveClass(
@@ -400,7 +412,7 @@ describe('Header', () => {
 
   it('折叠顶栏且侧栏固定时仍可切回悬浮，并保留顶栏背景层', () => {
     const props = makeProps({ topbarCollapsed: true, sidebarOpen: true })
-    render(<Header {...props} />)
+    render(<Header {...props} />, { wrapper: FutureRetroTheme })
 
     expect(screen.getByTestId('background-header')).toBeInTheDocument()
     const strip = document.querySelector('[data-dashboard-header-strip="true"]')
@@ -522,15 +534,7 @@ describe('Header', () => {
     document.body.appendChild(switcher)
 
     const { rerender, unmount } = render(<Header {...makeProps({ workspaceMode: 'logs' })} />, {
-      wrapper: ({ children }) => (
-        <ThemeProviderContext.Provider value={{
-          theme: 'light', resolvedTheme: 'light', setTheme: vi.fn(),
-          themeConfig: { ...loadThemeConfig(), dashboardStyle: 'future-retro' },
-          updateThemeConfig: vi.fn(), resetTheme: vi.fn(),
-        }}>
-          {children}
-        </ThemeProviderContext.Provider>
-      ),
+      wrapper: FutureRetroTheme,
     })
     const tabs = document.querySelector('[data-dashboard-workspace-tabs="true"]') as HTMLElement
     const measure = document.querySelector(
@@ -714,7 +718,7 @@ describe('Header', () => {
       workspaceMode: 'logs',
       actualTheme: 'dark',
     })
-    const { rerender } = render(<Header {...collapsedProps} />)
+    const { rerender } = render(<Header {...collapsedProps} />, { wrapper: FutureRetroTheme })
 
     const strip = document.querySelector('[data-dashboard-header-strip="true"]')
     expect(

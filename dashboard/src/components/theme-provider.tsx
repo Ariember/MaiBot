@@ -13,11 +13,6 @@ import {
   saveThemePartial,
 } from '@/lib/theme/storage'
 import { applyThemePipeline, removeCustomCSS } from '@/lib/theme/pipeline'
-import {
-  applyMillenniumFonts,
-  loadMillenniumCjkFont,
-  loadMillenniumFont,
-} from '@/lib/theme/millennium-font'
 
 type Theme = 'dark' | 'light' | 'system'
 
@@ -27,13 +22,12 @@ type ThemeProviderProps = {
   storageKey?: string
 }
 
-type WebUIStyleConfigValue = 0 | 1 | 2
+type WebUIStyleConfigValue = 0 | 1
 
-// bot_config 的 webui.webui_style 用整数保存界面风格：0 原版、1 未来复古、2 千禧。
+// bot_config 的 webui.webui_style 用整数保存界面风格：0 原版、1 未来复古。
 const DASHBOARD_STYLE_CONFIG_VALUES: Record<DashboardStyle, WebUIStyleConfigValue> = {
   modern: 0,
   'future-retro': 1,
-  millennium: 2,
 }
 
 function dashboardStyleToConfigValue(style: DashboardStyle): WebUIStyleConfigValue {
@@ -42,7 +36,6 @@ function dashboardStyleToConfigValue(style: DashboardStyle): WebUIStyleConfigVal
 
 function configValueToDashboardStyle(value: unknown): DashboardStyle {
   const configValue = Number(value)
-  if (configValue === 2) return 'millennium'
   return configValue === 1 ? 'future-retro' : 'modern'
 }
 
@@ -92,7 +85,6 @@ export function ThemeProvider({
     }
 
     root.dataset.dashboardStyle = dashboardStyle
-    applyMillenniumFonts(loadMillenniumFont(), loadMillenniumCjkFont())
     root.dataset.retroTextureStyle = futureRetroConfig.textureStyle
     root.style.setProperty('--retro-paper-warmth', `${futureRetroConfig.paperWarmth}%`)
     root.style.setProperty('--retro-panel-depth', String(futureRetroConfig.panelDepth / 100))

@@ -10,15 +10,6 @@
   --tab-height-sm: 1.75rem;
 }
 
-:root[data-dashboard-style='millennium'] {
-  --choice-size: 1.25rem;
-  --control-height-xs: 1.875rem;
-  --control-height-sm: 2.25rem;
-  --control-height: 2.875rem;
-  --control-height-lg: 3.25rem;
-  --tab-height: var(--control-height);
-  --tab-height-sm: var(--control-height-sm);
-}
 
 /* 表格等紧凑区域使用同一档位，不再为某个页面重新画复选框。 */
 :is([data-dashboard-checkbox='true'], [data-dashboard-radio-item='true'])[data-control-size='sm'] {
@@ -61,8 +52,8 @@
   opacity: 0.5;
 }
 
-/* 持续选中的按钮统一去掉浮起阴影；千禧的键帽按下状态由主题绘制。 */
-:root:not([data-dashboard-style='millennium']) .dashboard-button[aria-pressed='true'] {
+/* 持续选中的按钮统一去掉浮起阴影。 */
+:root .dashboard-button[aria-pressed='true'] {
   /* 只移除浮起阴影，保留 Tailwind 用 box-shadow 绘制的键盘焦点圈。 */
   --tw-shadow: 0 0 #0000;
 }
@@ -90,11 +81,6 @@
   }
 }
 [data-dashboard-segmented-meter='true'][data-separated='true'] > span + span { border-left: 1px solid var(--surface-data-bg); }
-:root[data-dashboard-style='millennium'] [data-dashboard-segmented-meter='true'] {
-  background: var(--mil-meter-track);
-  border: 2px solid var(--mil-line);
-  box-shadow: var(--mil-sunk);
-}
 
 /* 时间轴使用公共数据屏的描线和圆角，拖动手柄保留独立交互形状。 */
 [data-dashboard-time-range='true'] {

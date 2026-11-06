@@ -26,13 +26,6 @@ export interface PluginPageFont {
 }
 const fonts = new Map<string, Promise<PluginPageFont>>()
 const FONT_FILES = [
-  ['Departure Mono', 'DepartureMono-Regular.woff2', ''],
-  ['Ark Pixel 12px SC', 'ArkPixel12-ZhHans.woff2', 'unicode-range:U+3000-9FFF,U+FF00-FFEF;'],
-  [
-    'Jersey 20',
-    'Jersey20-Regular.ttf',
-    'size-adjust:118%;unicode-range:U+0000-024F,U+2000-206F,U+20A0-20CF,U+2190-21FF;',
-  ],
   ['JetBrains Mono', 'JetBrainsMono-Medium.ttf', 'font-weight:500;'],
 ] as const
 
@@ -81,17 +74,11 @@ export function readPluginPageTheme(probes: HTMLElement, language: string): Plug
   const variable = (name: string, fallback: string) =>
     style.getPropertyValue(name).trim() || fallback
   const background =
-    dashboardStyle === 'millennium'
-      ? variable('--mil-shell', card.backgroundColor)
-      : dashboardStyle === 'future-retro'
-        ? variable('--retro-paper', card.backgroundColor)
-        : samples.background.backgroundColor
+    dashboardStyle === 'future-retro'
+      ? variable('--retro-paper', card.backgroundColor)
+      : samples.background.backgroundColor
   const texture =
-    dashboardStyle === 'millennium'
-      ? variable('--mil-speck', 'none')
-      : dashboardStyle === 'future-retro'
-        ? variable('--retro-paper-texture', 'none')
-        : 'none'
+    dashboardStyle === 'future-retro' ? variable('--retro-paper-texture', 'none') : 'none'
   const tokens = {
     background,
     surface: card.backgroundColor,
@@ -107,10 +94,7 @@ export function readPluginPageTheme(probes: HTMLElement, language: string): Plug
     danger: samples.danger.backgroundColor,
     radius: card.borderRadius,
     'font-body': card.fontFamily,
-    'font-display': variable(
-      dashboardStyle === 'millennium' ? '--mil-font-pixel' : '--retro-font-heading',
-      card.fontFamily
-    ),
+    'font-display': variable('--retro-font-heading', card.fontFamily),
     'font-mono': variable('--typography-font-family-code', 'ui-monospace, monospace'),
   }
   let css = `:root{${Object.entries(tokens)
@@ -129,7 +113,7 @@ export function readPluginPageTheme(probes: HTMLElement, language: string): Plug
     css += `${selector}{${APPEARANCE.map((property) => `${property}:${sampled.getPropertyValue(property)};`).join('')}}`
   }
   css += `
-  .maibot-page{margin:0;color:var(--maibot-foreground);background-color:var(--maibot-background);background-image:${texture};background-size:${dashboardStyle === 'millennium' ? '6px 6px' : variable('--retro-paper-texture-size', 'auto')};font-family:var(--maibot-font-body)}
+  .maibot-page{margin:0;color:var(--maibot-foreground);background-color:var(--maibot-background);background-image:${texture};background-size:${variable('--retro-paper-texture-size', 'auto')};font-family:var(--maibot-font-body)}
   .maibot-button{padding:8px 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
   .maibot-button:disabled{opacity:.5;cursor:not-allowed}
   .maibot-button:hover:not(:disabled){filter:brightness(.96)}

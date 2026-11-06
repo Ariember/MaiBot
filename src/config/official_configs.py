@@ -5396,7 +5396,7 @@ class WebUIConfig(ConfigBase):
     """WebUI 运行模式；普通使用保持 production。"""
 
     webui_style: int = Field(
-        default=2,
+        default=0,
         ge=0,
         le=2,
         json_schema_extra={
@@ -5410,7 +5410,7 @@ class WebUIConfig(ConfigBase):
             "x-input-width": "8rem",
         },
     )
-    """界面风格编号；0 为旧风格，1 为未来复古风格，2 为千禧风格。"""
+    """界面风格编号；0 为原版，1 为未来复古；历史值 2 兼容显示为原版。"""
 
     anti_crawler_mode: Literal["false", "strict", "loose", "basic"] = Field(
         default="basic",

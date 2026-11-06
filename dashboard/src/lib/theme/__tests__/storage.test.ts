@@ -41,7 +41,7 @@ describe('loadThemeConfig', () => {
       styleTokenOverrides: {},
       styleCustomCSS: {},
       styleBackgroundConfig: {},
-      dashboardStyle: 'millennium',
+      dashboardStyle: 'modern',
       styleConfig: {
         futureRetro: {
           paperWarmth: 89,
@@ -120,14 +120,31 @@ describe('loadThemeConfig', () => {
     expect(config.styleConfig).toEqual(DEFAULT_DASHBOARD_STYLE_CONFIG)
   })
 
-  it('非法的 dashboardStyle 与强调色回退默认值', () => {
-    localStorage.setItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE, 'neon')
+  it.each(['neon', 'millennium'])('无效或已移除的风格 %s 与强调色回退默认值', (style) => {
+    localStorage.setItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE, style)
     localStorage.setItem(THEME_STORAGE_KEYS.ACCENT, 'garbage')
 
     const config = loadThemeConfig()
 
-    expect(config.dashboardStyle).toBe('millennium')
+    expect(config.dashboardStyle).toBe('modern')
     expect(config.accentColor).toBe(DEFAULT_ACCENT_COLOR_HSL)
+  })
+
+  it('已移除皮肤的缓存不会覆盖原版配置', () => {
+    localStorage.setItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE, 'millennium')
+    localStorage.setItem(
+      THEME_STORAGE_KEYS.STYLE_OVERRIDES,
+      JSON.stringify({ millennium: { color: { primary: '1 2% 3%' } } })
+    )
+    localStorage.setItem(
+      THEME_STORAGE_KEYS.STYLE_BACKGROUND_CONFIG,
+      JSON.stringify({ millennium: { page: { type: 'image', source: 'old-background' } } })
+    )
+
+    const config = loadThemeConfig()
+    expect(config.dashboardStyle).toBe('modern')
+    expect(config.styleTokenOverrides).toEqual({})
+    expect(config.styleBackgroundConfig).toEqual({})
   })
 
 })

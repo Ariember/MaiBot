@@ -49,9 +49,6 @@
   background: transparent;
 }
 
-:root[data-dashboard-style='millennium'] [data-discrete-slider-plate] {
-  background: var(--mil-on);
-}
 
 [data-discrete-slider-plate][data-disabled='true'] {
   opacity: 0.5;

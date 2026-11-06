@@ -26,14 +26,12 @@ import { Switch, SwitchField } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { buildFutureRetroTexture } from '@/lib/theme/future-retro'
-import { applyMillenniumFonts } from '@/lib/theme/millennium-font'
 import { applyThemePipeline } from '@/lib/theme/pipeline'
 import { DEFAULT_DASHBOARD_STYLE_CONFIG, DEFAULT_FUTURE_RETRO_STYLE_CONFIG } from '@/lib/theme/tokens'
 import type { DashboardStyle } from '@/lib/theme/tokens'
 
 import '@/index.css'
 import '@/styles/controls.css'
-import '@/styles/millennium.css'
 import '@/styles/modern.css'
 import '@/styles/mobile.css'
 import '@/styles/surfaces.css'
@@ -57,7 +55,6 @@ import { OrderControls } from '@/components/ui/order-controls'
 const styles: { id: DashboardStyle; label: string }[] = [
   { id: 'modern', label: '现代' },
   { id: 'future-retro', label: '未来复古' },
-  { id: 'millennium', label: '千禧' },
 ]
 const params = new URLSearchParams(window.location.search)
 const selectedStyle = styles.find((style) => style.id === params.get('style'))
@@ -84,7 +81,6 @@ function applyPreviewTheme(style: DashboardStyle, dark: boolean) {
   root.classList.toggle('dark', dark)
   root.classList.toggle('light', !dark)
   root.dataset.dashboardStyle = style
-  applyMillenniumFonts('departure', 'default')
   const retro = DEFAULT_FUTURE_RETRO_STYLE_CONFIG
   root.dataset.retroTextureStyle = retro.textureStyle
   root.style.setProperty('--retro-paper-warmth', `${retro.paperWarmth}%`)
@@ -360,7 +356,7 @@ const previewNames = {
 type PreviewView = keyof typeof previewNames
 
 function ReviewPage() {
-  const [style, setStyle] = useState<DashboardStyle>(selectedStyle?.id ?? 'millennium')
+  const [style, setStyle] = useState<DashboardStyle>(selectedStyle?.id ?? 'modern')
   const [dark, setDark] = useState(isDark)
   const [view, setView] = useState<PreviewView>(params.get('page') === 'comparison' ? 'comparison' : activePreviewPage ?? 'all')
   const [themeOpen, setThemeOpen] = useState(false)

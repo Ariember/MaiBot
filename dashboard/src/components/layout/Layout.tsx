@@ -118,8 +118,7 @@ export function Layout({ children }: LayoutProps) {
   const immersiveRestoreRef = useRef<{ sidebarOpen: boolean; topbarCollapsed: boolean } | null>(
     null
   )
-  const { theme, setTheme, themeConfig } = useTheme()
-  const effectiveSidebarOpen = themeConfig.dashboardStyle !== 'millennium' && sidebarOpen
+  const { theme, setTheme } = useTheme()
   const builtInMenuSections = useMenuSections()
   // 日志工作区在移动端保留麦麦导航，顶栏菜单按钮与其它页面保持一致。
   const sidebarWorkspaceMode = workspaceMode === 'logs' ? 'settings' : workspaceMode
@@ -345,11 +344,8 @@ export function Layout({ children }: LayoutProps) {
   // 去往日志工作区时侧栏只滑出、不收布局宽度：顶栏不跟着侧栏位移，切换完成后由日志槽位接管这段宽度。
   const sidebarKeepsWidth = sidebarExiting && workspaceTransitionTarget === 'logs'
   // 侧栏滑出/滑入期间顶栏延伸到侧栏下方，侧栏移开时露出的是完整的顶栏而不是页面底色。
-  // 千禧风格的铭牌与顶栏是同一条机壳上沿：顶栏常驻垫在侧栏下方，
-  // 否则非整数缩放下侧栏裁剪边缘的抗锯齿会在两段投影之间透出一条细缝。
   const sidebarUnderlay =
-    isSettingsWorkspace &&
-    (themeConfig.dashboardStyle === 'millennium' || sidebarKeepsWidth || targetWorkspaceWaiting)
+    isSettingsWorkspace && (sidebarKeepsWidth || targetWorkspaceWaiting)
   // 日志视图切换挂在顶栏里，不随页面容器移动；让它与页面同步退场/入场，避免突兀地出现或消失。
   const logSwitcherHidden =
     workspaceTransitionStage !== 'idle' && workspaceTransitionStage !== 'page-enter'
@@ -429,7 +425,7 @@ export function Layout({ children }: LayoutProps) {
                 width:
                   sidebarExiting && !sidebarKeepsWidth
                     ? 0
-                    : effectiveSidebarOpen
+                    : sidebarOpen
                       ? 'var(--layout-sidebar-width)'
                       : 'var(--layout-sidebar-collapsed-width)',
               }}
@@ -442,9 +438,8 @@ export function Layout({ children }: LayoutProps) {
               >
                 <Sidebar
                   menuSections={menuSections}
-                  sidebarOpen={effectiveSidebarOpen}
+                  sidebarOpen={sidebarOpen}
                   mobileMenuOpen={false}
-                  topbarCollapsed={topbarCollapsed}
                   onMobileMenuClose={() => {}}
                   onSidebarFix={handleSidebarFix}
                   onSidebarToggle={handleSidebarModeToggle}
@@ -470,7 +465,7 @@ export function Layout({ children }: LayoutProps) {
               extensions={workspaceExtensions}
               logSwitcherHidden={logSwitcherHidden}
               sidebarUnderlay={sidebarUnderlay}
-              sidebarOpen={effectiveSidebarOpen}
+              sidebarOpen={sidebarOpen}
               searchOpen={searchOpen}
               actualTheme={actualTheme}
               onSidebarToggle={handleSidebarModeToggle}

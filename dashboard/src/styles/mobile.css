@@ -476,15 +476,3 @@
   margin: 0;
   padding: 6px 10px;
 }
-
-:root[data-dashboard-style='millennium'] [data-mobile-floating-toolbar='true'] {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  background-color: var(--mil-panel);
-  background-image: var(--mil-speck);
-  background-size: 5px 5px;
-  border-bottom: 2px solid var(--mil-line);
-  border-radius: 0;
-  box-shadow: 0 5px 0 var(--mil-drop);
-  margin: 0;
-}

@@ -1013,10 +1013,7 @@ export function LogViewerPage({ defaultTab }: LogViewerPageProps) {
   // 手机上三个入口各自展示对应页面，避免上次的桌面页签覆盖入口选择。
   const activeTab = isMobileViewport ? (defaultTab ?? 'terminal') : desktopActiveTab
   const [topbarTabsRoot, setTopbarTabsRoot] = useState<HTMLElement | null>(null)
-  // 千禧顶栏始终用图标模式，初始即取紧凑态，避免先渲染完整文字再收窄造成顶栏跳动。
-  const [topbarTabsCompact, setTopbarTabsCompact] = useState(
-    () => document.documentElement.dataset.dashboardStyle === 'millennium'
-  )
+  const [topbarTabsCompact, setTopbarTabsCompact] = useState(false)
   const topbarTabsCompactRef = useRef(false)
   const [reasoningToolbarVisible, setReasoningToolbarVisible] = useState(activeTab === 'reasoning')
   const [showSwitchHint, setShowSwitchHint] = useState(() =>
@@ -1067,11 +1064,6 @@ export function LogViewerPage({ defaultTab }: LogViewerPageProps) {
         }
 
         const rootRect = topbarTabsRoot.getBoundingClientRect()
-        // 千禧顶栏的页签参与正常布局，保持图标模式，不使用绝对定位布局的间距判定。
-        if (document.documentElement.dataset.dashboardStyle === 'millennium') {
-          setTopbarTabsCompact(true)
-          return
-        }
         const measureRect = measureEl.getBoundingClientRect()
         const workspaceRect = workspaceTabs.getBoundingClientRect()
         const workspaceMeasureRect = workspaceTabsMeasure.getBoundingClientRect()

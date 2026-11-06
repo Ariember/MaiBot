@@ -143,9 +143,7 @@ export function Header({
   ]
   const workspaceTabsKey = workspaceTabs.map((tab) => `${tab.value}:${tab.labelKey}`).join('|')
   const { themeConfig } = useContext(ThemeProviderContext)
-  // 千禧风格的顶栏要放得下键帽，比其它风格高一截；高度由动画驱动，所以在这里按风格取值。
-  const expandedTopbarHeight = themeConfig.dashboardStyle === 'millennium' ? 52 : 42
-  // 原版风格和千禧一样用顶栏里的按钮收起顶栏，不再显示顶栏下沿的滑条。
+  // 原版风格用顶栏里的按钮收起顶栏，不再显示顶栏下沿的滑条。
   const isModernStyle = themeConfig.dashboardStyle === 'modern'
   const { config: headerBg, inheritedFrom } = useBackground('header')
   const inheritsPageBackground = inheritedFrom === 'page'
@@ -162,11 +160,6 @@ export function Header({
   // 桌面端侧栏当前占据的布局宽度（px）；小屏侧栏不占布局，探针不显示，取 0。
   const [sidebarInset, setSidebarInset] = useState(0)
   const sidebarInsetProbeRef = useRef<HTMLSpanElement | null>(null)
-  const [topbarRowGap, setTopbarRowGap] = useState(0)
-  // 只有千禧顶栏的日志槽位参与正常布局，其它风格是绝对定位，不需要让位。
-  // 槽位自身会多带一段行间距，让位宽度里要扣掉，工作区键才正好停在原位。
-  const logSwitcherInset =
-    themeConfig.dashboardStyle === 'millennium' ? Math.max(0, sidebarInset - topbarRowGap) : 0
   const workspaceTabsCompactRef = useRef(false)
   const workspaceHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const headerActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -191,8 +184,6 @@ export function Header({
     setSidebarInset(probe.offsetWidth)
     const resizeObserver = new ResizeObserver(() => {
       setSidebarInset(probe.offsetWidth)
-      const row = document.getElementById('log-viewer-topbar-tabs')?.parentElement
-      setTopbarRowGap(row ? parseFloat(window.getComputedStyle(row).columnGap) || 0 : 0)
     })
     resizeObserver.observe(probe)
     return () => resizeObserver.disconnect()
@@ -217,7 +208,7 @@ export function Header({
 
 
   useEffect(() => {
-    if (workspaceMode !== 'logs' || themeConfig.dashboardStyle === 'millennium') {
+    if (workspaceMode !== 'logs') {
       const resetFrameId = requestAnimationFrame(() => setWorkspaceTabsCompact(false))
       return () => cancelAnimationFrame(resetFrameId)
     }
@@ -316,7 +307,7 @@ export function Header({
       data-dashboard-header="true"
       data-dashboard-header-collapsed={topbarCollapsed ? 'true' : undefined}
       initial={false}
-      animate={{ height: topbarCollapsed ? 16 : expandedTopbarHeight, marginBottom: 0 }}
+      animate={{ height: topbarCollapsed ? 16 : 42, marginBottom: 0 }}
       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
       style={
         sidebarUnderlay && sidebarInset > 0 && !topbarCollapsed
@@ -590,8 +581,8 @@ export function Header({
                 className={cn(
                   'relative ml-2 flex min-w-0 flex-1 items-center sm:ml-3 sm:max-w-72',
                   // 原版风格在手机上由底部标签栏的搜索按钮负责搜索，顶栏不再重复放搜索框
-                  themeConfig.dashboardStyle !== 'millennium' && 'max-lg:hidden',
-                  workspaceMode === 'logs' && themeConfig.dashboardStyle !== 'millennium'
+                  'max-lg:hidden',
+                  workspaceMode === 'logs'
                     ? 'mr-auto sm:mr-0 sm:w-48 sm:flex-none'
                     : 'mr-auto'
                 )}
@@ -612,8 +603,7 @@ export function Header({
                   <Search className="h-4 w-4" />
                 </button>
               </form>
-              {/* 千禧风格下日志切换槽位放在搜索框右侧，并参与正常布局；其他风格保留左侧定位。
-                  宽度从 0 展开，入场/退场只做一次单向移动。 */}
+              {/* 日志切换槽位保留左侧定位，宽度从 0 展开，入场/退场只做一次单向移动。 */}
               <motion.div
                 id="log-viewer-topbar-tabs"
                 className={cn(
@@ -626,7 +616,7 @@ export function Header({
                 animate={
                   logSwitcherShown
                     ? { opacity: 1, width: 'auto', marginLeft: 0 }
-                    : { opacity: 0, width: 0, marginLeft: themeConfig.dashboardStyle === 'millennium' ? 0 : logSwitcherInset }
+                    : { opacity: 0, width: 0, marginLeft: 0 }
                 }
                 transition={
                   logSwitcherShown
@@ -751,8 +741,8 @@ export function Header({
               )}
             </Button>
 
-            {/* 千禧风格用一颗键帽收起顶栏，取代顶栏下沿的滑条；原版风格同样改为顶栏按钮 */}
-            {(themeConfig.dashboardStyle === 'millennium' || isModernStyle) && (
+            {/* 原版风格用顶栏按钮收起顶栏。 */}
+            {isModernStyle && (
               <Button
                 variant="ghost"
                 size="icon"

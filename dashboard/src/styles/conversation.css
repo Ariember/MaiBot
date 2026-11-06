@@ -10,14 +10,6 @@
 :root[data-dashboard-style='future-retro'] {
   --chat-bubble-radius: 0;
 }
-:root[data-dashboard-style='millennium'] {
-  --chat-bubble-bg: var(--mil-key);
-  --chat-bubble-ink: var(--mil-ink);
-  --chat-outgoing-bg: var(--mil-on);
-  --chat-outgoing-ink: var(--mil-on-ink);
-  --chat-bubble-shadow: inset 0 -3px var(--mil-key-side);
-  --chat-bubble-radius: 0;
-}
 [data-chat-workspace='true'] {
   display: flex;
   height: 100%;
@@ -185,8 +177,8 @@
   border: 1px solid currentColor;
 }
 [data-conversation-avatar='true'][data-bot='true'] > span {
-  background: var(--mil-hot, hsl(var(--primary)));
-  color: var(--mil-hot-ink, hsl(var(--primary-foreground)));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
 [data-conversation-header='true'] {
   display: flex;

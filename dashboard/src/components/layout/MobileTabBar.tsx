@@ -22,7 +22,7 @@ interface MobileTabDef {
   icon: LucideIcon
 }
 
-// 三个标签 + 独立的搜索键；「我的」从首页头像进入。两种风格结构相同，千禧风格只换外观（键帽）。
+// 三个标签 + 独立的搜索键；「我的」从首页头像进入。
 // 观察麦麦的聊天流就在「聊天」里，不再单独设标签。
 const TABS: MobileTabDef[] = [
   { tab: 'home', to: '/', labelKey: 'mobileNav.home', icon: House },

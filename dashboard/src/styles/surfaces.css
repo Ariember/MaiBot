@@ -35,26 +35,6 @@
   --surface-focus: var(--retro-ink);
 }
 
-:root[data-dashboard-style='millennium'] {
-  --surface-frame-bg: var(--mil-panel);
-  --surface-data-bg: var(--mil-screen);
-  --surface-line: var(--mil-line);
-  --surface-ink: var(--mil-screen-ink);
-  --surface-radius: 0;
-  --surface-list-padding: 0;
-  --surface-data-stroke: 2px;
-  --surface-separator-stroke: 2px;
-  --surface-frame-shadow: var(--mil-raise);
-  --surface-data-shadow: var(--mil-sunk);
-  --surface-data-outset: var(--mil-sunk-outset);
-  --surface-texture: var(--mil-speck);
-  --surface-data-texture: var(--mil-screen-tex);
-  --surface-data-inset: 0.75rem 0.75rem 0.25rem;
-  --list-selected-bg: var(--mil-on);
-  --list-selected-ink: var(--mil-on-ink);
-  --list-hover-bg: var(--mil-key-hover);
-  --surface-focus: var(--mil-on-side);
-}
 
 [data-dashboard-page-frame='true'] {
   background: var(--surface-texture) 0 0 / 5px 5px var(--surface-frame-bg);
@@ -71,11 +51,6 @@
 }
 :root.dark[data-dashboard-style='future-retro'] [data-dashboard-badge='true'][data-badge-variant='success'] {
   color: var(--retro-success);
-}
-:root[data-dashboard-style='millennium'] [data-dashboard-badge='true'][data-badge-variant='success'] {
-  background-color: var(--mil-on);
-  border-color: var(--mil-line);
-  color: var(--mil-on-ink);
 }
 
 [data-dashboard-data-panel='true'] {
@@ -94,10 +69,6 @@
 /* 窗口里的列表、表格留出壳边，标题与页脚仍印在壳上。 */
 [data-dashboard-data-panel='true'][data-inset='true'] { margin: var(--surface-data-inset); }
 
-/* 聊天浏览框没有页脚时，底部壳边与左右留白保持一致。 */
-:root[data-dashboard-style='millennium'] [data-chat-scope-panel-list='true']:last-child {
-  margin-bottom: 0.75rem;
-}
 
 /* 数据屏已负责描边，里面的表格不再叠第二个外框。 */
 :root [data-dashboard-data-panel='true'] > [data-dashboard-table-wrapper='true'] {
@@ -110,9 +81,6 @@
 :root [data-dashboard-card='true'][data-card-variant='flat'] {
   box-shadow: none;
   background-image: none;
-}
-:root[data-dashboard-style='millennium'] [data-dashboard-card='true'][data-card-variant='flat'] {
-  border-color: var(--mil-lo);
 }
 
 [data-dashboard-list-item='true'] {
@@ -132,10 +100,6 @@
   outline-offset: -2px;
 }
 :root:not([data-dashboard-style='modern']) [data-dashboard-list-item='true'] { border-radius: 0; }
-:root[data-dashboard-style='millennium'] [data-dashboard-list-item='true'] {
-  border-bottom: 2px dashed var(--mil-rule);
-  margin-top: 0;
-}
 
 /* 普通线使用主题线宽；刻线保留凹下的明暗两边。 */
 [data-dashboard-separator='true'] { background-color: var(--surface-line); }
@@ -146,11 +110,6 @@
 }
 [data-dashboard-separator='true'][data-variant='groove'][data-orientation='horizontal'] { height: 4px; }
 [data-dashboard-separator='true'][data-variant='groove'][data-orientation='vertical'] { width: 4px; }
-:root[data-dashboard-style='millennium'] [data-dashboard-separator='true'][data-variant='groove'] {
-  background: var(--mil-lo);
-}
-:root[data-dashboard-style='millennium'] [data-dashboard-separator='true'][data-variant='groove'][data-orientation='horizontal'] { box-shadow: inset 0 -2px var(--mil-hi); }
-:root[data-dashboard-style='millennium'] [data-dashboard-separator='true'][data-variant='groove'][data-orientation='vertical'] { box-shadow: inset -2px 0 var(--mil-hi); }
 
 [data-dashboard-progress-indicator='true'][data-state='indeterminate'] {
   width: 35%;

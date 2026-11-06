@@ -218,6 +218,7 @@ describe('AppearanceTab 主题模式与界面风格', () => {
     const user = userEvent.setup()
     render(<AppearanceTab />)
 
+    expect(screen.queryByRole('button', { name: /千禧/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /原版 Dashboard/ })).toHaveAttribute(
       'aria-pressed',
       'true'

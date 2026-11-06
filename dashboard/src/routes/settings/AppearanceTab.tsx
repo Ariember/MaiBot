@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import {
   AlertTriangle,
   Download,
-  Keyboard,
   Monitor,
   Moon,
   RotateCcw,
@@ -33,13 +32,6 @@ import {
   defaultLightTokens,
 } from '@/lib/theme/tokens'
 import { exportThemeJSON, importThemeJSON } from '@/lib/theme/storage'
-import {
-  loadMillenniumCjkFont,
-  loadMillenniumFont,
-  saveMillenniumCjkFont,
-  saveMillenniumFont,
-} from '@/lib/theme/millennium-font'
-import type { MillenniumCjkFont, MillenniumFont } from '@/lib/theme/millennium-font'
 import type {
   BackgroundConfigMap,
   BackgroundEffects,
@@ -85,80 +77,6 @@ import { hslToHex } from './types'
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
-const millenniumFontOptions: Array<{
-  value: MillenniumFont
-  label: string
-  description: string
-  fontFamily: string
-  sample: string
-}> = [
-  {
-    value: 'departure',
-    label: 'Departure Mono',
-    description: '默认，等宽，笔画结实',
-    fontFamily: "'Departure Mono', sans-serif",
-    sample: '0123456789 1,284 72.5%',
-  },
-  {
-    value: 'jersey',
-    label: 'Jersey 20',
-    description: '比例像素字，数字清楚、笔画粗',
-    fontFamily: "'Jersey 20', sans-serif",
-    sample: '0123456789 1,284 72.5%',
-  },
-]
-
-const millenniumCjkFontOptions: Array<{
-  value: MillenniumCjkFont
-  label: string
-  description: string
-  fontFamily: string
-  sample: string
-}> = [
-  {
-    value: 'default',
-    label: '默认字体',
-    description: '系统黑体，清晰易读',
-    fontFamily: "'Noto Sans SC', 'Microsoft YaHei UI', sans-serif",
-    sample: '麦麦控制台 运行时长',
-  },
-  {
-    value: 'ark',
-    label: 'Ark Pixel 12px',
-    description: '方舟像素，12px 点阵中文',
-    fontFamily: "'Ark Pixel 12px SC', sans-serif",
-    sample: '麦麦控制台 运行时长',
-  },
-]
-
-function MillenniumFontCard({
-  option,
-  selected,
-  onSelect,
-}: {
-  option: { label: string; description: string; fontFamily: string; sample: string }
-  selected: boolean
-  onSelect: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onSelect}
-      className={cn(
-        'bg-card hover:border-primary/70 hover:bg-accent/40 rounded-lg border p-4 text-left transition-all',
-        selected && 'border-primary bg-primary/10 shadow-sm'
-      )}
-    >
-      <div className="font-semibold">{option.label}</div>
-      <div className="mt-2 text-2xl leading-tight" style={{ fontFamily: option.fontFamily }}>
-        {option.sample}
-      </div>
-      <p className="text-muted-foreground mt-1 text-sm">{option.description}</p>
-    </button>
-  )
-}
-
 const dashboardStyleOptions: Array<{
   value: DashboardStyle
   label: string
@@ -176,12 +94,6 @@ const dashboardStyleOptions: Array<{
     label: '未来复古',
     description: '使用一键包外壳同款纸面颗粒、硬朗描边和切角面板。',
     icon: ScanLine,
-  },
-  {
-    value: 'millennium',
-    label: '千禧',
-    description: '米黄塑料机壳、键帽按钮和下沉屏幕，夜间模式是关灯后的炭灰机壳。',
-    icon: Keyboard,
   },
 ]
 
@@ -275,8 +187,6 @@ export function AppearanceTab() {
     [dashboardStyle, themeConfig.styleBackgroundConfig]
   )
 
-  const [millenniumFont, setMillenniumFont] = useState(loadMillenniumFont)
-  const [millenniumCjkFont, setMillenniumCjkFont] = useState(loadMillenniumCjkFont)
   const [localCSS, setLocalCSS] = useState(activeCustomCSS)
   const [accentInputValue, setAccentInputValue] = useState(() => {
     if (themeConfig.accentColor) {
@@ -617,7 +527,7 @@ export function AppearanceTab() {
       {/* 界面风格 */}
       <div>
         <h3 className="mb-3 text-base font-semibold sm:mb-4 sm:text-lg">界面风格</h3>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           {dashboardStyleOptions.map((option) => {
             const Icon = option.icon
             const selected = themeConfig.dashboardStyle === option.value
@@ -652,49 +562,6 @@ export function AppearanceTab() {
           })}
         </div>
       </div>
-
-      {themeConfig.dashboardStyle === 'millennium' && (
-        <div className="space-y-6">
-          <div>
-            <h3 className="mb-1 text-base font-semibold sm:text-lg">像素字体 · 英文与数字</h3>
-            <p className="text-muted-foreground mb-3 text-sm sm:mb-4">
-              千禧风格里英文和数字使用的字体，切换后立即生效。
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              {millenniumFontOptions.map((option) => (
-                <MillenniumFontCard
-                  key={option.value}
-                  option={option}
-                  selected={millenniumFont === option.value}
-                  onSelect={() => {
-                    setMillenniumFont(option.value)
-                    saveMillenniumFont(option.value)
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-          <div>
-            <h3 className="mb-1 text-base font-semibold sm:text-lg">像素字体 · 中文</h3>
-            <p className="text-muted-foreground mb-3 text-sm sm:mb-4">
-              千禧风格里中文使用的字体，切换后立即生效。
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              {millenniumCjkFontOptions.map((option) => (
-                <MillenniumFontCard
-                  key={option.value}
-                  option={option}
-                  selected={millenniumCjkFont === option.value}
-                  onSelect={() => {
-                    setMillenniumCjkFont(option.value)
-                    saveMillenniumCjkFont(option.value)
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {themeConfig.dashboardStyle === 'modern' && (
         <>

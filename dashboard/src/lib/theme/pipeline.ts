@@ -14,8 +14,6 @@ import {
   defaultLightTokens,
   futureRetroDarkTokens,
   futureRetroLightTokens,
-  millenniumDarkTokens,
-  millenniumLightTokens,
   tokenToCSSVarName,
 } from './tokens'
 
@@ -89,8 +87,6 @@ const buildTokens = (config: UserThemeConfig, isDark: boolean): ThemeTokens => {
       mergedTokens,
       isDark ? futureRetroDarkTokens : futureRetroLightTokens
     )
-  } else if (dashboardStyle === 'millennium') {
-    mergedTokens = mergeTokens(mergedTokens, isDark ? millenniumDarkTokens : millenniumLightTokens)
   }
 
   const styleTokenOverrides = config.styleTokenOverrides?.[dashboardStyle]
@@ -206,7 +202,7 @@ export function applyThemePipeline(config: UserThemeConfig, isDark: boolean): vo
   const root = document.documentElement
   const tokens = buildTokens(config, isDark)
   const dashboardStyle = config.dashboardStyle ?? DEFAULT_DASHBOARD_STYLE
-  // 仅原版风格开放自定义 CSS；未来复古与千禧的外观由各自的样式表完整接管。
+  // 仅原版风格开放自定义 CSS；未来复古的外观由样式表完整接管。
   const customCSS = dashboardStyle === 'modern' ? config.styleCustomCSS?.[dashboardStyle] : undefined
   const backgroundConfig = config.styleBackgroundConfig?.[dashboardStyle]
 
