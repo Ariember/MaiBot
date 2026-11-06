@@ -79,15 +79,20 @@ def fetch_digest(channel: str) -> str:
     try:
         with urlopen(f"https://ghcr.io/token?{query}", timeout=15) as response:
             token = json.load(response)["token"]
-        request = Request(f"https://ghcr.io/v2/{repository}/manifests/{channel}", headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": ", ".join((
-                "application/vnd.oci.image.index.v1+json",
-                "application/vnd.docker.distribution.manifest.list.v2+json",
-                "application/vnd.oci.image.manifest.v1+json",
-                "application/vnd.docker.distribution.manifest.v2+json",
-            )),
-        })
+        request = Request(
+            f"https://ghcr.io/v2/{repository}/manifests/{channel}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": ", ".join(
+                    (
+                        "application/vnd.oci.image.index.v1+json",
+                        "application/vnd.docker.distribution.manifest.list.v2+json",
+                        "application/vnd.oci.image.manifest.v1+json",
+                        "application/vnd.docker.distribution.manifest.v2+json",
+                    )
+                ),
+            },
+        )
         with urlopen(request, timeout=30) as response:
             body = response.read(4 * 1024 * 1024 + 1)
             digest = response.headers.get("Docker-Content-Digest", "")
@@ -112,8 +117,12 @@ def request_image_update(directory: Path, target: str) -> Dict[str, Any]:
     if target != fetch_digest(image_channel()):
         raise SelfUpdateError("state_changed", "镜像渠道已变化，请重新检查更新")
     pending = {
-        "target_commit": target, "base_commit": status["digest"], "branch": image_channel(),
-        "requested_at": time.time(), "source_id": "ghcr", "custom_prefix": "",
+        "target_commit": target,
+        "base_commit": status["digest"],
+        "branch": image_channel(),
+        "requested_at": time.time(),
+        "source_id": "ghcr",
+        "custom_prefix": "",
     }
     try:
         write_json(directory / "image-pending.json", pending, exclusive=True)

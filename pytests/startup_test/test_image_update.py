@@ -48,7 +48,9 @@ def test_invalid_target_never_contacts_registry(tmp_path, monkeypatch, target):
     fetch.assert_not_called()
 
 
-@pytest.mark.parametrize("changes", [{"updated_at": 0}, {"channel": "dev"}, {"digest": "bad"}, {"updated_at": time.time() + 1000}])
+@pytest.mark.parametrize(
+    "changes", [{"updated_at": 0}, {"channel": "dev"}, {"digest": "bad"}, {"updated_at": time.time() + 1000}]
+)
 def test_stale_or_mismatched_status_blocks_update(tmp_path, changes):
     status(tmp_path, **changes)
     with pytest.raises(SelfUpdateError) as error:
@@ -135,10 +137,29 @@ def make_updater(tmp_path, monkeypatch):
     monkeypatch.setattr(updater, "current_digest", lambda _: OLD)
     monkeypatch.setattr(updater, "compose", Mock())
     monkeypatch.setattr(image_updater, "fetch_digest", lambda _: NEW)
-    monkeypatch.setattr(image_updater, "run", Mock(return_value=json.dumps([{
-        "Config": {"Healthcheck": {"Test": ["CMD", "health"]}, "Labels": {"org.opencontainers.image.version": "2.0"}},
-    }])))
-    pending = {"base_commit": OLD, "target_commit": NEW, "branch": "latest", "source_id": "ghcr", "requested_at": time.time()}
+    monkeypatch.setattr(
+        image_updater,
+        "run",
+        Mock(
+            return_value=json.dumps(
+                [
+                    {
+                        "Config": {
+                            "Healthcheck": {"Test": ["CMD", "health"]},
+                            "Labels": {"org.opencontainers.image.version": "2.0"},
+                        },
+                    }
+                ]
+            )
+        ),
+    )
+    pending = {
+        "base_commit": OLD,
+        "target_commit": NEW,
+        "branch": "latest",
+        "source_id": "ghcr",
+        "requested_at": time.time(),
+    }
     return updater, pending
 
 
@@ -184,7 +205,9 @@ def test_failure_preserves_data_and_never_opens_migrated_data_with_old_image(tmp
         assert NEW in updater.override.read_text()
 
 
-@pytest.mark.parametrize("mutation", [{"base_commit": NEW}, {"branch": "dev"}, {"requested_at": 0}, {"target_commit": "evil"}])
+@pytest.mark.parametrize(
+    "mutation", [{"base_commit": NEW}, {"branch": "dev"}, {"requested_at": 0}, {"target_commit": "evil"}]
+)
 def test_executor_revalidates_before_stopping(tmp_path, monkeypatch, mutation):
     updater, pending = make_updater(tmp_path, monkeypatch)
     result = updater.execute({**pending, **mutation})
@@ -199,7 +222,9 @@ def test_custom_override_and_external_mount_are_not_overwritten(tmp_path, monkey
     assert not updater.execute(pending).success
     assert updater.override.read_bytes() == original
     with pytest.raises(ValueError, match="持久数据必须"):
-        updater.data_paths({"Mounts": [{"Type": "bind", "Source": str(tmp_path.parent), "Destination": "/MaiMBot/data"}]})
+        updater.data_paths(
+            {"Mounts": [{"Type": "bind", "Source": str(tmp_path.parent), "Destination": "/MaiMBot/data"}]}
+        )
 
 
 def test_explicit_restore_preserves_failed_data_and_restores_snapshot(tmp_path, monkeypatch):
@@ -235,16 +260,22 @@ def test_restore_rejects_paths_outside_backup_before_stopping(tmp_path, monkeypa
 def test_inspection_validates_compose_owner_and_repository(tmp_path, monkeypatch):
     updater = image_updater.ImageUpdater(tmp_path)
     labels = {
-        "com.docker.compose.service": "core", "com.docker.compose.project": "maibot",
+        "com.docker.compose.service": "core",
+        "com.docker.compose.project": "maibot",
         "com.docker.compose.project.working_dir": str(tmp_path),
         "com.docker.compose.project.config_files": str(tmp_path / "docker-compose.yml"),
     }
-    container = {"Config": {"Labels": labels, "Image": image_update.IMAGE_REPOSITORY + "@" + OLD}, "Image": "local-image-id"}
+    container = {
+        "Config": {"Labels": labels, "Image": image_update.IMAGE_REPOSITORY + "@" + OLD},
+        "Image": "local-image-id",
+    }
 
     def command(args, **kwargs):
         if args[1] == "inspect":
             return json.dumps([container])
-        return json.dumps([{"RepoDigests": [image_update.IMAGE_REPOSITORY + "@" + NEW, image_update.IMAGE_REPOSITORY + "@" + OLD]}])
+        return json.dumps(
+            [{"RepoDigests": [image_update.IMAGE_REPOSITORY + "@" + NEW, image_update.IMAGE_REPOSITORY + "@" + OLD]}]
+        )
 
     monkeypatch.setattr(image_updater, "run", command)
     updater.publish_status()

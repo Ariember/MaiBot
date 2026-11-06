@@ -12,7 +12,12 @@ import subprocess
 import time
 
 from src.common.image_update import (
-    DIGEST_PATTERN, IMAGE_REPOSITORY, REQUEST_MAX_AGE, fetch_digest, image_channel, write_json,
+    DIGEST_PATTERN,
+    IMAGE_REPOSITORY,
+    REQUEST_MAX_AGE,
+    fetch_digest,
+    image_channel,
+    write_json,
 )
 from src.common.instance_lock import FileLock
 from src.common.self_update import UpdateResult
@@ -54,7 +59,18 @@ class ImageUpdater:
         files = ["--file", str(self.root / "docker-compose.yml")]
         if self.override.exists():
             files.extend(["--file", str(self.override)])
-        return run(["docker", "compose", "--project-directory", str(self.root), "--project-name", self.project, *files, *arguments])
+        return run(
+            [
+                "docker",
+                "compose",
+                "--project-directory",
+                str(self.root),
+                "--project-name",
+                self.project,
+                *files,
+                *arguments,
+            ]
+        )
 
     def current_digest(self, container: Dict[str, Any]) -> str:
         image = json.loads(run(["docker", "image", "inspect", container["Image"]], timeout=30))[0]
@@ -64,15 +80,20 @@ class ImageUpdater:
         if configured.startswith(prefix) and configured in references:
             references = [configured]
         for reference in references:
-            if reference.startswith(prefix) and DIGEST_PATTERN.fullmatch(reference[len(prefix):]):
-                return reference[len(prefix):]
+            if reference.startswith(prefix) and DIGEST_PATTERN.fullmatch(reference[len(prefix) :]):
+                return reference[len(prefix) :]
         raise ValueError("core 尚未运行本 fork 的 GHCR 镜像，请先按部署文档迁移")
 
     def publish_status(self) -> None:
         container = self.inspect()
-        write_json(self.state / "image-status.json", {
-            "digest": self.current_digest(container), "channel": self.channel, "updated_at": time.time(),
-        })
+        write_json(
+            self.state / "image-status.json",
+            {
+                "digest": self.current_digest(container),
+                "channel": self.channel,
+                "updated_at": time.time(),
+            },
+        )
 
     def pin_image(self, digest: str) -> None:
         if not DIGEST_PATTERN.fullmatch(digest):
@@ -108,7 +129,11 @@ class ImageUpdater:
                 raise ValueError("不能把更新器状态或备份目录用作业务数据")
             paths.append(source)
         # data 内的插件、表情、日志挂载只备份一次。
-        return [path for path in sorted(set(paths)) if not any(path != parent and path.is_relative_to(parent) for parent in paths)]
+        return [
+            path
+            for path in sorted(set(paths))
+            if not any(path != parent and path.is_relative_to(parent) for parent in paths)
+        ]
 
     def save_backup(self, paths: List[Path], backup: Path, digest: str) -> None:
         backup.mkdir(parents=True, mode=0o700)
@@ -119,15 +144,23 @@ class ImageUpdater:
                 shutil.copytree(source, destination, symlinks=True)
             else:
                 shutil.copy2(source, destination)
-        write_json(backup / "manifest.json", {
-            "digest": digest, "paths": [str(path.relative_to(self.root)) for path in paths],
-        })
+        write_json(
+            backup / "manifest.json",
+            {
+                "digest": digest,
+                "paths": [str(path.relative_to(self.root)) for path in paths],
+            },
+        )
 
     def start_core(self) -> None:
-        self.compose("up", "-d", "--no-deps", "--no-build", "--pull", "never", "--wait", "--wait-timeout", "300", "core")
+        self.compose(
+            "up", "-d", "--no-deps", "--no-build", "--pull", "never", "--wait", "--wait-timeout", "300", "core"
+        )
 
     def execute(self, pending: Dict[str, Any]) -> UpdateResult:
-        result = UpdateResult(success=False, started_at=time.time(), source_name="GitHub Container Registry", stage="precheck")
+        result = UpdateResult(
+            success=False, started_at=time.time(), source_name="GitHub Container Registry", stage="precheck"
+        )
         stopped = False
         launched = False
         old_digest = ""
@@ -140,7 +173,11 @@ class ImageUpdater:
             result.from_commit, result.to_commit = old_digest, target
             result.branch = self.channel
             result.from_version = container["Config"]["Labels"].get("org.opencontainers.image.version", "")
-            if pending["base_commit"] != old_digest or pending["branch"] != self.channel or pending["source_id"] != "ghcr":
+            if (
+                pending["base_commit"] != old_digest
+                or pending["branch"] != self.channel
+                or pending["source_id"] != "ghcr"
+            ):
                 raise ValueError("当前镜像或渠道已变化，请重新检查更新")
             if not 0 <= time.time() - pending["requested_at"] <= REQUEST_MAX_AGE:
                 raise ValueError("镜像更新请求已过期")
@@ -172,7 +209,15 @@ class ImageUpdater:
                 raise RuntimeError("启动后的镜像摘要与确认目标不一致")
             result.success = True
             result.stage = "done"
-        except (OSError, ValueError, KeyError, TypeError, RuntimeError, SelfUpdateError, subprocess.SubprocessError) as exc:
+        except (
+            OSError,
+            ValueError,
+            KeyError,
+            TypeError,
+            RuntimeError,
+            SelfUpdateError,
+            subprocess.SubprocessError,
+        ) as exc:
             result.error_code = "image_update_failed"
             result.error = str(exc)
             if stopped and not launched:
@@ -188,12 +233,20 @@ class ImageUpdater:
                     self.compose("stop", "--timeout", "70", "core")
                 except (OSError, RuntimeError, subprocess.SubprocessError) as stop_error:
                     result.rollback_error = str(stop_error)
-                result.error += f"；新程序可能已迁移数据，请按 docs/docker-deployment.md 从备份恢复：{result.backup_path}"
+                result.error += (
+                    f"；新程序可能已迁移数据，请按 docs/docker-deployment.md 从备份恢复：{result.backup_path}"
+                )
             if launched or result.rollback_error:
                 write_json(self.state / "image-recovery.json", asdict(result))
         result.finished_at = time.time()
         write_json(self.state / "last_result.json", asdict(result))
-        logger.info("镜像更新结束：success=%s stage=%s backup=%s error=%s", result.success, result.stage, result.backup_path, result.error)
+        logger.info(
+            "镜像更新结束：success=%s stage=%s backup=%s error=%s",
+            result.success,
+            result.stage,
+            result.backup_path,
+            result.error,
+        )
         return result
 
     def restore(self, backup: Path) -> None:
@@ -236,8 +289,14 @@ class ImageUpdater:
             self.pin_image(digest)
             self.start_core()
             result = UpdateResult(
-                success=False, rolled_back=True, started_at=time.time(), finished_at=time.time(),
-                to_commit=digest, stage="restored", source_name="GitHub Container Registry", backup_path=str(backup),
+                success=False,
+                rolled_back=True,
+                started_at=time.time(),
+                finished_at=time.time(),
+                to_commit=digest,
+                stage="restored",
+                source_name="GitHub Container Registry",
+                backup_path=str(backup),
                 error=f"已从备份恢复；失败后的数据保存在 {preserved}",
             )
             write_json(self.state / "last_result.json", asdict(result))
@@ -251,9 +310,12 @@ class ImageUpdater:
         pending = self.state / "image-pending.json"
         with FileLock(self.state / "executor.lock"):
             if active.exists():
-                write_json(self.state / "image-recovery.json", {
-                    "error": "更新执行器在任务中中断，请检查 last_result.json、备份和容器状态后手动恢复",
-                })
+                write_json(
+                    self.state / "image-recovery.json",
+                    {
+                        "error": "更新执行器在任务中中断，请检查 last_result.json、备份和容器状态后手动恢复",
+                    },
+                )
             while True:
                 try:
                     self.publish_status()
