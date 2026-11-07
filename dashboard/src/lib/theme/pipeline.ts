@@ -20,7 +20,6 @@ import {
 const CUSTOM_CSS_ID = 'maibot-custom-css'
 const COMPONENT_CSS_ID_PREFIX = 'maibot-bg-css-'
 const COMPONENT_IDS = ['page', 'sidebar', 'header', 'card', 'dialog'] as const
-const DEFAULT_PRIMARY_COLOR_HSL = defaultLightTokens.color.primary
 
 const mergeTokens = (base: ThemeTokens, overrides: Partial<ThemeTokens>): ThemeTokens => {
   return {
@@ -49,9 +48,7 @@ const mergeTokens = (base: ThemeTokens, overrides: Partial<ThemeTokens>): ThemeT
 
 const buildTokens = (config: UserThemeConfig, isDark: boolean): ThemeTokens => {
   const baseTokens = isDark ? defaultDarkTokens : defaultLightTokens
-  let mergedTokens = mergeTokens(baseTokens, {
-    color: generatePalette(DEFAULT_PRIMARY_COLOR_HSL, isDark),
-  })
+  let mergedTokens = baseTokens
 
   if (config.accentColor) {
     if (isDefaultAccentColor(config.accentColor)) {
@@ -208,7 +205,7 @@ export function applyThemePipeline(config: UserThemeConfig, isDark: boolean): vo
 
   injectTokensAsCSS(tokens, root)
 
-  // 原版风格的桌面端样式表（styles/modern.css）用这组变量替换图表的系列 2–5；手机端和其它风格不读取它们。
+  // 原版风格的样式表（styles/modern.css）用这组变量统一桌面和手机的图表系列 2–5。
   const modernChartKeys = ['chart-2', 'chart-3', 'chart-4', 'chart-5'] as const
   if (dashboardStyle === 'modern') {
     const companions = isDefaultAccentColor(config.accentColor)

@@ -1,15 +1,116 @@
 /*
- * 原版风格的桌面端（lg 及以上）补充样式。
- * 手机端（lg 以下）由 styles/mobile.css 负责；这里的规则全部包在 min-width: 1024px 里，两边互不影响。
- * 配色、卡片、控件沿用原版风格本身的令牌，这里只管三件事：
+ * 原版风格的配色与桌面端（lg 及以上）补充样式。
+ * 首页数据配色由桌面与手机共用；手机布局仍由 styles/mobile.css 负责。
+ * 配色、卡片、控件沿用原版风格本身的令牌，桌面端另外负责：
  * 1. 侧栏：当前页用贴边的 2px 主色线加主色字，不铺底色；
  * 2. 顶栏：跟随悬停滑动的选中块收成一条贴底的线；
  * 3. 磨砂玻璃：只放在有细节、有色彩、有图片的内容前面——吸顶顶栏、浮层、图表提示框，
  *    以及设置了自定义背景时的卡片与侧栏。模糊强度跟随「视觉效果」里的模糊开关（--visual-blur-md）。
  */
 
+:root[data-dashboard-style='modern'] {
+  --accent: var(--color-muted);
+  --accent-foreground: var(--color-foreground);
+}
+
+/* 图表系列与首页指标共用配色，保持卡片、数值和图例之间的对应关系。 */
+:root[data-dashboard-style='modern'] [data-dashboard-shell='true'] {
+  --color-chart-2: var(--modern-chart-2, 174 18% 36%);
+  --color-chart-3: var(--modern-chart-3, 220 12% 43%);
+  --color-chart-4: var(--modern-chart-4, 30 20% 42%);
+  --color-chart-5: var(--modern-chart-5, 148 14% 38%);
+}
+
+:root.dark[data-dashboard-style='modern'] [data-dashboard-shell='true'] {
+  --color-chart-2: var(--modern-chart-2, 174 18% 65%);
+  --color-chart-3: var(--modern-chart-3, 220 12% 72%);
+  --color-chart-4: var(--modern-chart-4, 30 20% 68%);
+  --color-chart-5: var(--modern-chart-5, 148 14% 65%);
+}
+
+:root[data-dashboard-style='modern'] [data-home-card-id] {
+  --home-card-accent: var(--color-chart-1);
+}
+
+:root[data-dashboard-style='modern']
+  :is([data-home-card-id='builtin:cost-trend'], [data-home-card-id='builtin:daily-statistics']) {
+  --home-card-accent: var(--color-chart-2);
+}
+
+:root[data-dashboard-style='modern'] [data-home-card-id='builtin:token-trend'] {
+  --home-card-accent: var(--color-chart-3);
+}
+
+:root[data-dashboard-style='modern'] [data-home-card-id='builtin:model-distribution'] {
+  --home-card-accent: var(--color-chart-4);
+}
+
+:root[data-dashboard-style='modern']
+  :is([data-home-card-id='builtin:prompt-cache'], [data-home-card-id='builtin:model-details']) {
+  --home-card-accent: var(--color-chart-5);
+}
+
+:root[data-dashboard-style='modern']
+  [data-home-card-style='default']
+  [data-dashboard-card-title='true'] > svg {
+  color: hsl(var(--home-card-accent));
+}
+
+:root[data-dashboard-style='modern']
+  :is([data-home-summary-primary='true'], [data-home-summary-metric='true']) {
+  --home-metric-color: var(--color-chart-1);
+}
+
+:root[data-dashboard-style='modern'] [data-home-summary-primary='true']:nth-child(2) {
+  --home-metric-color: var(--color-chart-2);
+}
+
+:root[data-dashboard-style='modern'] [data-home-summary-metric='true']:nth-child(1) {
+  --home-metric-color: var(--color-chart-3);
+}
+
+:root[data-dashboard-style='modern'] [data-home-summary-metric='true']:nth-child(2) {
+  --home-metric-color: var(--color-chart-4);
+}
+
+:root[data-dashboard-style='modern'] [data-home-summary-metric='true']:nth-child(3) {
+  --home-metric-color: var(--color-chart-5);
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-shell='true']
+  [data-home-card-style='default']
+  :is([data-home-summary-primary='true'], [data-home-summary-metric='true']) .text-primary {
+  color: hsl(var(--home-metric-color));
+}
+
+:root[data-dashboard-style='modern']
+  [data-home-card-style='default'] [data-home-summary-primary='true'] {
+  background-color: hsl(var(--home-metric-color) / 0.06);
+}
+
+:root[data-dashboard-style='modern'] [data-home-cache-breakdown='true'] > div {
+  --home-metric-color: var(--color-chart-5);
+}
+
+:root[data-dashboard-style='modern'] [data-home-cache-breakdown='true'] > div:nth-child(2) {
+  --home-metric-color: var(--color-chart-2);
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-shell='true']
+  [data-home-card-style='default'] [data-home-cache-breakdown='true'] .text-primary {
+  color: hsl(var(--home-metric-color));
+}
+
+:root[data-dashboard-style='modern']
+  [data-home-card-style='default'] [data-home-cache-breakdown='true'] .bg-primary {
+  background-color: hsl(var(--home-metric-color));
+}
+
 @media (min-width: 1024px) {
   :root[data-dashboard-style='modern'] {
+    --mdn-card-shadow: 0 1px 2px rgb(16 24 40 / 0.03), 0 4px 16px -8px rgb(16 24 40 / 0.12);
     --mdn-glass-alpha: 0.74;
     --mdn-glass-surface-alpha: 0.5;
     --mdn-glass-chart-alpha: 0.6;
@@ -20,6 +121,7 @@
   }
 
   :root.dark[data-dashboard-style='modern'] {
+    --mdn-card-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 4px 16px -8px rgb(0 0 0 / 0.3);
     --mdn-glass-alpha: 0.72;
     --mdn-glass-surface-alpha: 0.46;
     --mdn-glass-chart-alpha: 0.5;
@@ -28,22 +130,33 @@
     --mdn-scrim: 0 0% 0% / 0.5;
   }
 
-  /* ---------- 图表配色 ----------
-     系列 1 仍是主色，系列 2–5 换成管线给出的搭配色；令牌写在根节点的行内样式上，所以在外壳这一层覆盖。
-     管线变量缺失时（例如热更新后主题还没重新应用）退回这里写的默认搭配色，避免变量失效后图形变黑。 */
+  /* ---------- 卡片与页面层次 ---------- */
 
-  :root[data-dashboard-style='modern'] [data-dashboard-shell='true'] {
-    --color-chart-2: var(--modern-chart-2, 158.5 75.3% 34.9%);
-    --color-chart-3: var(--modern-chart-3, 212.8 67.7% 50.2%);
-    --color-chart-4: var(--modern-chart-4, 40.8 100% 46.5%);
-    --color-chart-5: var(--modern-chart-5, 337.4 70.3% 69.6%);
+  :root[data-dashboard-style='modern']
+    [data-dashboard-shell='true'][data-dashboard-page-background='none']
+    [data-dashboard-sidebar='true']:not(:has([data-background-layer])) {
+    background-color: hsl(var(--card));
   }
 
-  :root.dark[data-dashboard-style='modern'] [data-dashboard-shell='true'] {
-    --color-chart-2: var(--modern-chart-2, 159.2 72.7% 35.9%);
-    --color-chart-3: var(--modern-chart-3, 212.8 76.8% 56.1%);
-    --color-chart-4: var(--modern-chart-4, 39.7 100% 39.4%);
-    --color-chart-5: var(--modern-chart-5, 338.2 61.1% 57.6%);
+  :root[data-dashboard-style='modern'] [data-dashboard-card='true']:not([data-card-variant='flat']) {
+    box-shadow: var(--mdn-card-shadow);
+  }
+
+  :root[data-dashboard-style='modern']
+    :is(
+      [data-home-summary-cards='true']
+        [data-home-card-style]:not([data-home-card-style='borderless']):not([data-home-card-id='builtin:bot-status']),
+      [data-plugin-market-card='true']
+    ),
+  :root[data-dashboard-style='modern']
+    [data-home-summary-cards='true']
+    [data-home-card-id='builtin:bot-status'][data-home-card-style]:not([data-home-card-style='borderless'])
+    [data-maibot-status-face] {
+    box-shadow: var(--mdn-card-shadow) !important;
+  }
+
+  :root[data-dashboard-style='modern'] [data-plugin-market-card='true'] {
+    border-width: 1px !important;
   }
 
   /* ---------- 侧栏 ---------- */
