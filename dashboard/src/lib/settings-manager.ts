@@ -3,15 +3,11 @@
  * 统一管理所有前端 localStorage 设置
  */
 
-import { DEFAULT_ACCENT_COLOR_HSL } from './theme/palette'
-
 // 所有设置的 key 定义
 export const STORAGE_KEYS = {
   // 外观设置
   /** @deprecated 使用新的主题系统 — 见 @/lib/theme/storage.ts 的 THEME_STORAGE_KEYS.MODE */
   THEME: 'maibot-ui-theme',
-  /** @deprecated 使用新的主题系统 — 见 @/lib/theme/storage.ts 的 THEME_STORAGE_KEYS.ACCENT */
-  ACCENT_COLOR: 'accent-color',
   ENABLE_ANIMATIONS: 'maibot-animations',
   ENABLE_AVATAR_FETCH: 'maibot-enable-avatar-fetch',
 
@@ -60,7 +56,6 @@ export const NOTIFICATIONS_RESET_EVENT = 'maibot-notifications-reset'
 export const DEFAULT_SETTINGS = {
   // 外观
   theme: 'system' as 'light' | 'dark' | 'system',
-  accentColor: DEFAULT_ACCENT_COLOR_HSL,
   enableAnimations: true,
   enableAvatarFetch: true,
 
@@ -137,7 +132,6 @@ export function setSetting<K extends keyof Settings>(key: K, value: Settings[K])
 export function getAllSettings(): Settings {
   return {
     theme: getSetting('theme'),
-    accentColor: getSetting('accentColor'),
     enableAnimations: getSetting('enableAnimations'),
     enableAvatarFetch: getSetting('enableAvatarFetch'),
     alwaysShowUpdateNotice: getSetting('alwaysShowUpdateNotice'),
@@ -377,7 +371,6 @@ export function formatBytes(bytes: number): string {
 function getStorageKey(settingKey: keyof Settings): string {
   const keyMap: Record<keyof Settings, string> = {
     theme: STORAGE_KEYS.THEME,
-    accentColor: STORAGE_KEYS.ACCENT_COLOR,
     enableAnimations: STORAGE_KEYS.ENABLE_ANIMATIONS,
     enableAvatarFetch: STORAGE_KEYS.ENABLE_AVATAR_FETCH,
     alwaysShowUpdateNotice: STORAGE_KEYS.ALWAYS_SHOW_UPDATE_NOTICE,

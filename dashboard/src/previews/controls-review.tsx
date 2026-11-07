@@ -89,7 +89,6 @@ function applyPreviewTheme(style: DashboardStyle, dark: boolean) {
   root.style.setProperty('--retro-paper-texture-size', '220px 220px')
   applyThemePipeline({
     selectedPreset: dark ? 'dark' : 'light',
-    accentColor: '',
     styleTokenOverrides: {},
     styleCustomCSS: {},
     dashboardStyle: style,

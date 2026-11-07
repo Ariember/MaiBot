@@ -4,7 +4,6 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { DEFAULT_ACCENT_COLOR_HSL } from '../palette'
 import {
   THEME_STORAGE_KEYS,
   exportThemeJSON,
@@ -20,7 +19,6 @@ import type { UserThemeConfig } from '../tokens'
 /** 构造一份合法的完整主题配置，按需覆盖字段 */
 const buildConfig = (overrides: Partial<UserThemeConfig> = {}): UserThemeConfig => ({
   selectedPreset: 'light',
-  accentColor: DEFAULT_ACCENT_COLOR_HSL,
   styleTokenOverrides: {},
   styleCustomCSS: {},
   styleBackgroundConfig: {},
@@ -37,7 +35,6 @@ describe('loadThemeConfig', () => {
   it('存储为空时返回默认配置', () => {
     expect(loadThemeConfig()).toEqual({
       selectedPreset: 'light',
-      accentColor: DEFAULT_ACCENT_COLOR_HSL,
       styleTokenOverrides: {},
       styleCustomCSS: {},
       styleBackgroundConfig: {},
@@ -55,8 +52,6 @@ describe('loadThemeConfig', () => {
 
   it('读取已存值并逐字段归一化', () => {
     localStorage.setItem(THEME_STORAGE_KEYS.PRESET, 'ocean')
-    // 十六进制强调色会被转换为 HSL 字符串
-    localStorage.setItem(THEME_STORAGE_KEYS.ACCENT, '#ff0000')
     localStorage.setItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE, 'modern')
     // 未知风格 key（bogus）应被丢弃
     localStorage.setItem(
@@ -91,7 +86,6 @@ describe('loadThemeConfig', () => {
     const config = loadThemeConfig()
 
     expect(config.selectedPreset).toBe('ocean')
-    expect(config.accentColor).toBe('0 100% 50%')
     expect(config.dashboardStyle).toBe('modern')
     expect(config.styleTokenOverrides).toEqual({ modern: { color: { primary: '1 2% 3%' } } })
     expect(config.styleCustomCSS).toEqual({ modern: '.a { color: red; }' })
@@ -120,14 +114,12 @@ describe('loadThemeConfig', () => {
     expect(config.styleConfig).toEqual(DEFAULT_DASHBOARD_STYLE_CONFIG)
   })
 
-  it.each(['neon', 'millennium'])('无效或已移除的风格 %s 与强调色回退默认值', (style) => {
+  it.each(['neon', 'millennium'])('无效或已移除的风格 %s 回退默认值', (style) => {
     localStorage.setItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE, style)
-    localStorage.setItem(THEME_STORAGE_KEYS.ACCENT, 'garbage')
 
     const config = loadThemeConfig()
 
     expect(config.dashboardStyle).toBe('modern')
-    expect(config.accentColor).toBe(DEFAULT_ACCENT_COLOR_HSL)
   })
 
   it('已移除皮肤的缓存不会覆盖原版配置', () => {
@@ -154,8 +146,6 @@ describe('saveThemeConfig', () => {
     saveThemeConfig(
       buildConfig({
         selectedPreset: 'dark',
-        // 默认强调色的十六进制形式会被归一化回默认 HSL
-        accentColor: '#55AB49',
         // future-retro 的自定义 CSS 不受支持，保存时会被丢弃
         styleCustomCSS: { 'future-retro': '.x {}' },
         dashboardStyle: 'modern',
@@ -163,7 +153,6 @@ describe('saveThemeConfig', () => {
     )
 
     expect(localStorage.getItem(THEME_STORAGE_KEYS.PRESET)).toBe('dark')
-    expect(localStorage.getItem(THEME_STORAGE_KEYS.ACCENT)).toBe(DEFAULT_ACCENT_COLOR_HSL)
     expect(localStorage.getItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE)).toBe('modern')
     expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEYS.STYLE_CUSTOM_CSS)!)).toEqual({})
     expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEYS.STYLE_OVERRIDES)!)).toEqual({})
@@ -215,17 +204,13 @@ describe('importThemeJSON', () => {
     const result = importThemeJSON('{}')
 
     expect(result.success).toBe(false)
-    expect(result.errors).toEqual([
-      'selectedPreset must be a string',
-      'accentColor must be a string',
-    ])
+    expect(result.errors).toEqual(['selectedPreset must be a string'])
   })
 
   it('可选字段类型错误时报告错误且不写入存储', () => {
     const result = importThemeJSON(
       JSON.stringify({
         selectedPreset: 'light',
-        accentColor: '#123456',
         styleTokenOverrides: 'oops',
         dashboardStyle: 42,
       })
@@ -243,7 +228,6 @@ describe('importThemeJSON', () => {
     const result = importThemeJSON(
       JSON.stringify({
         selectedPreset: 'dark',
-        accentColor: '200 50% 40%',
         dashboardStyle: 'modern',
         styleCustomCSS: { modern: '.a { color: red; }' },
       })
@@ -251,7 +235,6 @@ describe('importThemeJSON', () => {
 
     expect(result).toEqual({ success: true, errors: [] })
     expect(localStorage.getItem(THEME_STORAGE_KEYS.PRESET)).toBe('dark')
-    expect(localStorage.getItem(THEME_STORAGE_KEYS.ACCENT)).toBe('200 50% 40%')
     expect(localStorage.getItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE)).toBe('modern')
     expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEYS.STYLE_CUSTOM_CSS)!)).toEqual({
       modern: '.a { color: red; }',

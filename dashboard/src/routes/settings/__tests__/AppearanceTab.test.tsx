@@ -5,7 +5,6 @@
  * - mock use-theme / use-animation 上下文钩子，注入可控状态并断言回调参数（请求形状）；
  * - mock 重量级子组件（CodeEditor / 背景上传器 / 背景效果 / 组件 CSS 编辑器），
  *   通过暴露按钮驱动父组件的编排逻辑；
- * - applyThemePipeline 打桩避免污染 jsdom 文档样式，getComputedTokens 保留真实实现；
  * - Radix Select / Slider 通过 combobox/option 与键盘箭头驱动，锁定 token 写入形状；
  * - FileReader 用同步桩替换，规避 jsdom 异步读文件与 location.reload 的时序问题。
  */
@@ -16,8 +15,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppearanceTab } from '../AppearanceTab'
 import type { AnimationSettings } from '@/lib/animation-context'
 import type { ThemeProviderState } from '@/lib/theme-context'
-import { DEFAULT_ACCENT_COLOR_HEX, DEFAULT_ACCENT_COLOR_HSL, hexToHSL } from '@/lib/theme/palette'
-import { applyThemePipeline } from '@/lib/theme/pipeline'
 import { exportThemeJSON, importThemeJSON } from '@/lib/theme/storage'
 import {
   DEFAULT_FUTURE_RETRO_STYLE_CONFIG,
@@ -55,12 +52,6 @@ vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: toastMock }) }))
 vi.mock('@/components/use-theme', () => ({ useTheme: () => themeState }))
 
 vi.mock('@/hooks/use-animation', () => ({ useAnimation: () => animationState }))
-
-// applyThemePipeline 打桩（避免向 jsdom 注入样式），getComputedTokens 保留真实实现
-vi.mock('@/lib/theme/pipeline', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/theme/pipeline')>()
-  return { ...actual, applyThemePipeline: vi.fn() }
-})
 
 vi.mock('@/lib/theme/storage', () => ({
   exportThemeJSON: vi.fn(),
@@ -156,7 +147,7 @@ class MockFileReader {
   }
 }
 
-/** 构造可控的主题上下文状态（默认 modern 风格、system 模式、未持久化主题色） */
+/** 构造可控的主题上下文状态（默认 modern 风格、system 模式） */
 function makeThemeState(
   configPartial: Partial<UserThemeConfig> = {},
   theme: 'dark' | 'light' | 'system' = 'system'
@@ -167,7 +158,6 @@ function makeThemeState(
     setTheme: vi.fn(),
     themeConfig: {
       selectedPreset: 'light',
-      accentColor: '',
       styleTokenOverrides: {},
       styleCustomCSS: {},
       styleBackgroundConfig: {},
@@ -228,25 +218,12 @@ describe('AppearanceTab 主题模式与界面风格', () => {
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({ dashboardStyle: 'future-retro' })
   })
 
-  it('modern 风格显示主题色/自定义 CSS/导入导出区块与色板预览', () => {
+  it('modern 风格显示自定义 CSS 与导入导出区块', () => {
     render(<AppearanceTab />)
 
-    expect(screen.getByText('settings.appearance.accentColor')).toBeInTheDocument()
+    expect(screen.queryByText('settings.appearance.accentColor')).not.toBeInTheDocument()
     expect(screen.getByText('settings.appearance.customCss')).toBeInTheDocument()
     expect(screen.getByText('settings.appearance.importExportTheme')).toBeInTheDocument()
-    // 8 个色板 token 预览
-    for (const tokenName of [
-      'primary',
-      'secondary',
-      'muted',
-      'accent',
-      'destructive',
-      'background',
-      'card',
-      'border',
-    ]) {
-      expect(screen.getByText(tokenName)).toBeInTheDocument()
-    }
     // 未来复古专属配置不应出现
     expect(screen.queryByText('settings.appearance.retroConfig')).not.toBeInTheDocument()
     // 自定义 CSS 为空时清除按钮禁用
@@ -276,78 +253,6 @@ describe('AppearanceTab 主题模式与界面风格', () => {
         },
       },
     })
-  })
-})
-
-describe('AppearanceTab 主题色', () => {
-  it('输入合法 hex 会转大写、立即更新预览并防抖持久化 accentColor', async () => {
-    const user = userEvent.setup()
-    render(<AppearanceTab />)
-
-    const input = screen.getByRole('textbox', { name: 'settings.appearance.accentPrimary' })
-    expect(input).toHaveValue(DEFAULT_ACCENT_COLOR_HEX)
-
-    await user.clear(input)
-    await user.type(input, '#ff0000')
-    // 文本输入被规范化为大写
-    expect(input).toHaveValue('#FF0000')
-
-    // 预览管线立即以新颜色重新执行（浅色模式 isDark=false）
-    await waitFor(() => {
-      const lastCall = vi.mocked(applyThemePipeline).mock.calls.at(-1)
-      expect(lastCall?.[0].accentColor).toBe(hexToHSL('#FF0000'))
-      expect(lastCall?.[1]).toBe(false)
-    })
-
-    // 防抖（160ms）后写入配置
-    await waitFor(() =>
-      expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-        accentColor: hexToHSL('#FF0000'),
-      })
-    )
-  })
-
-  it('非法 hex 输入不触发持久化，预览保持默认主题色', async () => {
-    const user = userEvent.setup()
-    render(<AppearanceTab />)
-
-    const input = screen.getByRole('textbox', { name: 'settings.appearance.accentPrimary' })
-    await user.clear(input)
-    await user.type(input, '#GGGGGG')
-    expect(input).toHaveValue('#GGGGGG')
-
-    // 等待超过防抖窗口，确认没有任何持久化调用
-    await new Promise((resolve) => setTimeout(resolve, 260))
-    expect(themeState.updateThemeConfig).not.toHaveBeenCalled()
-
-    // 预览仍是默认主题色
-    const lastCall = vi.mocked(applyThemePipeline).mock.calls.at(-1)
-    expect(lastCall?.[0].accentColor).toBe(DEFAULT_ACCENT_COLOR_HSL)
-  })
-
-  it('重置主题色按钮立即回写默认 accentColor 并还原输入框', async () => {
-    const user = userEvent.setup()
-    themeState = makeThemeState({ accentColor: '0 100% 50%' })
-    render(<AppearanceTab />)
-
-    // 手风琴全部收起时页面上只有主题色区块这一个"重置默认"按钮
-    const resetButton = screen.getByRole('button', { name: /resetDefault/ })
-    expect(resetButton).toBeEnabled()
-
-    await user.click(resetButton)
-    expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-      accentColor: DEFAULT_ACCENT_COLOR_HSL,
-    })
-    expect(screen.getByRole('textbox', { name: 'settings.appearance.accentPrimary' })).toHaveValue(
-      DEFAULT_ACCENT_COLOR_HEX
-    )
-  })
-
-  it('主题色已是默认值时重置按钮禁用', () => {
-    themeState = makeThemeState({ accentColor: DEFAULT_ACCENT_COLOR_HSL })
-    render(<AppearanceTab />)
-
-    expect(screen.getByRole('button', { name: /resetDefault/ })).toBeDisabled()
   })
 })
 
@@ -614,27 +519,7 @@ function getLabeledSlider(label: string) {
   return within(root as HTMLElement).getByRole('slider')
 }
 
-describe('AppearanceTab 主题色原生选择器与导入按钮', () => {
-  it('原生 color 输入立即更新预览并防抖持久化 accentColor', async () => {
-    const { container } = render(<AppearanceTab />)
-    const colorInput = container.querySelector<HTMLInputElement>('input[type="color"]')
-    expect(colorInput).not.toBeNull()
-
-    fireEvent.change(colorInput!, { target: { value: '#00aaff' } })
-    expect(colorInput).toHaveValue('#00aaff')
-
-    await waitFor(() => {
-      const lastCall = vi.mocked(applyThemePipeline).mock.calls.at(-1)
-      expect(lastCall?.[0].accentColor).toBe(hexToHSL('#00aaff'))
-    })
-
-    await waitFor(() =>
-      expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-        accentColor: hexToHSL('#00aaff'),
-      })
-    )
-  })
-
+describe('AppearanceTab 导入按钮', () => {
   it('导入主题按钮点击隐藏文件框，成功导入后 1 秒刷新页面', () => {
     vi.useFakeTimers()
     try {

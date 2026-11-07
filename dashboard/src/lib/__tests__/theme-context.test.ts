@@ -14,7 +14,6 @@ describe('ThemeProviderContext', () => {
     expect(state.resolvedTheme).toBe('light')
     expect(state.themeConfig).toEqual({
       selectedPreset: 'light',
-      accentColor: '',
       styleTokenOverrides: {},
       styleCustomCSS: {},
       dashboardStyle: DEFAULT_DASHBOARD_STYLE,
@@ -23,7 +22,7 @@ describe('ThemeProviderContext', () => {
     })
 
     expect(state.setTheme('dark')).toBeNull()
-    expect(state.updateThemeConfig({ accentColor: '#fff' })).toBeNull()
+    expect(state.updateThemeConfig({ selectedPreset: 'dark' })).toBeNull()
     expect(state.resetTheme()).toBeNull()
   })
 })

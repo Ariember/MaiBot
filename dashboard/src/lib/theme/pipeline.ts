@@ -1,11 +1,5 @@
 import type { ThemeTokens, UserThemeConfig } from './tokens'
 
-import {
-  generatePalette,
-  getModernChartCompanions,
-  getReadableForeground,
-  isDefaultAccentColor,
-} from './palette'
 import { getPresetById } from './presets'
 import { sanitizeCSS } from './sanitizer'
 import {
@@ -49,22 +43,6 @@ const mergeTokens = (base: ThemeTokens, overrides: Partial<ThemeTokens>): ThemeT
 const buildTokens = (config: UserThemeConfig, isDark: boolean): ThemeTokens => {
   const baseTokens = isDark ? defaultDarkTokens : defaultLightTokens
   let mergedTokens = baseTokens
-
-  if (config.accentColor) {
-    if (isDefaultAccentColor(config.accentColor)) {
-      mergedTokens = mergeTokens(mergedTokens, {
-        color: {
-          ...mergedTokens.color,
-          accent: config.accentColor,
-          'accent-foreground': getReadableForeground(config.accentColor),
-        },
-      })
-    } else {
-      mergedTokens = mergeTokens(mergedTokens, {
-        color: generatePalette(config.accentColor, isDark),
-      })
-    }
-  }
 
   if (
     config.selectedPreset &&
@@ -205,18 +183,6 @@ export function applyThemePipeline(config: UserThemeConfig, isDark: boolean): vo
 
   injectTokensAsCSS(tokens, root)
 
-  // 原版风格的样式表（styles/modern.css）用这组变量统一桌面和手机的图表系列 2–5。
-  const modernChartKeys = ['chart-2', 'chart-3', 'chart-4', 'chart-5'] as const
-  if (dashboardStyle === 'modern') {
-    const companions = isDefaultAccentColor(config.accentColor)
-      ? getModernChartCompanions(isDark)
-      : modernChartKeys.map((key) => tokens.color[key])
-    modernChartKeys.forEach((key, index) => {
-      root.style.setProperty(`--modern-${key}`, companions[index])
-    })
-  } else {
-    modernChartKeys.forEach((key) => root.style.removeProperty(`--modern-${key}`))
-  }
   if (customCSS) {
     const sanitized = sanitizeCSS(customCSS)
     if (sanitized.css.trim().length > 0) {

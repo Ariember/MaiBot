@@ -13,23 +13,40 @@
   --accent-foreground: var(--color-foreground);
 }
 
-/* 图表系列与首页指标共用配色，保持卡片、数值和图例之间的对应关系。 */
-:root[data-dashboard-style='modern'] [data-dashboard-shell='true'] {
-  --color-chart-2: var(--modern-chart-2, 174 18% 36%);
-  --color-chart-3: var(--modern-chart-3, 220 12% 43%);
-  --color-chart-4: var(--modern-chart-4, 30 20% 42%);
-  --color-chart-5: var(--modern-chart-5, 148 14% 38%);
-}
-
-:root.dark[data-dashboard-style='modern'] [data-dashboard-shell='true'] {
-  --color-chart-2: var(--modern-chart-2, 174 18% 65%);
-  --color-chart-3: var(--modern-chart-3, 220 12% 72%);
-  --color-chart-4: var(--modern-chart-4, 30 20% 68%);
-  --color-chart-5: var(--modern-chart-5, 148 14% 65%);
-}
-
+/* 首页指标沿用图表配色，与图例保持对应。 */
 :root[data-dashboard-style='modern'] [data-home-card-id] {
   --home-card-accent: var(--color-chart-1);
+}
+
+:root[data-dashboard-style='modern']
+  [data-home-card-id='builtin:bot-status'] [data-maibot-runtime-label='true'].text-primary,
+:root[data-dashboard-style='modern'] [data-maibot-activity-orbit='true'][data-state='running'] {
+  color: hsl(var(--color-chart-1));
+}
+
+:root[data-dashboard-style='modern']
+  [data-maibot-activity-orbit='true'][data-state='running'] > span:nth-child(2) {
+  color: hsl(var(--color-chart-3));
+}
+
+:root[data-dashboard-style='modern']
+  [data-maibot-activity-orbit='true'][data-state='running'] > span:nth-child(3) {
+  color: hsl(var(--color-chart-2));
+}
+
+:root[data-dashboard-style='modern'] [data-maibot-status-glow='true'] {
+  background: radial-gradient(
+    ellipse at center,
+    hsl(var(--color-chart-1) / 0.18) 0%,
+    hsl(var(--color-chart-3) / 0.08) 42%,
+    transparent 74%
+  );
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-feature-status='true'][data-enabled='true']
+  [data-dashboard-feature-status-light='true'] {
+  background: hsl(var(--color-chart-5)) !important;
 }
 
 :root[data-dashboard-style='modern']
@@ -54,6 +71,11 @@
   [data-home-card-style='default']
   [data-dashboard-card-title='true'] > svg {
   color: hsl(var(--home-card-accent));
+  background-color: hsl(var(--home-card-accent) / 0.1);
+  box-sizing: content-box;
+  flex-shrink: 0;
+  border-radius: var(--visual-radius-md);
+  padding: 0.375rem;
 }
 
 :root[data-dashboard-style='modern']
@@ -86,7 +108,10 @@
 
 :root[data-dashboard-style='modern']
   [data-home-card-style='default'] [data-home-summary-primary='true'] {
-  background-color: hsl(var(--home-metric-color) / 0.06);
+  background-color: hsl(var(--home-metric-color) / 0.09);
+  border-radius: var(--visual-radius-md);
+  border-inline-width: 0;
+  padding: 0.25rem 0.75rem;
 }
 
 :root[data-dashboard-style='modern'] [data-home-cache-breakdown='true'] > div {
@@ -106,6 +131,67 @@
 :root[data-dashboard-style='modern']
   [data-home-card-style='default'] [data-home-cache-breakdown='true'] .bg-primary {
   background-color: hsl(var(--home-metric-color));
+}
+
+/* 彩色重点指标与浅色衬底突出数据，页面和卡片保持中性色。 */
+:root[data-dashboard-style='modern'] [data-home-summary-primary-group='true'] {
+  gap: 0.5rem;
+}
+
+:root[data-dashboard-style='modern']
+  [data-home-card-style='default'] [data-home-summary-primary='true']:first-child {
+  background: linear-gradient(
+    120deg,
+    hsl(var(--color-chart-1) / 0.14),
+    hsl(var(--color-chart-3) / 0.06)
+  );
+}
+
+:root[data-dashboard-style='modern'] [data-home-summary-secondary='true'] {
+  border-top-width: 0;
+}
+
+:root[data-dashboard-style='modern'] [data-home-cache-breakdown='true'] {
+  gap: 0.5rem;
+}
+
+:root[data-dashboard-style='modern']
+  [data-home-card-style='default'] [data-home-cache-breakdown='true'] > div {
+  border-inline-width: 0;
+  border-radius: var(--visual-radius-md);
+  background-color: hsl(var(--home-metric-color) / 0.07);
+  padding-block: 0.25rem;
+}
+
+:root[data-dashboard-style='modern']
+  [data-home-card-style='default'] [data-home-cache-breakdown='true'] .bg-muted {
+  background-color: hsl(var(--home-metric-color) / 0.12);
+}
+
+:root[data-dashboard-style='modern'] [data-home-storage-row='true']:nth-child(1) {
+  --home-storage-color: var(--color-chart-3);
+}
+
+:root[data-dashboard-style='modern'] [data-home-storage-row='true']:nth-child(2) {
+  --home-storage-color: var(--color-chart-5);
+}
+
+:root[data-dashboard-style='modern'] [data-home-storage-row='true']:nth-child(3) {
+  --home-storage-color: var(--color-chart-4);
+}
+
+:root[data-dashboard-style='modern'] [data-home-storage-row='true']:nth-child(4) {
+  --home-storage-color: var(--color-chart-1);
+}
+
+:root[data-dashboard-style='modern']
+  [data-home-card-style='default'] [data-home-storage-row='true'] [data-dashboard-progress='true'] {
+  background-color: hsl(var(--home-storage-color) / 0.12);
+}
+
+:root[data-dashboard-style='modern']
+  [data-home-card-style='default'] [data-home-storage-row='true'] [data-dashboard-progress-indicator='true'] {
+  background-color: hsl(var(--home-storage-color));
 }
 
 @media (min-width: 1024px) {

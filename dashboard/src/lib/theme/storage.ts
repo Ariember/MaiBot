@@ -2,7 +2,6 @@
  * 主题配置的 localStorage 存储管理模块。
  */
 
-import { DEFAULT_ACCENT_COLOR_HSL, normalizeAccentColor } from './palette'
 import {
   DASHBOARD_STYLES,
   DEFAULT_DASHBOARD_STYLE,
@@ -22,7 +21,6 @@ import type {
 export const THEME_STORAGE_KEYS = {
   MODE: 'maibot-theme-mode',
   PRESET: 'maibot-theme-preset',
-  ACCENT: 'maibot-theme-accent',
   STYLE_OVERRIDES: 'maibot-theme-style-overrides',
   STYLE_CUSTOM_CSS: 'maibot-theme-style-custom-css',
   STYLE_BACKGROUND_CONFIG: 'maibot-theme-style-background',
@@ -32,7 +30,6 @@ export const THEME_STORAGE_KEYS = {
 
 const DEFAULT_THEME_CONFIG: UserThemeConfig = {
   selectedPreset: 'light',
-  accentColor: DEFAULT_ACCENT_COLOR_HSL,
   styleTokenOverrides: {},
   styleCustomCSS: {},
   styleBackgroundConfig: {},
@@ -43,8 +40,7 @@ const DEFAULT_THEME_CONFIG: UserThemeConfig = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
-type ImportThemeConfigRecord = Record<string, unknown> &
-  Pick<UserThemeConfig, 'selectedPreset' | 'accentColor'>
+type ImportThemeConfigRecord = Record<string, unknown> & Pick<UserThemeConfig, 'selectedPreset'>
 
 function hasRequiredImportThemeFields(
   config: Record<string, unknown>,
@@ -54,10 +50,6 @@ function hasRequiredImportThemeFields(
 
   if (typeof config.selectedPreset !== 'string') {
     errors.push('selectedPreset must be a string')
-    valid = false
-  }
-  if (typeof config.accentColor !== 'string') {
-    errors.push('accentColor must be a string')
     valid = false
   }
 
@@ -162,7 +154,6 @@ function parseJSONStorage(key: string): unknown {
 
 export function loadThemeConfig(): UserThemeConfig {
   const preset = localStorage.getItem(THEME_STORAGE_KEYS.PRESET)
-  const accent = localStorage.getItem(THEME_STORAGE_KEYS.ACCENT)
   const dashboardStyle = localStorage.getItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE)
 
   let styleTokenOverrides: StyleTokenOverrides = {}
@@ -200,7 +191,6 @@ export function loadThemeConfig(): UserThemeConfig {
 
   return {
     selectedPreset: preset || DEFAULT_THEME_CONFIG.selectedPreset,
-    accentColor: normalizeAccentColor(accent),
     styleTokenOverrides,
     styleCustomCSS,
     styleBackgroundConfig,
@@ -211,7 +201,6 @@ export function loadThemeConfig(): UserThemeConfig {
 
 export function saveThemeConfig(config: UserThemeConfig): void {
   localStorage.setItem(THEME_STORAGE_KEYS.PRESET, config.selectedPreset)
-  localStorage.setItem(THEME_STORAGE_KEYS.ACCENT, normalizeAccentColor(config.accentColor))
   localStorage.setItem(
     THEME_STORAGE_KEYS.STYLE_OVERRIDES,
     JSON.stringify(normalizeStyleTokenOverrides(config.styleTokenOverrides))
@@ -300,14 +289,12 @@ export function importThemeJSON(json: string): { success: boolean; errors: strin
     return { success: false, errors }
   }
   const selectedPreset = config.selectedPreset
-  const accentColor = config.accentColor
-  if (!hasRequiredFields || typeof selectedPreset !== 'string' || typeof accentColor !== 'string') {
+  if (!hasRequiredFields || typeof selectedPreset !== 'string') {
     throw new Error('Theme import required fields were not narrowed after validation')
   }
 
   saveThemeConfig({
     selectedPreset,
-    accentColor,
     styleTokenOverrides: normalizeStyleTokenOverrides(config.styleTokenOverrides),
     styleCustomCSS: normalizeStyleCustomCSS(config.styleCustomCSS),
     styleBackgroundConfig: normalizeStyleBackgroundConfig(config.styleBackgroundConfig),

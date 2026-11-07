@@ -187,7 +187,6 @@ export const DEFAULT_DASHBOARD_STYLE_CONFIG: DashboardStyleConfig = {
 
 export type UserThemeConfig = {
   selectedPreset: string
-  accentColor: string
   styleTokenOverrides: StyleTokenOverrides
   styleCustomCSS: StyleCustomCSS
   styleBackgroundConfig?: StyleBackgroundConfigMap
@@ -208,11 +207,11 @@ export const defaultLightTokens: ThemeTokens = {
     'secondary-foreground': '0 0% 22%',
     muted: '0 0% 96%',
     'muted-foreground': '0 0% 44%',
-    accent: '112.7 40.2% 47.8%',
-    'accent-foreground': '210 40% 98%',
+    accent: '0 0% 94%',
+    'accent-foreground': '0 0% 15%',
     destructive: '0 84.2% 60.2%',
     'destructive-foreground': '210 40% 98%',
-    background: '0 0% 97%',
+    background: '0 0% 97.5%',
     foreground: '0 0% 15%',
     card: '0 0% 100%',
     'card-foreground': '0 0% 15%',
@@ -221,11 +220,11 @@ export const defaultLightTokens: ThemeTokens = {
     border: '0 0% 90%',
     input: '0 0% 88%',
     ring: '0 0% 45%',
-    'chart-1': '0 0% 28%',
-    'chart-2': '174 18% 36%',
-    'chart-3': '220 12% 43%',
-    'chart-4': '30 20% 42%',
-    'chart-5': '148 14% 38%',
+    'chart-1': '217 91% 53%',
+    'chart-2': '189 94% 34%',
+    'chart-3': '258 90% 60%',
+    'chart-4': '322 81% 43%',
+    'chart-5': '160 84% 32%',
   },
   typography: {
     'font-family-base':
@@ -315,8 +314,8 @@ export const defaultDarkTokens: ThemeTokens = {
     'secondary-foreground': '0 0% 94%',
     muted: '0 0% 20%',
     'muted-foreground': '0 0% 68%',
-    accent: '112.7 40.2% 34%',
-    'accent-foreground': '210 40% 98%',
+    accent: '0 0% 24%',
+    'accent-foreground': '0 0% 96%',
     destructive: '0 62.8% 30.6%',
     'destructive-foreground': '210 40% 98%',
     background: '0 0% 12%',
@@ -328,11 +327,11 @@ export const defaultDarkTokens: ThemeTokens = {
     border: '0 0% 26%',
     input: '0 0% 30%',
     ring: '0 0% 64%',
-    'chart-1': '0 0% 82%',
-    'chart-2': '174 18% 65%',
-    'chart-3': '220 12% 72%',
-    'chart-4': '30 20% 68%',
-    'chart-5': '148 14% 65%',
+    'chart-1': '213 94% 68%',
+    'chart-2': '188 86% 60%',
+    'chart-3': '255 96% 76%',
+    'chart-4': '325 86% 72%',
+    'chart-5': '158 70% 60%',
   },
   typography: {
     'font-family-base':

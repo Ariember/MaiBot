@@ -29,7 +29,6 @@ function makeBackgroundConfig(overrides: Partial<BackgroundConfig> = {}): Backgr
 function makeThemeConfig(overrides: Partial<UserThemeConfig> = {}): UserThemeConfig {
   return {
     selectedPreset: 'light',
-    accentColor: '',
     styleTokenOverrides: {},
     styleCustomCSS: {},
     dashboardStyle: 'future-retro',

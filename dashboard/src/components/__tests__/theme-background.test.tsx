@@ -95,7 +95,6 @@ vi.mock('@/components/ui/select', () => ({
 function makeThemeConfig(overrides: Partial<UserThemeConfig> = {}): UserThemeConfig {
   return {
     selectedPreset: 'light',
-    accentColor: '',
     styleTokenOverrides: {},
     styleCustomCSS: {},
     styleBackgroundConfig: {},

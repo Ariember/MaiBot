@@ -167,7 +167,7 @@ export function OtherTab() {
           })
           
           // 提示用户刷新页面以应用所有更改
-          if (result.imported.includes('theme') || result.imported.includes('accentColor')) {
+          if (result.imported.includes('theme')) {
             toast({
               title: t('settings.other.importRefreshHint'),
               description: t('settings.other.importRefreshHintDesc'),

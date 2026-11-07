@@ -326,7 +326,7 @@ function BotStatusFlipCard({
                     )}
                     <Bar
                       dataKey="online_seconds"
-                      fill="hsl(var(--primary) / 0.68)"
+                      fill="hsl(var(--color-chart-1) / 0.8)"
                       maxBarSize={7}
                       radius={[3, 3, 1, 1]}
                     />

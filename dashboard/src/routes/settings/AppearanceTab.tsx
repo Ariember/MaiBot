@@ -20,11 +20,9 @@ import { cn } from '@/lib/utils'
 import { buildFutureRetroTexture } from '@/lib/theme/future-retro'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
-import { applyThemePipeline, getComputedTokens } from '@/lib/theme/pipeline'
-import { DEFAULT_ACCENT_COLOR_HEX, DEFAULT_ACCENT_COLOR_HSL, hexToHSL } from '@/lib/theme/palette'
+import { getComputedTokens } from '@/lib/theme/pipeline'
 import {
   DEFAULT_FUTURE_RETRO_STYLE_CONFIG,
   defaultBackgroundConfig,
@@ -72,8 +70,6 @@ import {
 } from '@/components/ui/select'
 import { SegmentedControl } from '@/components/ui/management'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-
-import { hslToHex } from './types'
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -188,23 +184,8 @@ export function AppearanceTab() {
   )
 
   const [localCSS, setLocalCSS] = useState(activeCustomCSS)
-  const [accentInputValue, setAccentInputValue] = useState(() => {
-    if (themeConfig.accentColor) {
-      return hslToHex(themeConfig.accentColor)
-    }
-
-    return DEFAULT_ACCENT_COLOR_HEX
-  })
-  const [accentPreviewHex, setAccentPreviewHex] = useState(() => {
-    if (themeConfig.accentColor) {
-      return hslToHex(themeConfig.accentColor)
-    }
-
-    return DEFAULT_ACCENT_COLOR_HEX
-  })
   const [bgDraftConfig, setBgDraftConfig] = useState<BackgroundConfigMap>(activeBackgroundConfig)
   const [cssWarnings, setCssWarnings] = useState<string[]>([])
-  const accentDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cssDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bgDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -236,19 +217,6 @@ export function AppearanceTab() {
       })
     },
     [themeConfig.styleConfig, updateThemeConfig]
-  )
-
-  const isValidHexColor = useCallback((value: string) => /^#[0-9A-F]{6}$/i.test(value), [])
-
-  const persistAccentColor = useCallback(
-    (hex: string) => {
-      if (accentDebounceRef.current) clearTimeout(accentDebounceRef.current)
-
-      accentDebounceRef.current = setTimeout(() => {
-        updateThemeConfig({ accentColor: hexToHSL(hex) })
-      }, 160)
-    },
-    [updateThemeConfig]
   )
 
   const updateTokenSection = useCallback(
@@ -314,30 +282,6 @@ export function AppearanceTab() {
     [dashboardStyle, themeConfig.styleCustomCSS, updateThemeConfig]
   )
 
-  const previewAccentHSL = useMemo(() => {
-    if (isValidHexColor(accentPreviewHex)) {
-      return hexToHSL(accentPreviewHex)
-    }
-
-    return themeConfig.accentColor || DEFAULT_ACCENT_COLOR_HSL
-  }, [accentPreviewHex, isValidHexColor, themeConfig.accentColor])
-
-  const previewThemeConfig = useMemo(() => {
-    return {
-      ...themeConfig,
-      accentColor: previewAccentHSL,
-    }
-  }, [previewAccentHSL, themeConfig])
-
-  useEffect(() => {
-    const persistedHex = themeConfig.accentColor
-      ? hslToHex(themeConfig.accentColor)
-      : DEFAULT_ACCENT_COLOR_HEX
-
-    setAccentInputValue(persistedHex)
-    setAccentPreviewHex(persistedHex)
-  }, [themeConfig.accentColor])
-
   useEffect(() => {
     setBgDraftConfig(activeBackgroundConfig)
   }, [activeBackgroundConfig])
@@ -348,43 +292,11 @@ export function AppearanceTab() {
   }, [activeCustomCSS])
 
   useEffect(() => {
-    applyThemePipeline(previewThemeConfig, resolvedTheme === 'dark')
-  }, [previewThemeConfig, resolvedTheme])
-
-  useEffect(() => {
     return () => {
-      if (accentDebounceRef.current) clearTimeout(accentDebounceRef.current)
       if (cssDebounceRef.current) clearTimeout(cssDebounceRef.current)
       if (bgDebounceRef.current) clearTimeout(bgDebounceRef.current)
     }
   }, [])
-
-  const handleAccentColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const hex = e.target.value
-    setAccentInputValue(hex)
-    setAccentPreviewHex(hex)
-    persistAccentColor(hex)
-  }
-
-  const handleAccentTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase()
-    setAccentInputValue(value)
-
-    if (!isValidHexColor(value)) {
-      return
-    }
-
-    setAccentPreviewHex(value)
-    persistAccentColor(value)
-  }
-
-  const handleResetAccent = () => {
-    if (accentDebounceRef.current) clearTimeout(accentDebounceRef.current)
-
-    setAccentInputValue(DEFAULT_ACCENT_COLOR_HEX)
-    setAccentPreviewHex(DEFAULT_ACCENT_COLOR_HEX)
-    updateThemeConfig({ accentColor: DEFAULT_ACCENT_COLOR_HSL })
-  }
 
   const handleExport = () => {
     const json = exportThemeJSON()
@@ -435,8 +347,8 @@ export function AppearanceTab() {
   }
 
   const computedTokens = useMemo(() => {
-    return getComputedTokens(previewThemeConfig, resolvedTheme === 'dark')
-  }, [previewThemeConfig, resolvedTheme])
+    return getComputedTokens(themeConfig, resolvedTheme === 'dark')
+  }, [themeConfig, resolvedTheme])
   const baseFontSizePx =
     parseFloat(
       getTokenValue(
@@ -446,8 +358,6 @@ export function AppearanceTab() {
         computedTokens.typography['font-size-base']
       )
     ) * 16
-
-  const previewTokens = computedTokens.color
 
   const bgConfig: BackgroundConfigMap = bgDraftConfig
 
@@ -565,107 +475,6 @@ export function AppearanceTab() {
 
       {themeConfig.dashboardStyle === 'modern' && (
         <>
-          {/* 主题色配置 */}
-          <div>
-            <div className="mb-3 flex items-center justify-between sm:mb-4">
-              <h3 className="text-base font-semibold sm:text-lg">
-                {t('settings.appearance.accentColor')}
-              </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleResetAccent}
-                disabled={themeConfig.accentColor === DEFAULT_ACCENT_COLOR_HSL}
-                className="h-8"
-              >
-                <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                {t('settings.appearance.resetDefault')}
-              </Button>
-            </div>
-
-            <div className="space-y-6">
-              {/* 颜色选择器 */}
-              <Card className="flex flex-col items-start gap-4 p-4 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-3">
-                  <div className="border-border relative h-10 w-10 overflow-hidden rounded-full border-2 shadow-sm">
-                    <input
-                      type="color"
-                      value={accentPreviewHex}
-                      onChange={handleAccentColorChange}
-                      className="absolute inset-0 -top-1/4 -left-1/4 h-[150%] w-[150%] cursor-pointer border-0 p-0"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="accent-color-input" className="font-medium">
-                      {t('settings.appearance.accentPrimary')}
-                    </Label>
-                    <p className="text-muted-foreground text-xs">
-                      {t('settings.appearance.accentHint')}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex w-full flex-1 items-center gap-2 sm:w-auto">
-                  <Input
-                    id="accent-color-input"
-                    type="text"
-                    value={accentInputValue}
-                    onChange={handleAccentTextChange}
-                    className="w-32 font-mono uppercase"
-                    maxLength={7}
-                  />
-                </div>
-              </Card>
-
-              {/* 实时色板预览 */}
-              <div className="space-y-3">
-                <h4 className="text-muted-foreground text-sm font-medium">
-                  {t('settings.appearance.colorPreview')}
-                </h4>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-8">
-                  <ColorTokenPreview
-                    name="primary"
-                    value={previewTokens.primary}
-                    foreground={previewTokens['primary-foreground']}
-                  />
-                  <ColorTokenPreview
-                    name="secondary"
-                    value={previewTokens.secondary}
-                    foreground={previewTokens['secondary-foreground']}
-                  />
-                  <ColorTokenPreview
-                    name="muted"
-                    value={previewTokens.muted}
-                    foreground={previewTokens['muted-foreground']}
-                  />
-                  <ColorTokenPreview
-                    name="accent"
-                    value={previewTokens.accent}
-                    foreground={previewTokens['accent-foreground']}
-                  />
-                  <ColorTokenPreview
-                    name="destructive"
-                    value={previewTokens.destructive}
-                    foreground={previewTokens['destructive-foreground']}
-                  />
-                  <ColorTokenPreview
-                    name="background"
-                    value={previewTokens.background}
-                    foreground={previewTokens.foreground}
-                    border
-                  />
-                  <ColorTokenPreview
-                    name="card"
-                    value={previewTokens.card}
-                    foreground={previewTokens['card-foreground']}
-                    border
-                  />
-                  <ColorTokenPreview name="border" value={previewTokens.border} />
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* 样式微调 */}
           <div>
             <h3 className="mb-3 text-base font-semibold sm:mb-4 sm:text-lg">
@@ -1452,38 +1261,6 @@ export function AppearanceTab() {
           </Card>
         </div>
       )}
-    </div>
-  )
-}
-
-function ColorTokenPreview({
-  name,
-  value,
-  foreground,
-  border,
-}: {
-  name: string
-  value: string
-  foreground?: string
-  border?: boolean
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div
-        className={cn(
-          'flex h-16 items-center justify-center rounded-md text-xs font-medium shadow-sm',
-          border && 'border-border border'
-        )}
-        style={{
-          backgroundColor: `hsl(${value})`,
-          color: foreground ? `hsl(${foreground})` : undefined,
-        }}
-      >
-        Aa
-      </div>
-      <div className="text-muted-foreground truncate text-center text-xs" title={name}>
-        {name}
-      </div>
     </div>
   )
 }

@@ -4,7 +4,6 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { DEFAULT_ACCENT_COLOR_HSL, getReadableForeground } from '../palette'
 import {
   applyThemePipeline,
   getComputedTokens,
@@ -24,7 +23,6 @@ import type { ThemeTokens, UserThemeConfig } from '../tokens'
 /** 构造一份合法的完整主题配置，默认使用 modern 风格便于隔离复古令牌 */
 const buildConfig = (overrides: Partial<UserThemeConfig> = {}): UserThemeConfig => ({
   selectedPreset: 'light',
-  accentColor: DEFAULT_ACCENT_COLOR_HSL,
   styleTokenOverrides: {},
   styleCustomCSS: {},
   styleBackgroundConfig: {},
@@ -40,21 +38,14 @@ afterEach(() => {
 })
 
 describe('getComputedTokens', () => {
-  it('默认强调色 + modern 亮色时基于默认主色生成调色板，仅替换 accent', () => {
+  it('modern 亮色使用默认黑白灰令牌', () => {
     const tokens = getComputedTokens(buildConfig(), false)
 
     expect(tokens.color.primary).toBe(defaultLightTokens.color.primary)
-    expect(tokens.color.accent).toBe(DEFAULT_ACCENT_COLOR_HSL)
-    expect(tokens.color['accent-foreground']).toBe(getReadableForeground(DEFAULT_ACCENT_COLOR_HSL))
+    expect(tokens.color.accent).toBe(defaultLightTokens.color.accent)
+    expect(tokens.color['accent-foreground']).toBe(defaultLightTokens.color['accent-foreground'])
     // modern 风格不合并复古排版令牌
     expect(tokens.typography).toEqual(defaultLightTokens.typography)
-  })
-
-  it('自定义强调色时整个调色板围绕它重建', () => {
-    const tokens = getComputedTokens(buildConfig({ accentColor: '200 80% 50%' }), false)
-
-    expect(tokens.color.primary).toBe('200 80% 50%')
-    expect(tokens.color.ring).toBe('200 80% 50%')
   })
 
   it('future-retro 风格按明暗合并对应复古令牌', () => {
@@ -81,8 +72,8 @@ describe('getComputedTokens', () => {
     expect(tokens.color.primary).toBe('1 2% 3%')
     // 非当前风格的覆盖不生效
     expect(tokens.color.primary).not.toBe('9 9% 9%')
-    // 未覆盖的字段仍保留调色板生成结果
-    expect(tokens.color.accent).toBe(DEFAULT_ACCENT_COLOR_HSL)
+    // 未覆盖的字段仍保留默认令牌
+    expect(tokens.color.accent).toBe(defaultLightTokens.color.accent)
   })
 })
 
