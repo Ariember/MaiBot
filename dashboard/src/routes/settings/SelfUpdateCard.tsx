@@ -354,8 +354,8 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
   const image = status.deployment_type === 'image'
   const versionChanged =
     status.latest_version !== null && status.latest_version !== status.current_version
-  const targetLabel = image ? status.latest_commit ?? '' : formatRevision(
-    status.latest_version ?? status.current_version,
+  const targetLabel = formatRevision(
+    image ? `ghcr.io/ariember/maibot:${status.branch}` : status.latest_version ?? status.current_version,
     status.latest_commit ?? ''
   )
 
@@ -372,7 +372,7 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
         </p>}
       </div>
 
-      {image && <p className="break-all font-mono text-xs">{status.latest_commit}</p>}
+      {image && <p className="break-all font-mono text-xs" title={status.latest_commit ?? undefined}>{targetLabel}</p>}
       {!image && <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md bg-background/60 p-2">
         {status.commits.map((commit) => (
           <li key={commit.short_id} className="flex gap-2">
@@ -424,8 +424,8 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+          <AlertDialogHeader className="min-w-0">
+            <AlertDialogTitle className="break-all">
               {t('settings.selfUpdate.confirmTitle', { version: targetLabel })}
             </AlertDialogTitle>
             <AlertDialogDescription>{t(image
