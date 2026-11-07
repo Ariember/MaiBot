@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version as read_installed_version
+from os import getenv
 from pathlib import Path
 from typing import Literal
 
@@ -13,6 +14,7 @@ from src.common.paths import project_metadata_path
 from src.common.version import PROJECT_ROOT, read_project_version
 
 DASHBOARD_PACKAGE_NAME = "maibot-dashboard"
+_LOCAL_DASHBOARD_ENV = "MAIBOT_WEBUI_USE_LOCAL_DASHBOARD"
 
 WebUICompatibilityStatus = Literal["compatible", "webui_outdated", "main_program_outdated"]
 
@@ -106,6 +108,16 @@ def _has_same_release(left: str, right: str) -> bool:
     )
 
 
+def resolve_local_dashboard_path(project_root: Path | None = None) -> Path | None:
+    """返回已启用且可加载的本地 Dashboard 构建目录。"""
+    if getenv(_LOCAL_DASHBOARD_ENV, "").strip().lower() not in {"1", "true", "yes", "on"}:
+        return None
+    static_path = (project_root or PROJECT_ROOT) / "dashboard" / "dist"
+    if static_path.is_dir() and (static_path / "index.html").exists():
+        return static_path
+    return None
+
+
 def read_required_webui_version(project_root: Path | None = None) -> str:
     """从 pyproject.toml 读取主程序要求的 WebUI 版本。"""
 
@@ -160,10 +172,14 @@ def get_webui_version_compatibility(
     webui_version: str,
     project_root: Path | None = None,
 ) -> WebUIVersionCompatibility:
-    """比较实际 WebUI 版本和主程序在 pyproject.toml 中声明的版本。"""
+    """按实际静态资源来源选择版本声明，再比较浏览器中的 WebUI 版本。"""
 
     root = project_root or PROJECT_ROOT
-    required_webui_version = read_required_webui_version(root)
+    required_webui_version = (
+        read_local_webui_version(root)
+        if resolve_local_dashboard_path(root) is not None
+        else read_required_webui_version(root)
+    )
     comparison = compare_versions(webui_version, required_webui_version)
     # 测试版依赖用于开发迭代，不据此提示前后端版本不匹配。
     if _parse_version(required_webui_version).phase[0] < 4:

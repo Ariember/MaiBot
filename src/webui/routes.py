@@ -174,10 +174,10 @@ async def health_check():
 
 
 @router.get("/version-compatibility", response_model=VersionCompatibilityResponse)
-async def get_version_compatibility(
+def get_version_compatibility(
     webui_version: str = Query(..., min_length=1, max_length=64),
 ) -> VersionCompatibilityResponse:
-    """比较当前 WebUI 版本与主程序在 pyproject.toml 中声明的版本。"""
+    """比较浏览器中的 WebUI 版本与当前加载资源的版本声明。"""
 
     try:
         compatibility = get_webui_version_compatibility(webui_version)

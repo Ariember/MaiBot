@@ -116,3 +116,29 @@ def test_read_required_webui_version_rejects_missing_dependency(tmp_path: Path) 
 
     with pytest.raises(ValueError, match="maibot-dashboard"):
         read_required_webui_version(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("enabled", "built", "browser_version", "required", "status"),
+    [
+        ("1", True, "1.9.14", "1.9.14", "compatible"),
+        ("1", True, "1.9.13", "1.9.14", "webui_outdated"),
+        ("1", True, "1.9.15", "1.9.14", "main_program_outdated"),
+        ("0", True, "1.9.13", "1.9.13", "compatible"),
+        ("1", False, "1.9.13", "1.9.13", "compatible"),
+    ],
+)
+def test_compatibility_follows_the_loaded_dashboard_source(
+    monkeypatch, tmp_path, enabled, built, browser_version, required, status
+):
+    _write_project_files(tmp_path, required_webui_version="1.9.13", local_webui_version="1.9.14")
+    monkeypatch.setenv("MAIBOT_WEBUI_USE_LOCAL_DASHBOARD", enabled)
+    if built:
+        static_path = tmp_path / "dashboard" / "dist"
+        static_path.mkdir()
+        (static_path / "index.html").write_text("<html></html>", encoding="utf-8")
+
+    compatibility = get_webui_version_compatibility(browser_version, tmp_path)
+
+    assert compatibility.required_webui_version == required
+    assert compatibility.status == status

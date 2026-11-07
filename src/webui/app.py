@@ -21,12 +21,12 @@ from src.webui.version_compatibility import (
     get_webui_version_compatibility,
     read_installed_webui_version,
     read_local_webui_version,
+    resolve_local_dashboard_path,
 )
 
 logger = get_logger("webui.app")
 
 _DASHBOARD_PACKAGE_NAME = "maibot-dashboard"
-_LOCAL_DASHBOARD_ENV = "MAIBOT_WEBUI_USE_LOCAL_DASHBOARD"
 _STATISTICS_REPORT_PATH_ENV = "MAIBOT_STATISTICS_REPORT_PATH"
 _DEFAULT_STATISTICS_REPORT_PATH = "maibot_statistics.html"
 _MANUAL_INSTALL_COMMAND = f"pip install {_DASHBOARD_PACKAGE_NAME}"
@@ -109,10 +109,6 @@ def _resolve_statistics_report_path() -> Path:
         return report_path.resolve()
 
     return (get_instance_root() / report_path).resolve()
-
-
-def _is_local_dashboard_enabled() -> bool:
-    return getenv(_LOCAL_DASHBOARD_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _validate_static_path(static_path: Path | None) -> Tuple[str, Dict[str, Any]] | None:
@@ -296,10 +292,9 @@ def _log_webui_version_compatibility(static_path: Path) -> None:
 
 
 def _resolve_static_path() -> Path | None:
-    if _is_local_dashboard_enabled():
-        static_path = _get_project_root() / "dashboard" / "dist"
-        if static_path.is_dir() and (static_path / "index.html").exists():
-            return static_path
+    static_path = resolve_local_dashboard_path(_get_project_root())
+    if static_path is not None:
+        return static_path
 
     try:
         module = import_module("maibot_dashboard")
