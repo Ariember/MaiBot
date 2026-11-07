@@ -246,7 +246,6 @@
       "dshModel": "打开 dsh 设置模型和 API Key（已配置可跳过）：",
       "dshEnable": "选择 dsh CLI 连接方式，启用并保存，然后在“独立 Agent”页面发送任务。找不到程序时，将 ACP 启动程序填写为 dsh.cmd 的绝对路径。",
       "dshCommand": "预设自动启动：",
-      "disabled": "Agent 未启用",
       "reasoning": "思考记录",
       "connecting": "正在连接",
       "disabled": "电脑功能未启用",

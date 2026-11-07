@@ -179,7 +179,6 @@
       "dshModel": "dsh でモデルと API キーを設定（設定済みなら省略）：",
       "dshEnable": "接続方式で dsh CLI を選択して有効にし、保存してから Agent ページでタスクを送信します。プログラムが見つからない場合、Windows では ACP 起動プログラムに dsh.cmd の絶対パスを指定します。",
       "dshCommand": "プリセットの起動コマンド：",
-      "disabled": "Agent は無効です",
       "reasoning": "思考履歴",
       "connecting": "接続中",
       "disabled": "コンピューター機能は無効です",

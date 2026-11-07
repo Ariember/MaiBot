@@ -246,7 +246,6 @@
       "dshModel": "Configure the model and API key in dsh (skip if configured):",
       "dshEnable": "Select the dsh CLI connection, enable and save the Agent, then send a task on its page. If the executable is not found, set ACP executable to the absolute path of dsh.cmd on Windows.",
       "dshCommand": "The preset runs:",
-      "disabled": "Agent is disabled",
       "reasoning": "Thinking history",
       "connecting": "Connecting",
       "disabled": "Computer use disabled",
