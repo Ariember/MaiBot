@@ -4,7 +4,7 @@
   --surface-data-bg: hsl(var(--background));
   --surface-line: hsl(var(--border));
   --surface-ink: hsl(var(--foreground));
-  --surface-radius: 0.5rem;
+  --surface-radius: var(--visual-radius-lg);
   --surface-data-stroke: 1px;
   --surface-separator-stroke: 1px;
   --surface-frame-shadow: none;
@@ -84,7 +84,7 @@
 }
 
 [data-dashboard-list-item='true'] {
-  border-radius: 0.25rem;
+  border-radius: var(--visual-radius-sm);
   color: var(--surface-ink);
   cursor: pointer;
 }

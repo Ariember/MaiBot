@@ -26,6 +26,8 @@
   --radius-md: var(--visual-radius-md);
   --radius-lg: var(--visual-radius-lg);
   --radius-xl: var(--visual-radius-xl);
+  --radius-2xl: calc(var(--visual-radius-xl) * 7 / 6);
+  --radius-3xl: calc(var(--visual-radius-xl) * 4 / 3);
   --font-sans: var(--typography-font-family-base);
   --font-mono: var(--typography-font-family-code);
   --text-xs: var(--typography-font-size-xs);
@@ -375,10 +377,10 @@
     --typography-letter-spacing-wide: 0.02em;
 
     /* Visual Tokens */
-    --visual-radius-sm: 0.25rem;
-    --visual-radius-md: 0.375rem;
-    --visual-radius-lg: 0.5rem;
-    --visual-radius-xl: 0.75rem;
+    --visual-radius-sm: 0.375rem;
+    --visual-radius-md: 0.625rem;
+    --visual-radius-lg: 1rem;
+    --visual-radius-xl: 1.5rem;
     --visual-radius-full: 9999px;
     --visual-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --visual-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);

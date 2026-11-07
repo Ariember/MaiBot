@@ -10,14 +10,14 @@
 }
 
 .uppy-Dashboard-innerWrap {
-  border-radius: 0.5rem;
+  border-radius: var(--visual-radius-lg);
   overflow: hidden;
 }
 
 /* 拖放区域样式 */
 .uppy-Dashboard-AddFiles {
   border: 2px dashed hsl(var(--color-border)) !important;
-  border-radius: 0.5rem !important;
+  border-radius: var(--visual-radius-lg) !important;
   background: hsl(var(--color-muted) / 0.3) !important;
   transition: all 0.2s ease;
 }
@@ -80,7 +80,7 @@
 .uppy-StatusBar-actionBtn--upload {
   background: hsl(var(--color-primary)) !important;
   color: hsl(var(--color-primary-foreground)) !important;
-  border-radius: 0.375rem !important;
+  border-radius: var(--visual-radius-md) !important;
   font-weight: 500 !important;
   padding: 0.5rem 1rem !important;
 }
@@ -118,7 +118,7 @@
 
 /* 文件预览图片样式 */
 .uppy-Dashboard-Item-preview {
-  border-radius: 0.375rem !important;
+  border-radius: var(--visual-radius-md) !important;
   overflow: hidden;
 }
 

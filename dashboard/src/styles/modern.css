@@ -13,6 +13,37 @@
   --accent-foreground: var(--color-foreground);
 }
 
+/* 连续曲线用于矩形容器，圆形和胶囊保留圆弧。 */
+@supports (corner-shape: superellipse(1.5)) {
+  :root[data-dashboard-style='modern']
+    :where(
+      [class*='rounded'],
+      [data-dashboard-page-frame='true'],
+      [data-dashboard-data-panel='true'],
+      [data-dashboard-list-item='true'],
+      [data-dashboard-selection-card='true'],
+      [data-dashboard-file-dropzone='true'],
+      [data-dashboard-time-range='true'],
+      [data-status-indicator='true'][data-status-variant='panel'],
+      [data-resource-part='icon'],
+      [data-conversation-item='true'],
+      [data-message-bubble='true'],
+      [data-trace-round='true'],
+      [data-quick-review-card],
+      [data-colorful-tint],
+      .uppy-Dashboard-innerWrap,
+      .uppy-Dashboard-AddFiles,
+      .uppy-StatusBar-actionBtn--upload,
+      .uppy-Dashboard-Item-preview
+    ):not([class*='rounded-full']) {
+    corner-shape: superellipse(1.5);
+  }
+
+  :root[data-dashboard-style='modern'] [class~='rounded-[inherit]'] {
+    corner-shape: inherit;
+  }
+}
+
 /* 首页指标沿用图表配色，与图例保持对应。 */
 :root[data-dashboard-style='modern'] [data-home-card-id] {
   --home-card-accent: var(--color-chart-1);
@@ -637,6 +668,7 @@
     width: 2.5rem;
     height: 0.25rem;
     border-radius: 9999px !important;
+    corner-shape: round;
     background-color: hsl(var(--muted-foreground) / 0.5);
     transition: background-color 150ms;
   }

@@ -85,7 +85,7 @@ describe('injectTokensAsCSS', () => {
 
     expect(el.style.getPropertyValue('--color-primary')).toBe(defaultLightTokens.color.primary)
     expect(el.style.getPropertyValue('--typography-font-weight-bold')).toBe('700')
-    expect(el.style.getPropertyValue('--visual-radius-md')).toBe('0.375rem')
+    expect(el.style.getPropertyValue('--visual-radius-md')).toBe('0.625rem')
     expect(el.style.getPropertyValue('--layout-header-height')).toBe('3.5rem')
     expect(el.style.getPropertyValue('--animation-anim-duration-fast')).toBe('150ms')
   })

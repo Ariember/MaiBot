@@ -647,7 +647,7 @@ export function AppearanceTab() {
                         </span>
                       </div>
                       <Slider
-                        defaultValue={[6]}
+                        defaultValue={[10]}
                         value={[
                           Math.round(
                             parseFloat(
@@ -665,7 +665,10 @@ export function AppearanceTab() {
                         step={1}
                         onValueChange={(vals) => {
                           updateTokenSection('visual', {
+                            'radius-sm': `${(vals[0] * 0.6) / 16}rem`,
                             'radius-md': `${vals[0] / 16}rem`,
+                            'radius-lg': `${(vals[0] * 1.6) / 16}rem`,
+                            'radius-xl': `${(vals[0] * 2.4) / 16}rem`,
                           })
                         }}
                       />

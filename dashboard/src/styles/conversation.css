@@ -5,7 +5,7 @@
   --chat-outgoing-bg: hsl(var(--primary));
   --chat-outgoing-ink: hsl(var(--primary-foreground));
   --chat-bubble-shadow: none;
-  --chat-bubble-radius: 0.75rem;
+  --chat-bubble-radius: var(--visual-radius-lg);
 }
 :root[data-dashboard-style='future-retro'] {
   --chat-bubble-radius: 0;

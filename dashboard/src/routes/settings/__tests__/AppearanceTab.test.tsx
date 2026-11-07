@@ -702,7 +702,12 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: {
-          visual: { 'radius-md': '0.4375rem' },
+          visual: {
+            'radius-sm': '0.4125rem',
+            'radius-md': '0.6875rem',
+            'radius-lg': '1.1rem',
+            'radius-xl': '1.65rem',
+          },
         },
       },
     })

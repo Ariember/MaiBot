@@ -119,7 +119,7 @@
     [data-home-card-id='builtin:bot-status'][data-home-card-style]
     [data-maibot-status-face],
   :root[data-dashboard-style='modern'] [data-plugin-market-card='true'] {
-    border-radius: 24px;
+    border-radius: var(--visual-radius-xl);
     box-shadow: none !important;
   }
 
@@ -419,7 +419,7 @@
 
   :root[data-dashboard-style='modern'] [data-quick-review-card] {
     border: 0;
-    border-radius: 30px;
+    border-radius: var(--radius-3xl);
     box-shadow: 0 20px 50px rgb(0 0 0 / 0.1);
     padding: 28px;
   }
