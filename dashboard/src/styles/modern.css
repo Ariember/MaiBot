@@ -194,6 +194,217 @@
   background-color: hsl(var(--home-storage-color));
 }
 
+/* ---------- 页内多彩 ----------
+   首页之外的重复单元（卡片、分区面板、资源行、市场网格的格子）按位置轮换图表色：
+   标题有图标时图标带浅色衬底，没有图标时标题前留一条色记；
+   列表行图标、统计数值、强调条用 data-colorful-* 标记接入同一轮换色。
+   市场卡片外层套着 content-visibility 包装格，颜色在格子上轮换、卡片继承。 */
+
+:root[data-dashboard-style='modern'] {
+  --colorful-accent: var(--color-chart-1);
+}
+
+/* 自行轮换的单元：卡片、面板、资源行按自身在同级中的位置取色；
+   落在 scope 容器里的后代不参与，由所在的格子统一供色。 */
+:root[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-card='true']:not([data-plugin-market-card='true']),
+    [data-dashboard-section-panel='true'],
+    [data-dashboard-resource-row='true'],
+    [data-colorful-item]
+  ):not([data-home-page='true'] *):not([data-colorful-scope='true'] *) {
+  --colorful-accent: var(--color-chart-1);
+}
+
+:root[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-card='true']:not([data-plugin-market-card='true']),
+    [data-dashboard-section-panel='true'],
+    [data-dashboard-resource-row='true'],
+    [data-colorful-item]
+  ):not([data-home-page='true'] *):not([data-colorful-scope='true'] *):nth-of-type(5n + 2) {
+  --colorful-accent: var(--color-chart-2);
+}
+
+:root[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-card='true']:not([data-plugin-market-card='true']),
+    [data-dashboard-section-panel='true'],
+    [data-dashboard-resource-row='true'],
+    [data-colorful-item]
+  ):not([data-home-page='true'] *):not([data-colorful-scope='true'] *):nth-of-type(5n + 3) {
+  --colorful-accent: var(--color-chart-3);
+}
+
+:root[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-card='true']:not([data-plugin-market-card='true']),
+    [data-dashboard-section-panel='true'],
+    [data-dashboard-resource-row='true'],
+    [data-colorful-item]
+  ):not([data-home-page='true'] *):not([data-colorful-scope='true'] *):nth-of-type(5n + 4) {
+  --colorful-accent: var(--color-chart-4);
+}
+
+:root[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-card='true']:not([data-plugin-market-card='true']),
+    [data-dashboard-section-panel='true'],
+    [data-dashboard-resource-row='true'],
+    [data-colorful-item]
+  ):not([data-home-page='true'] *):not([data-colorful-scope='true'] *):nth-of-type(5n) {
+  --colorful-accent: var(--color-chart-5);
+}
+
+/* 格子轮换：scope 容器和市场网格按格子位置供色，内容继承格子的颜色。 */
+:root[data-dashboard-style='modern']
+  :is(
+    [data-colorful-scope='true'] > *,
+    [data-plugin-market-grid='true'] > *
+  ):not([data-home-page='true'] *) {
+  --colorful-accent: var(--color-chart-1);
+}
+
+:root[data-dashboard-style='modern']
+  :is(
+    [data-colorful-scope='true'] > *,
+    [data-plugin-market-grid='true'] > *
+  ):not([data-home-page='true'] *):nth-of-type(5n + 2) {
+  --colorful-accent: var(--color-chart-2);
+}
+
+:root[data-dashboard-style='modern']
+  :is(
+    [data-colorful-scope='true'] > *,
+    [data-plugin-market-grid='true'] > *
+  ):not([data-home-page='true'] *):nth-of-type(5n + 3) {
+  --colorful-accent: var(--color-chart-3);
+}
+
+:root[data-dashboard-style='modern']
+  :is(
+    [data-colorful-scope='true'] > *,
+    [data-plugin-market-grid='true'] > *
+  ):not([data-home-page='true'] *):nth-of-type(5n + 4) {
+  --colorful-accent: var(--color-chart-4);
+}
+
+:root[data-dashboard-style='modern']
+  :is(
+    [data-colorful-scope='true'] > *,
+    [data-plugin-market-grid='true'] > *
+  ):not([data-home-page='true'] *):nth-of-type(5n) {
+  --colorful-accent: var(--color-chart-5);
+}
+
+/* 标题图标带浅色衬底，与首页一致；标题已带语义色（text-*）的图标保持原样。 */
+:root[data-dashboard-style='modern']
+  [data-dashboard-card='true']:not([data-home-page='true'] *)
+  [data-dashboard-card-title='true'] > svg:first-of-type:not([class*='text-']) {
+  color: hsl(var(--colorful-accent));
+  background-color: hsl(var(--colorful-accent) / 0.1);
+  box-sizing: content-box;
+  flex-shrink: 0;
+  border-radius: var(--visual-radius-md);
+  padding: 0.375rem;
+}
+
+/* 标题没有图标时，在标题前留一条彩色记号；面板已有 leading 标记的不再重复。
+   插件市场卡标题左侧已带插件图标，且标题内是块级按钮，inline 记号会独占一行把标题挤出标题框。 */
+:root[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-card='true']:not([data-home-page='true'] *):not([data-plugin-market-card='true'])
+      [data-dashboard-card-title='true'],
+    [data-dashboard-section-panel='true']:not([data-home-page='true'] *)
+      [data-section-part='header']:not(:has([data-section-part='leading']))
+      [data-section-part='heading']
+      h2
+  ):not(:has(> svg))::before {
+  display: inline-block;
+  width: 0.1875rem;
+  height: 1em;
+  margin-right: 0.5rem;
+  border-radius: 999px;
+  background-color: hsl(var(--colorful-accent));
+  vertical-align: -0.125em;
+  content: '';
+}
+
+/* 资源行图标按行轮换配色；插件图标等图片内容只吃到描边和底色。 */
+:root[data-dashboard-style='modern']
+  [data-dashboard-resource-row='true']:not([data-home-page='true'] *)
+  [data-resource-part='icon'] {
+  border-color: hsl(var(--colorful-accent) / 0.45);
+  background-color: hsl(var(--colorful-accent) / 0.1);
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-resource-row='true']:not([data-home-page='true'] *)
+  [data-resource-part='icon'] > svg:not([class*='text-']) {
+  color: hsl(var(--colorful-accent));
+}
+
+/* 数据挂钩：标记元素取所在单元的轮换色，未标记时退回 chart-1。 */
+:root[data-dashboard-style='modern'] [data-colorful-value] {
+  color: hsl(var(--colorful-accent));
+}
+
+:root[data-dashboard-style='modern'] [data-colorful-fill] {
+  background-color: hsl(var(--colorful-accent));
+}
+
+:root[data-dashboard-style='modern'] [data-colorful-tint] {
+  background-color: hsl(var(--colorful-accent) / 0.09);
+  border-radius: var(--visual-radius-md);
+}
+
+:root[data-dashboard-style='modern']
+  :is([data-colorful-item], [data-plugin-market-card='true']):hover {
+  border-color: hsl(var(--colorful-accent) / 0.55);
+}
+
+/* 插件读数按语义固定配色：下载、评分、评论。 */
+:root[data-dashboard-style='modern'] [data-plugin-card-stats='true'] > div:nth-child(1) {
+  --plugin-stat-color: var(--color-chart-1);
+}
+
+:root[data-dashboard-style='modern'] [data-plugin-card-stats='true'] > div:nth-child(2) {
+  --plugin-stat-color: var(--color-chart-4);
+}
+
+:root[data-dashboard-style='modern'] [data-plugin-card-stats='true'] > div:nth-child(3) {
+  --plugin-stat-color: var(--color-chart-3);
+}
+
+:root[data-dashboard-style='modern'] [data-plugin-card-stats='true'] > div > svg {
+  color: hsl(var(--plugin-stat-color));
+}
+
+:root[data-dashboard-style='modern'] [data-plugin-card-stats='true'] .text-primary {
+  color: hsl(var(--plugin-stat-color));
+}
+
+/* 移动端管理页：分组入口图标按位置轮换配色。 */
+:root[data-dashboard-style='modern'] [data-manage-page='true'] li:nth-of-type(5n + 1) > a > svg:first-child {
+  color: hsl(var(--color-chart-1));
+}
+
+:root[data-dashboard-style='modern'] [data-manage-page='true'] li:nth-of-type(5n + 2) > a > svg:first-child {
+  color: hsl(var(--color-chart-2));
+}
+
+:root[data-dashboard-style='modern'] [data-manage-page='true'] li:nth-of-type(5n + 3) > a > svg:first-child {
+  color: hsl(var(--color-chart-3));
+}
+
+:root[data-dashboard-style='modern'] [data-manage-page='true'] li:nth-of-type(5n + 4) > a > svg:first-child {
+  color: hsl(var(--color-chart-4));
+}
+
+:root[data-dashboard-style='modern'] [data-manage-page='true'] li:nth-of-type(5n) > a > svg:first-child {
+  color: hsl(var(--color-chart-5));
+}
+
 @media (min-width: 1024px) {
   :root[data-dashboard-style='modern'] {
     --mdn-card-shadow: 0 1px 2px rgb(16 24 40 / 0.03), 0 4px 16px -8px rgb(16 24 40 / 0.12);

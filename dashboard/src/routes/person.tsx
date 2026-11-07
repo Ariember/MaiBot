@@ -213,15 +213,15 @@ export function PersonManagementPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">总人数</div>
-          <div className="text-2xl font-bold mt-1">{stats.total}</div>
+          <div data-colorful-value="true" className="text-2xl font-bold mt-1">{stats.total}</div>
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">已认识</div>
-          <div className="text-2xl font-bold mt-1 text-green-600">{stats.known}</div>
+          <div data-colorful-value="true" className="text-2xl font-bold mt-1 text-green-600">{stats.known}</div>
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">未认识</div>
-          <div className="text-2xl font-bold mt-1 text-muted-foreground">{stats.unknown}</div>
+          <div data-colorful-value="true" className="text-2xl font-bold mt-1 text-muted-foreground">{stats.unknown}</div>
         </Card>
       </div>
 

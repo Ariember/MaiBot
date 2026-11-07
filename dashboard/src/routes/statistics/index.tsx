@@ -170,12 +170,18 @@ interface MetricItemProps {
 
 function MetricItem({ label, value, detail }: MetricItemProps) {
   return (
-    <Card className="group hover:border-primary/60 relative min-h-28 min-w-0 overflow-hidden px-4 py-4 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5">
-      <div className="bg-primary/75 absolute inset-x-0 top-0 h-0.5" />
+    <Card
+      data-colorful-item="true"
+      className="group hover:border-primary/60 relative min-h-28 min-w-0 overflow-hidden px-4 py-4 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5"
+    >
+      <div data-colorful-fill="true" className="bg-primary/75 absolute inset-x-0 top-0 h-0.5" />
       <div className="text-muted-foreground truncate text-xs font-medium tracking-wide">
         {label}
       </div>
-      <div className="text-primary mt-2 truncate text-xl font-bold tracking-tight tabular-nums">
+      <div
+        data-colorful-value="true"
+        className="text-primary mt-2 truncate text-xl font-bold tracking-tight tabular-nums"
+      >
         {value}
       </div>
       {detail && <div className="text-muted-foreground mt-2 truncate text-[11px]">{detail}</div>}
