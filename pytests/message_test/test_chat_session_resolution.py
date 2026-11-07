@@ -34,10 +34,12 @@ def session_database(monkeypatch):
 
 def test_private_target_does_not_include_old_group_sender(session_database):
     with Session(session_database) as session:
-        session.add_all([
-            ChatSession(session_id="group", platform="qq", group_id="100", user_id="200"),
-            ChatSession(session_id="private", platform="qq", user_id="200"),
-        ])
+        session.add_all(
+            [
+                ChatSession(session_id="group", platform="qq", group_id="100", user_id="200"),
+                ChatSession(session_id="private", platform="qq", user_id="200"),
+            ]
+        )
         session.commit()
     manager = ChatManager()
 
@@ -64,7 +66,11 @@ async def test_open_ambiguous_target_requires_explicit_route(session_database):
     manager = ChatManager()
     for account in ("bot-a", "bot-b"):
         manager.sessions[account] = BotChatSession(
-            session_id=account, platform="qq", group_id="100", account_id=account, scope="adapter",
+            session_id=account,
+            platform="qq",
+            group_id="100",
+            account_id=account,
+            scope="adapter",
         )
 
     with pytest.raises(ValueError, match="多个聊天流"):
@@ -77,13 +83,20 @@ async def test_open_ambiguous_target_requires_explicit_route(session_database):
 @pytest.mark.asyncio
 async def test_open_new_target_inherits_unique_plugin_scope(session_database, monkeypatch):
     monkeypatch.setattr(bot_account_service, "get_bot_accounts", lambda platform: {"bot"})
-    drivers = [SimpleNamespace(descriptor=SimpleNamespace(kind=kind, route_key=route)) for kind, route in (
-        (DriverKind.PLUGIN, RouteKey("qq", "bot", "adapter")),
-        (DriverKind.LEGACY, RouteKey("qq", "bot")),
-    )]
-    monkeypatch.setattr(platform_io, "get_platform_io_manager", lambda: SimpleNamespace(
-        driver_registry=SimpleNamespace(list=Mock(return_value=drivers)),
-    ))
+    drivers = [
+        SimpleNamespace(descriptor=SimpleNamespace(kind=kind, route_key=route))
+        for kind, route in (
+            (DriverKind.PLUGIN, RouteKey("qq", "bot", "adapter")),
+            (DriverKind.LEGACY, RouteKey("qq", "bot")),
+        )
+    ]
+    monkeypatch.setattr(
+        platform_io,
+        "get_platform_io_manager",
+        lambda: SimpleNamespace(
+            driver_registry=SimpleNamespace(list=Mock(return_value=drivers)),
+        ),
+    )
     manager = ChatManager()
 
     session, created = await manager.open_session(platform="qq", group_id="100")
@@ -101,9 +114,13 @@ async def test_open_new_target_inherits_unique_plugin_scope(session_database, mo
 @pytest.mark.parametrize("accounts", [set(), {"bot-a", "bot-b"}])
 def test_new_target_rejects_missing_or_ambiguous_account(monkeypatch, accounts):
     monkeypatch.setattr(bot_account_service, "get_bot_accounts", lambda platform: accounts)
-    monkeypatch.setattr(platform_io, "get_platform_io_manager", lambda: SimpleNamespace(
-        driver_registry=SimpleNamespace(list=Mock(return_value=[])),
-    ))
+    monkeypatch.setattr(
+        platform_io,
+        "get_platform_io_manager",
+        lambda: SimpleNamespace(
+            driver_registry=SimpleNamespace(list=Mock(return_value=[])),
+        ),
+    )
 
     with pytest.raises(ValueError, match="account_id"):
         ChatManager._resolve_new_session_route("qq", None, None)

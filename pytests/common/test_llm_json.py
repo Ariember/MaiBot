@@ -8,11 +8,14 @@ from src.common.llm_json import parse_llm_json, validate_llm_json
 from src.maisaka.reply_supplement import ReplySupplementPlan
 
 
-@pytest.mark.parametrize("response", [
-    '{"msg_id": null, "parts": [{"type": "reply"}]}',
-    '```json\n{"msg_id": null, "parts": [{"type": "reply"}]}\n```',
-    '```\r\n{"msg_id": null, "parts": [{"type": "reply"}]}\r\n```',
-])
+@pytest.mark.parametrize(
+    "response",
+    [
+        '{"msg_id": null, "parts": [{"type": "reply"}]}',
+        '```json\n{"msg_id": null, "parts": [{"type": "reply"}]}\n```',
+        '```\r\n{"msg_id": null, "parts": [{"type": "reply"}]}\r\n```',
+    ],
+)
 def test_reply_supplement_json(response: str) -> None:
     plan = validate_llm_json(response, ReplySupplementPlan)
     assert plan.msg_id is None
@@ -30,7 +33,7 @@ def test_invalid_or_incomplete_json_remains_an_error() -> None:
 
 def test_repair_is_explicit() -> None:
     assert parse_llm_json('```json\n{"value": 1,}\n```', repair=True) == {"value": 1}
-    assert parse_llm_json('```json\n[1, 2]\n```') == [1, 2]
+    assert parse_llm_json("```json\n[1, 2]\n```") == [1, 2]
 
 
 def test_tool_argument_parsing_modes() -> None:

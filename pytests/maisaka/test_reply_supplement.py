@@ -44,9 +44,14 @@ async def test_invalid_plan_is_regenerated_with_feedback(monkeypatch, retry_succ
 
     async def generate(self, current_request):
         requests.append(current_request)
-        return LLMResponseResult(output_items=(
-            ContextItemBuilder().set_role(RoleType.Assistant).add_text_content(responses[len(requests) - 1]).build(),
-        ))
+        return LLMResponseResult(
+            output_items=(
+                ContextItemBuilder()
+                .set_role(RoleType.Assistant)
+                .add_text_content(responses[len(requests) - 1])
+                .build(),
+            )
+        )
 
     monkeypatch.setattr(reply_supplement.LLMServiceClient, "generate_response_from_snapshot", generate)
     if retry_succeeds:
@@ -76,9 +81,14 @@ async def test_supplement_failure_keeps_body_and_quote_respects_frequency(monkey
     body = ReplyGenerationResult(completion=LLMCompletionResult(response_text="正文已生成"))
     generated = asyncio.Event()
     target = SimpleNamespace(
-        message_id="message", message_info=SimpleNamespace(user_info=SimpleNamespace(
-            user_id="200", user_nickname="用户", user_cardname=None,
-        )),
+        message_id="message",
+        message_info=SimpleNamespace(
+            user_info=SimpleNamespace(
+                user_id="200",
+                user_nickname="用户",
+                user_cardname=None,
+            )
+        ),
     )
 
     async def generate_body(**kwargs):
@@ -89,29 +99,51 @@ async def test_supplement_failure_keeps_body_and_quote_respects_frequency(monkey
         generated.set()
         if supplement_kind == "failed":
             raise ValueError("重生成后仍无效")
-        plan = reply_supplement.ReplySupplementPlan.model_validate({
-            "msg_id": "message" if supplement_kind == "quote" else None, "parts": [{"type": "reply"}],
-        })
+        plan = reply_supplement.ReplySupplementPlan.model_validate(
+            {
+                "msg_id": "message" if supplement_kind == "quote" else None,
+                "parts": [{"type": "reply"}],
+            }
+        )
         return reply_supplement.ReplySupplement(
-            plan, target if supplement_kind == "quote" else None, [None], {"plan": plan.model_dump()},
+            plan,
+            target if supplement_kind == "quote" else None,
+            [None],
+            {"plan": plan.model_dump()},
         )
 
     runtime = SimpleNamespace(
-        session_id="test", chat_stream=SimpleNamespace(platform=reply.CLI_PLATFORM_NAME), _chat_history=[],
-        log_prefix="test", _update_stage_status=Mock(), record_planner_reply=Mock(),
+        session_id="test",
+        chat_stream=SimpleNamespace(platform=reply.CLI_PLATFORM_NAME),
+        _chat_history=[],
+        log_prefix="test",
+        _update_stage_status=Mock(),
+        record_planner_reply=Mock(),
     )
     tool_ctx = SimpleNamespace(
-        runtime=runtime, build_failure_result=Mock(), build_success_result=Mock(return_value={"success": True}),
+        runtime=runtime,
+        build_failure_result=Mock(),
+        build_success_result=Mock(return_value={"success": True}),
         append_guided_reply_to_chat_history=Mock(),
-        post_process_reply_message_items_async=AsyncMock(return_value=[PostProcessedReplyMessage(
-            sequence=MessageSequence([TextComponent("正文已生成")]),
-        )]),
+        post_process_reply_message_items_async=AsyncMock(
+            return_value=[
+                PostProcessedReplyMessage(
+                    sequence=MessageSequence([TextComponent("正文已生成")]),
+                )
+            ]
+        ),
     )
     extension = SimpleNamespace(prepare=AsyncMock(), targets=[], reply_id="test")
     monkeypatch.setattr(reply, "ReplyExtensionExecution", Mock(return_value=extension))
-    monkeypatch.setattr(reply.replyer_manager, "get_replyer", Mock(return_value=SimpleNamespace(
-        generate_reply_with_context=generate_body,
-    )))
+    monkeypatch.setattr(
+        reply.replyer_manager,
+        "get_replyer",
+        Mock(
+            return_value=SimpleNamespace(
+                generate_reply_with_context=generate_body,
+            )
+        ),
+    )
     monkeypatch.setattr(reply.config_module.global_config.debug, "replyer_retro_prompt", False)
     monkeypatch.setattr(reply, "_invoke_before_post_process_hook", AsyncMock(return_value=("正文已生成", {})))
     monkeypatch.setattr(reply, "is_bot_self", lambda *args: False)
@@ -121,8 +153,11 @@ async def test_supplement_failure_keeps_body_and_quote_respects_frequency(monkey
     monkeypatch.setattr(reply, "_resolve_reply_quote", quote)
 
     result = await reply.execute_reply(
-        tool_ctx, {"msg_id": "message", "reply_reference": "指导"}, call_id="test",
-        target_message=target, supplement_runner=generate_supplement,
+        tool_ctx,
+        {"msg_id": "message", "reply_reference": "指导"},
+        call_id="test",
+        target_message=target,
+        supplement_runner=generate_supplement,
     )
 
     assert result == {"success": True}
