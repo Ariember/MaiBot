@@ -6,7 +6,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
 from html import escape
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Literal, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Literal, Optional, Tuple
 
 import asyncio
 import difflib
@@ -45,6 +45,7 @@ from src.llm_models.payload_content.tool_option import ToolCall
 from src.services import database_service as database_api
 from src.maisaka.display.display_utils import format_tool_call_for_display
 from src.maisaka.utils.tool_post_execution import handle_tool_post_execution_effects
+from src.maisaka.utils.tool_batch import execute_tool_calls
 from src.maisaka.utils.tool_record_payload import build_tool_record_payload, normalize_tool_record_value
 
 from src.maisaka.builtin_tool import (
@@ -2099,7 +2100,10 @@ class MaisakaReasoningEngine:
         }
         passive_replyer = self.passive_replyer_enabled
         total_tool_count = len(tool_calls)
-        for tool_index, tool_call in enumerate(tool_calls, start=1):
+
+        async def invoke_tool(
+            tool_index: int, tool_call: ToolCall
+        ) -> Tuple[ToolInvocation, ToolExecutionResult, float, float, bool]:
             self._log_tool_call_source(tool_call, stage=f"Planner {tool_index}/{total_tool_count}")
             invocation = self._build_tool_invocation(tool_call, latest_thought)
             self._runtime._update_stage_status(
@@ -2117,6 +2121,12 @@ class MaisakaReasoningEngine:
             else:
                 result = await self._runtime._tool_registry.invoke(invocation, execution_context)
             tool_ended_at = time.time()
+            return invocation, result, tool_started_at, tool_ended_at, is_unexpanded_tool
+
+        async for tool_index, tool_call, execution in execute_tool_calls(
+            tool_calls, invoke_tool, tool_spec_map.values()
+        ):
+            invocation, result, tool_started_at, tool_ended_at, is_unexpanded_tool = execution
             if invocation.tool_name != "wait":
                 self._runtime._reset_consecutive_wait_count(f"tool:{invocation.tool_name}")
             if is_unexpanded_tool and not result.success:

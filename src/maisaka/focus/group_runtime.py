@@ -17,8 +17,9 @@ from src.common.logger import get_logger
 from src.common.message_repository import find_messages
 from src.common.utils.utils_config import ChatConfigUtils
 from src.config.config import global_config
-from src.core.tooling import ToolExecutionResult
+from src.core.tooling import ToolExecutionResult, ToolInvocation, ToolSpec
 from src.llm_models.payload_content.context_item import FunctionCallItem
+from src.llm_models.payload_content.tool_option import ToolCall
 from src.maisaka.chat_loop_service import ChatResponse, MaisakaChatLoopService
 from src.maisaka.context.messages import (
     ContentContextMessage,
@@ -35,6 +36,7 @@ from src.maisaka.context.post_processor import process_chat_history_after_cycle
 from src.maisaka.mode_policy import build_consecutive_wait_reminders
 from src.maisaka.monitor.events import emit_flow_step, emit_planner_snapshot
 from src.maisaka.tool_result_condenser import condense_tool_result, should_condense_tool_result
+from src.maisaka.utils.tool_batch import execute_tool_calls
 
 from .context import FocusCheckpointStore, FocusContextEntry
 from .tools import FocusToolRouter
@@ -605,11 +607,21 @@ class FocusGroupRuntime:
             for message in response.raw_messages
             if isinstance(message.output_item, FunctionCallItem)
         }
-        for index, call in enumerate(response.tool_calls):
+
+        async def invoke_tool(
+            _index: int, call: ToolCall
+        ) -> Tuple[
+            Optional[ToolInvocation],
+            ToolExecutionResult,
+            Optional[MaisakaHeartFlowChatting],
+            Optional[ToolSpec],
+            float,
+            float,
+        ]:
             tool_started = time.time()
+            invocation = None
             runtime = None
             spec = None
-            condensed = None
             if paused or generation != self._generation or self._closed:
                 result = ToolExecutionResult(
                     tool_name=call.func_name,
@@ -624,18 +636,25 @@ class FocusGroupRuntime:
                     call.call_id,
                     response.content or "",
                 )
-                if runtime is not None:
-                    await runtime._reasoning_engine._record_tool_execution_effects(invocation, result, spec)
-                    raw_content = result.get_history_content()
-                    if global_config.capabilities.tool_result_condense and should_condense_tool_result(
-                        call.func_name,
-                        raw_content,
-                        success=result.success,
-                        already_previewed=result.metadata.get("web_result_preview") is True,
-                    ):
-                        condensed = await condense_tool_result(runtime, call, raw_content, response.content or "")
-                    if call.func_name != "wait":
-                        self._consecutive_waits = 0
+            return invocation, result, runtime, spec, tool_started, time.time()
+
+        async for tool_index, call, execution in execute_tool_calls(
+            response.tool_calls, invoke_tool, (route.spec for route in self.tools.routes.values())
+        ):
+            invocation, result, runtime, spec, tool_started, tool_ended = execution
+            condensed = None
+            if runtime is not None:
+                await runtime._reasoning_engine._record_tool_execution_effects(invocation, result, spec)
+                raw_content = result.get_history_content()
+                if global_config.capabilities.tool_result_condense and should_condense_tool_result(
+                    call.func_name,
+                    raw_content,
+                    success=result.success,
+                    already_previewed=result.metadata.get("web_result_preview") is True,
+                ):
+                    condensed = await condense_tool_result(runtime, call, raw_content, response.content or "")
+                if call.func_name != "wait":
+                    self._consecutive_waits = 0
             metadata = dict(result.metadata)
             metadata["focus_scope_id"] = self.scope_id
             content = condensed if condensed is not None else result.get_history_content()
@@ -675,8 +694,8 @@ class FocusGroupRuntime:
                 "error_message": result.error_message,
                 "summary": content,
                 "started_at": tool_started,
-                "ended_at": time.time(),
-                "duration_ms": (time.time() - tool_started) * 1000,
+                "ended_at": tool_ended,
+                "duration_ms": (tool_ended - tool_started) * 1000,
                 "detail": result.metadata.get("monitor_detail"),
                 "card": result.metadata.get("monitor_card"),
                 "sub_cards": result.metadata.get("monitor_sub_cards"),
@@ -699,7 +718,7 @@ class FocusGroupRuntime:
             if result.success and (result.metadata.get("pause_execution") or result.stop_after_execution):
                 paused = True
             next_call = (
-                response.tool_calls[index + 1].call_id if index + 1 < len(response.tool_calls) and not paused else ""
+                response.tool_calls[tool_index].call_id if tool_index < len(response.tool_calls) and not paused else ""
             )
             await self._emit_response(
                 response,

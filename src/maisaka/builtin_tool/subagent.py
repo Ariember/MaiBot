@@ -9,7 +9,7 @@
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import asyncio
 import json
@@ -33,6 +33,7 @@ from src.maisaka.subagent_tasks import (
     SubAgentTask,
     format_tool_usage,
 )
+from src.maisaka.utils.tool_batch import execute_tool_calls
 
 from .context import BuiltinToolRuntimeContext
 
@@ -227,6 +228,23 @@ async def _run_sub_agent_rounds(
     execution_context = engine._build_tool_execution_context(task)
     conclusion = ""
 
+    async def invoke_tool(_index: int, tool_call: ToolCall) -> Tuple[ToolExecutionResult, float]:
+        tool_started_at = time.time()
+        if tool_call.func_name not in granted_tool_names:
+            result = ToolExecutionResult(
+                tool_name=tool_call.func_name,
+                success=False,
+                error_message=f"工具 {tool_call.func_name} 没有授权给你。",
+            )
+        else:
+            tool_usage[tool_call.func_name] = tool_usage.get(tool_call.func_name, 0) + 1
+            result = await tool_registry.invoke(engine._build_tool_invocation(tool_call, task), execution_context)
+            logger.info(
+                f"{runtime.log_prefix} 子代理调用工具 {tool_call.func_name} "
+                f"参数={json.dumps(tool_call.args or {}, ensure_ascii=False)[:200]} 成功={result.success}"
+            )
+        return result, (time.time() - tool_started_at) * 1000
+
     for round_index in range(max_rounds + 1):
         is_final_round = round_index == max_rounds
         if is_final_round:
@@ -264,22 +282,10 @@ async def _run_sub_agent_rounds(
             for message in response.raw_messages
             if isinstance(message.output_item, FunctionCallItem)
         }
-        for tool_call in response.tool_calls:
+        async for _, tool_call, (result, duration_ms) in execute_tool_calls(
+            response.tool_calls, invoke_tool, granted_specs
+        ):
             logical_turn_id = str(logical_turn_ids[tool_call.call_id] or "")
-            tool_started_at = time.time()
-            if tool_call.func_name not in granted_tool_names:
-                result = ToolExecutionResult(
-                    tool_name=tool_call.func_name,
-                    success=False,
-                    error_message=f"工具 {tool_call.func_name} 没有授权给你。",
-                )
-            else:
-                tool_usage[tool_call.func_name] = tool_usage.get(tool_call.func_name, 0) + 1
-                result = await tool_registry.invoke(engine._build_tool_invocation(tool_call, task), execution_context)
-                logger.info(
-                    f"{runtime.log_prefix} 子代理调用工具 {tool_call.func_name} "
-                    f"参数={json.dumps(tool_call.args or {}, ensure_ascii=False)[:200]} 成功={result.success}"
-                )
             tool_result_message = _build_tool_result_message(tool_call, result, logical_turn_id)
             sub_agent_history.append(tool_result_message)
             if result.content_items:
@@ -293,7 +299,7 @@ async def _run_sub_agent_rounds(
                 tool_name=tool_call.func_name,
                 success=result.success,
                 summary=tool_result_message.content,
-                duration_ms=(time.time() - tool_started_at) * 1000,
+                duration_ms=duration_ms,
             )
 
     logger.info(f"{runtime.log_prefix} 子代理任务结束 工具使用={format_tool_usage(tool_usage)} 结论={len(conclusion)}字")
