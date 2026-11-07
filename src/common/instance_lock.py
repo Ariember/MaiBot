@@ -1,4 +1,4 @@
-"""安装版实例租约；与更新方式无关。"""
+"""实例租约；与部署和更新方式无关。"""
 
 from pathlib import Path
 from typing import Any

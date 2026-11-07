@@ -1,4 +1,5 @@
 data/
+.maibot-instance-locks/
 # Local roleplay benchmark data
 tools/roleplay_benchmark/
 tools/roleplay_benchmark/data/agent_scores.json

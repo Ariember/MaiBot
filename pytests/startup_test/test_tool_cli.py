@@ -7,6 +7,10 @@ import os
 import subprocess
 import sys
 
+import pytest
+
+from src.common.instance_lock import register_instance
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -51,3 +55,67 @@ def test_run_requires_initialized_instance(tmp_path: Path) -> None:
     assert result.returncode == 2
     assert "maibot init" in result.stderr
     assert not list(tmp_path.iterdir())
+
+
+def invoke_runner(directory: Path, entry: str, *, supervised: bool = False) -> subprocess.CompletedProcess:
+    env = os.environ.copy()
+    env["MAIBOT_INSTANCE_DIR"] = str(directory)
+    env["PYTHONPATH"] = str(ROOT)
+    env["PYTHONIOENCODING"] = "utf-8"
+    env.pop("MAIBOT_WORKER_PROCESS", None)
+    env.pop("MAIBOT_RUNNER_SUPERVISED", None)
+    if supervised:
+        env["MAIBOT_RUNNER_SUPERVISED"] = "1"
+    # 只执行真实启动入口及文件锁；禁止创建 Worker、访问业务数据或执行更新。
+    script = f"""
+from unittest.mock import patch
+import runpy
+import sys
+
+def run_runner(*args):
+    print("runner-started")
+    return 0
+
+with (
+    patch("src.common.process_runner.run_runner", run_runner),
+    patch("src.common.self_update.clear_pending_update"),
+    patch("src.config.legacy_upgrade_confirmation.require_legacy_upgrade_confirmation"),
+):
+    if {entry!r} == "bot":
+        runpy.run_path({str(ROOT / 'bot.py')!r}, run_name="__main__")
+    elif {entry!r} == "cli":
+        sys.argv = ["maibot", "run", "--directory", {str(directory)!r}]
+        runpy.run_module("src.cli.tool", run_name="__main__")
+    else:
+        runpy.run_module("src.runtime", run_name="__main__")
+"""
+    return subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=directory, env=env, capture_output=True, text=True, encoding="utf-8", timeout=30,
+    )
+
+
+@pytest.mark.parametrize("entry", ["bot", "cli", "runtime"])
+def test_run_refuses_duplicate_before_starting_worker(tmp_path: Path, entry: str) -> None:
+    config = tmp_path / "config"
+    config.mkdir()
+    for name in ("bot_config.toml", "model_config.toml"):
+        (config / name).touch()
+    with register_instance(tmp_path):
+        result = invoke_runner(tmp_path, entry)
+    assert result.returncode != 0
+    assert "这个实例正在运行" in result.stderr
+    assert "runner-started" not in result.stdout
+
+    result = invoke_runner(tmp_path, entry)
+    assert result.returncode == 0, result.stderr
+    assert "runner-started" in result.stdout
+
+
+def test_supervised_runner_reuses_outer_instance_lease(tmp_path: Path) -> None:
+    with register_instance(tmp_path):
+        result = invoke_runner(tmp_path, "runtime", supervised=True)
+        assert result.returncode == 0, result.stderr
+        assert "runner-started" in result.stdout
+        with pytest.raises(RuntimeError, match="这个实例正在运行"):
+            register_instance(tmp_path)

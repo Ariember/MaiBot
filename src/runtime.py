@@ -1,4 +1,5 @@
 # raise RuntimeError("System Not Ready")
+from contextlib import nullcontext
 from pathlib import Path
 from rich.traceback import install
 from typing import TypeVar
@@ -92,10 +93,11 @@ if __name__ == "__main__" and os.environ.get("MAIBOT_WORKER_PROCESS") == "1":
 
 
 from src.common.paths import PACKAGED_INSTALL, SOURCE_ROOT, get_instance_root  # noqa: E402
+from src.common.instance_lock import register_instance  # noqa: E402
 from src.common.i18n import set_locale, t, tn  # noqa: E402
 from src.common.logger import get_logger, initialize_logging, shutdown_logging  # noqa: E402
 from src.common.runtime_loop import set_main_loop  # noqa: E402
-from src.common.process_runner import RESTART_EXIT_CODE, run_runner  # noqa: E402
+from src.common.process_runner import RESTART_EXIT_CODE, RUNNER_SUPERVISED_ENV, run_runner  # noqa: E402
 from src.common.self_update import apply_pending_update, clear_pending_update  # noqa: E402
 from src.common.shutdown import application_signal_handlers, request_shutdown  # noqa: E402
 from src.common.update_notice import emit_terminal_update_notice_if_needed  # noqa: E402
@@ -144,8 +146,15 @@ def run_runner_process():
 # 此时应该作为 Runner 运行。
 if os.environ.get("MAIBOT_WORKER_PROCESS") != "1":
     if __name__ == "__main__":
-        require_legacy_upgrade_confirmation(Path(script_dir))
-        run_runner_process()
+        # 自更新交接的 Runner 沿用最外层进程持有的租约，Worker 重启期间不释放。
+        instance_lease = (
+            nullcontext()
+            if os.environ.get(RUNNER_SUPERVISED_ENV) == "1"
+            else register_instance(Path(script_dir))
+        )
+        with instance_lease:
+            require_legacy_upgrade_confirmation(Path(script_dir))
+            run_runner_process()
     # 如果作为模块导入，不执行 Runner 逻辑，但也不应该执行下面的 Worker 逻辑
     sys.exit(0)
 
