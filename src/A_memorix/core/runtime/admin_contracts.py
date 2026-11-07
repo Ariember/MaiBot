@@ -138,6 +138,8 @@ _FEEDBACK_ACTIONS = {"list", "get", "rollback"}
 _FACT_ACTIONS = {"get", "list", "create", "update", "retract", "restore"}
 _RUNTIME_ACTIONS = {
     "save",
+    "list_vector_spaces",
+    "delete_vector_space",
     "get_config",
     "self_check",
     "refresh_self_check",
