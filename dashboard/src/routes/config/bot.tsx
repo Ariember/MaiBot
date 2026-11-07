@@ -641,7 +641,7 @@ function BotConfigPageContent() {
   return (
     // 手机端由工作区 main 统一滚动，内部视口展开，避免嵌套滚动截住上下滑动。
     <ScrollArea
-      className="h-full min-w-0 max-lg:h-auto max-lg:overflow-visible max-lg:[&>[data-dashboard-scrollbar]]:hidden"
+      className="h-full min-w-0 max-lg:h-auto max-lg:overflow-visible max-lg:*:data-dashboard-scrollbar:hidden"
       viewportClassName="max-lg:h-auto max-lg:!overflow-visible max-lg:overscroll-auto"
       scrollbars="vertical"
     >
@@ -652,12 +652,12 @@ function BotConfigPageContent() {
             {editMode === 'detail' && tabGroups.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="shrink-0 gap-2 text-base font-semibold ![background-image:none]" aria-label="选择设置页面">
+                  <Button variant="outline" className="shrink-0 gap-2 text-base font-semibold bg-none!" aria-label="选择设置页面">
                     {tabGroups.find((tab) => tab.id === activeConfigTab)?.label ?? tabGroups[0].label}
                     <ChevronDown className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="flex max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-40 flex-col gap-2 overflow-y-auto p-2 ![background-image:none]">
+                <DropdownMenuContent align="start" className="flex max-h-(--radix-dropdown-menu-content-available-height) min-w-40 flex-col gap-2 overflow-y-auto p-2 bg-none!">
                   {tabGroups.map((tab) => {
                     const pinned = pinnedTabs.some((item) => item.id === tab.id)
                     const PinIcon = pinned ? PinOff : Pin
@@ -669,7 +669,7 @@ function BotConfigPageContent() {
                         data-config-section-menu-row="true"
                         className={cn(
                           buttonVariants({ variant: 'outline' }),
-                          'w-full shrink-0 justify-start gap-1 px-2 text-base font-semibold ![background-image:none]'
+                          'w-full shrink-0 justify-start gap-1 px-2 text-base font-semibold bg-none!'
                         )}
                       >
                         <DropdownMenuItem
@@ -717,7 +717,7 @@ function BotConfigPageContent() {
                         size="sm"
                         variant={activeConfigTab === tab.id ? 'secondary' : 'outline'}
                         aria-pressed={activeConfigTab === tab.id}
-                        className="shrink-0 text-sm font-semibold ![background-image:none]"
+                        className="shrink-0 text-sm font-semibold bg-none!"
                         onClick={() => setActiveConfigTab(tab.id)}
                       >
                         {tab.label}
@@ -742,11 +742,11 @@ function BotConfigPageContent() {
               className="min-w-0 flex-1 sm:w-64 sm:flex-none"
             >
               <TabsList data-config-bot-mode-tabs="true" className="grid h-9 w-full grid-cols-2">
-                <TabsTrigger value="detail" className="min-w-0 gap-1 !px-1 text-sm sm:!px-2">
+                <TabsTrigger value="detail" className="min-w-0 gap-1 px-1! text-sm sm:px-2!">
                   <SlidersHorizontal className="h-4 w-4 shrink-0" />
                   详细设置
                 </TabsTrigger>
-                <TabsTrigger value="commands" className="min-w-0 gap-1 !px-1 text-sm sm:!px-2">
+                <TabsTrigger value="commands" className="min-w-0 gap-1 px-1! text-sm sm:px-2!">
                   <ShieldCheck className="h-4 w-4 shrink-0" />
                   命令管理
                 </TabsTrigger>
@@ -865,7 +865,7 @@ function BotConfigPageContent() {
                   {hasTomlError && tomlErrorMessage && (
                     <div className="text-destructive bg-destructive/10 mt-3 rounded-md p-3 font-semibold">
                       <div className="mb-2 font-bold">⚠️ TOML 格式错误：</div>
-                      <pre className="font-mono text-sm break-words whitespace-pre-wrap">
+                      <pre className="font-mono text-sm wrap-break-word whitespace-pre-wrap">
                         {tomlErrorMessage}
                       </pre>
                     </div>
@@ -981,11 +981,21 @@ interface DynamicConfigTabsProps {
   searchFieldPath: string
 }
 
+/** 卡片内的小节分隔标题：左侧标签 + 右侧细分隔线。 */
+function ConfigGroupDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="shrink-0 text-xs font-medium tracking-wider text-muted-foreground">{label}</span>
+      <div aria-hidden="true" className="h-px flex-1 bg-border/60" />
+    </div>
+  )
+}
+
 function ConfigTabsExpandButton({ expanded, onClick }: { expanded: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
-      className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center self-center border-0 bg-transparent p-0 text-foreground transition-colors hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center self-center border-0 bg-transparent p-0 text-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       aria-label={expanded ? '收起设置栏目' : '展开更多设置栏目'}
       aria-expanded={expanded}
       title={expanded ? '收起设置栏目' : '展开更多设置栏目'}
@@ -1116,6 +1126,7 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
   }
 
   const identityFieldNames = new Set(['nickname', 'alias_names'])
+  const personalityStyleFieldNames = new Set(['behavior_style', 'reply_style'])
   const basicChatPromptFieldNames = new Set(['group_chat_prompt', 'private_chat_prompts'])
   const chatQuoteFieldNames = new Set(['private_quote_frequency', 'group_quote_frequency'])
   const basicChatContextFieldNames = new Set(['max_context_size', 'max_private_context_size'])
@@ -1171,7 +1182,7 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
     ...replyStyleSchema,
     fields: replyStyleSchema.fields
       .filter((field) => basicChatPromptFieldNames.has(field.name))
-      .map((field) => ({ ...field, advanced: false })),
+      .map((field) => ({ ...field, advanced: false, 'x-row': 'chat-basic-prompts' })),
     nested: {},
   } : null
   // 基础页提供常用记忆开关，仍通过记忆配置的原始路径读写。
@@ -1191,74 +1202,91 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
       schema: { ...schema, fields: [{ ...field, label, advanced: false }], nested: {} },
     }]
   })
+  const learningSections = (['expression', 'jargon'] as const).filter((section) => configSchema.nested?.[section])
   const sectionLeadingContent = {
     personality: (
-      <div className="space-y-3">
-        <PersonalityProfiles
-          values={{
-            ...sectionValues.personality,
-            group_chat_prompt: (sectionValues.chat?.reply_style as ConfigSectionData)?.group_chat_prompt,
-            private_chat_prompts: (sectionValues.chat?.reply_style as ConfigSectionData)?.private_chat_prompts,
-          }}
-          onChange={(value) => { void onPersonalityChange(value) }}
-        />
-        {identitySchema && (
-          <DynamicConfigForm
-            schema={identitySchema}
-            values={sectionValues.bot ?? {}}
-            onChange={(field, value) => updateSectionValueByPath('bot', [field], value)}
-            basePath="bot"
-            hooks={fieldHooks}
-            advancedVisible={advancedVisible}
-          />
-        )}
+      <div className="space-y-4">
+        {/* 身份面板：人设切换与昵称/别名归为一组 */}
+        <div className="divide-y divide-border/60 rounded-lg border border-border/60 bg-muted/30">
+          <div className="px-3 py-2.5">
+            <PersonalityProfiles
+              values={{
+                ...sectionValues.personality,
+                group_chat_prompt: (sectionValues.chat?.reply_style as ConfigSectionData)?.group_chat_prompt,
+                private_chat_prompts: (sectionValues.chat?.reply_style as ConfigSectionData)?.private_chat_prompts,
+              }}
+              onChange={(value) => { void onPersonalityChange(value) }}
+            />
+          </div>
+          {identitySchema && (
+            <div className="px-3 py-2.5">
+              <DynamicConfigForm
+                schema={identitySchema}
+                values={sectionValues.bot ?? {}}
+                onChange={(field, value) => updateSectionValueByPath('bot', [field], value)}
+                basePath="bot"
+                hooks={fieldHooks}
+                advancedVisible={advancedVisible}
+              />
+            </div>
+          )}
+        </div>
+        <ConfigGroupDivider label="性格与表达" />
       </div>
     ),
   }
   const sectionTrailingContent = {
-    personality: (
-      <GlobalLearningSettings
-        values={sectionValues}
-        sections={(['expression', 'jargon'] as const).filter((section) => configSchema.nested?.[section])}
-        onChange={(section, rules) => updateSectionValueByPath(section, ['learning_list'], rules)}
-      />
+    personality: learningSections.length > 0 && (
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5">
+        <span className="text-sm font-medium">全局学习</span>
+        <GlobalLearningSettings
+          values={sectionValues}
+          sections={learningSections}
+          onChange={(section, rules) => updateSectionValueByPath(section, ['learning_list'], rules)}
+        />
+      </div>
     ),
   }
   const fieldTrailingContent = {
     'personality.reply_style': (
-      <div className="space-y-3">
+      <div className="space-y-4">
         {alternateStyleSchema && alternateStyleSchema.fields.length > 0 && (
-          <Popover open={alternateStylesOpen} onOpenChange={setAlternateStylesOpen}>
-            <PopoverTrigger asChild>
-              <Button type="button" variant="outline" size="sm">
-                备用表达风格
-                <ChevronDown className={cn('ml-2 h-4 w-4 transition-transform', alternateStylesOpen && 'rotate-180')} />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="start"
-              className="max-h-[min(24rem,var(--radix-popover-content-available-height))] w-[28rem] max-w-[calc(100vw-2rem)] overflow-y-auto p-3"
-              aria-label="备用表达风格设置"
-            >
-              <DynamicConfigForm
-                schema={alternateStyleSchema}
-                values={sectionValues.personality ?? {}}
-                onChange={(field, value) => updateSectionValueByPath('personality', [field], value)}
-                basePath="personality"
-                hooks={fieldHooks}
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex justify-end">
+            <Popover open={alternateStylesOpen} onOpenChange={setAlternateStylesOpen}>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline" size="sm">
+                  备用表达风格
+                  <ChevronDown className={cn('ml-2 h-4 w-4 transition-transform', alternateStylesOpen && 'rotate-180')} />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                className="max-h-[min(24rem,var(--radix-popover-content-available-height))] w-md max-w-[calc(100vw-2rem)] overflow-y-auto p-3"
+                aria-label="备用表达风格设置"
+              >
+                <DynamicConfigForm
+                  schema={alternateStyleSchema}
+                  values={sectionValues.personality ?? {}}
+                  onChange={(field, value) => updateSectionValueByPath('personality', [field], value)}
+                  basePath="personality"
+                  hooks={fieldHooks}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         )}
         {basicChatPromptSchema && (
-          <DynamicConfigForm
-            schema={basicChatPromptSchema}
-            values={(sectionValues.chat?.reply_style as ConfigSectionData) ?? {}}
-            onChange={(field, value) => updateSectionValueByPath('chat', ['reply_style', field], value)}
-            basePath="chat.reply_style"
-            hooks={fieldHooks}
-            advancedVisible={advancedVisible}
-          />
+          <div className="space-y-3">
+            <ConfigGroupDivider label="聊天提示词" />
+            <DynamicConfigForm
+              schema={basicChatPromptSchema}
+              values={(sectionValues.chat?.reply_style as ConfigSectionData) ?? {}}
+              onChange={(field, value) => updateSectionValueByPath('chat', ['reply_style', field], value)}
+              basePath="chat.reply_style"
+              hooks={fieldHooks}
+              advancedVisible={advancedVisible}
+            />
+          </div>
         )}
       </div>
     ),
@@ -1273,7 +1301,9 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
       return {
         ...schema,
         uiLabel: '身份与人格',
-        fields: schema.fields.filter((field) => ![...alternateStyleFieldNames, 'profiles', 'selected_profile'].includes(field.name)),
+        fields: schema.fields
+          .filter((field) => ![...alternateStyleFieldNames, 'profiles', 'selected_profile'].includes(field.name))
+          .map((field) => (personalityStyleFieldNames.has(field.name) ? { ...field, 'x-row': 'personality-style' } : field)),
         nested: Object.fromEntries(Object.entries(schema.nested ?? {}).filter(([name]) => name !== 'profiles')),
       }
     }

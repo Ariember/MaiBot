@@ -1032,7 +1032,7 @@ function SharedMemoryChatStreamSelect({
               onValueChange={setSearch}
               placeholder="搜索群名、私聊名、群号或用户 ID..."
             />
-            <CommandList className="max-h-[280px]">
+            <CommandList className="max-h-70">
               <CommandEmpty>未找到匹配的聊天流</CommandEmpty>
               {groups.length > 0 && (
                 <CommandGroup heading="群聊">
@@ -1847,7 +1847,7 @@ function TalkValueTimelineOverview({
         </div>
       </div>
       <div className="overflow-x-auto">
-        <div className="min-w-[540px] p-2.5">
+        <div className="min-w-135 p-2.5">
           <div className="grid grid-cols-[5.5rem_minmax(16rem,1fr)_6.5rem] gap-2 pb-1.5 text-[11px] text-muted-foreground">
             <div>轨道</div>
             <TimeRangeTicks />

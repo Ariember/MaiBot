@@ -468,10 +468,10 @@ export const DynamicConfigForm: React.FC<DynamicConfigFormProps> = ({
               className={cn(
                 "grid min-w-0 items-stretch gap-3 py-0.5",
                 isBotIdentityRow
-                  ? "grid-cols-[minmax(0,1fr)_auto]"
+                  ? "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]"
                   : isVisualImageCompressionRow
                   ? "grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1.1fr)] items-center"
-                  : rowKey === 'chat-quote-frequency'
+                  : row.length === 2
                   ? "md:grid-cols-2"
                   : "md:grid-cols-2 xl:grid-cols-3",
               )}

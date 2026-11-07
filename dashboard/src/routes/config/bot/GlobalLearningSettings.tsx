@@ -17,8 +17,8 @@ interface GlobalLearningSettingsProps {
 
 export function GlobalLearningSettings({ values, sections, onChange }: GlobalLearningSettingsProps) {
   return (
-    <div className="space-y-3">
-      {sections.map((section) => {
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      {sections.flatMap((section) => {
         const value = values[section]?.learning_list
         const rules = Array.isArray(value) ? value as LearningRule[] : []
         // 与后端一致：平台和目标均为空（* 与留空等价）的第一条规则是全局默认。
@@ -36,23 +36,21 @@ export function GlobalLearningSettings({ values, sections, onChange }: GlobalLea
             : [nextRule, ...rules])
         }
 
-        return (
-          <div key={section} className="grid grid-cols-2 gap-x-6 gap-y-2">
-            {(['use', 'learn'] as const).map((field) => {
-              const id = `${section}-global-${field}`
-              return (
-                <div key={field} className="flex items-center justify-between gap-3">
-                  <Label htmlFor={id}>{field === 'use' ? '使用' : '学习'}{label}</Label>
-                  <Switch
-                    id={id}
-                    checked={globalRule[field]}
-                    onCheckedChange={(checked) => updateFlag(field, checked)}
-                  />
-                </div>
-              )
-            })}
-          </div>
-        )
+        return (['use', 'learn'] as const).map((field) => {
+          const id = `${section}-global-${field}`
+          return (
+            <div key={field} className="flex items-center gap-2">
+              <Label htmlFor={id} className="font-normal text-muted-foreground">
+                {field === 'use' ? '使用' : '学习'}{label}
+              </Label>
+              <Switch
+                id={id}
+                checked={globalRule[field]}
+                onCheckedChange={(checked) => updateFlag(field, checked)}
+              />
+            </div>
+          )
+        })
       })}
     </div>
   )

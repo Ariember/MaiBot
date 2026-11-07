@@ -129,10 +129,10 @@ export function PersonalityProfiles({ values, onChange }: {
 
   return (
     <>
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <Label htmlFor="personality-profile" className="shrink-0">当前人设</Label>
         <Select value={selected?.name ?? ''} onValueChange={switchTo}>
-          <SelectTrigger id="personality-profile" className="min-w-0 flex-1">
+          <SelectTrigger id="personality-profile" className="min-w-36 flex-1">
             <SelectValue placeholder="当前人设（未命名）" />
           </SelectTrigger>
           <SelectContent>
@@ -140,16 +140,18 @@ export function PersonalityProfiles({ values, onChange }: {
             {profiles.map((profile) => <SelectItem key={profile.name} value={profile.name}>{profile.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => {
-          setDraft(null); setOriginalName(null); setConfirmDelete(false); setImportText(''); setPanel('import')
-        }}><Download className="mr-1 h-4 w-4" />导入</Button>
-        <Button type="button" size="sm" className="shrink-0" onClick={createProfile}><Plus className="mr-1 h-4 w-4" />新建</Button>
-        <Button type="button" size="icon" variant="outline" className="shrink-0" aria-label="管理人设" title="管理人设" onClick={() => {
-          const first = selected ?? profiles[0]
-          if (first) editProfile(first)
-          else { setDraft(null); setOriginalName(null); setConfirmDelete(false) }
-          setPanel('manage')
-        }}><Wrench className="h-4 w-4" /></Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={() => {
+            setDraft(null); setOriginalName(null); setConfirmDelete(false); setImportText(''); setPanel('import')
+          }}><Download className="mr-1 h-4 w-4" />导入</Button>
+          <Button type="button" size="sm" onClick={createProfile}><Plus className="mr-1 h-4 w-4" />新建</Button>
+          <Button type="button" size="icon" variant="outline" aria-label="管理人设" title="管理人设" onClick={() => {
+            const first = selected ?? profiles[0]
+            if (first) editProfile(first)
+            else { setDraft(null); setOriginalName(null); setConfirmDelete(false) }
+            setPanel('manage')
+          }}><Wrench className="h-4 w-4" /></Button>
+        </div>
       </div>
 
       <Dialog open={panel !== null} onOpenChange={(open) => { if (!open) closePanel() }}>
@@ -169,7 +171,7 @@ export function PersonalityProfiles({ values, onChange }: {
                 {imported.error && <p role="alert" className="text-sm text-destructive">{imported.error}</p>}
                 {imported.profile && <div className="space-y-2 rounded-md border p-3">
                   <p className="font-medium">已解析：{imported.profile.name}</p>
-                  <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{imported.profile.personality}</p>
+                  <p className="whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">{imported.profile.personality}</p>
                   {profiles.some((profile) => profile.name === imported.profile?.name) && <p className="text-sm text-destructive">已有同名人设，请在下一步修改名称。</p>}
                 </div>}
               </div>}

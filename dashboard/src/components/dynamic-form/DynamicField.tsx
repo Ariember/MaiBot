@@ -350,7 +350,7 @@ export const DynamicField: React.FC<DynamicFieldProps> = ({
               descriptionDisplay === 'label-hover' && fieldDescription && "cursor-help",
             )}
           >
-            <span className="break-words">{fieldLabel}</span>
+            <span className="wrap-break-word">{fieldLabel}</span>
             {schema.required && <span className="text-destructive">*</span>}
           </Label>
         )
