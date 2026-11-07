@@ -25,14 +25,8 @@ import {
 } from '@/components/ui/select'
 
 import { useModelFetcher } from '../hooks/useModelFetcher'
-import {
-  applyModelPriceDefaults,
-  MODEL_PRICE_DATE,
-  MODEL_PRICE_FIELDS,
-  MODEL_PRICE_USD_TO_CNY,
-} from '../modelPricing'
+import { applyModelPriceDefaults } from '../modelPricing'
 import type { ModelInfo, ProviderConfig } from '../types'
-import { ModelPriceHint } from './ModelPriceHint'
 
 interface BatchAddModelsDialogProps {
   providers: string[]
@@ -42,8 +36,6 @@ interface BatchAddModelsDialogProps {
   onSave: (models: ModelInfo[]) => Promise<boolean>
   onClose: () => void
 }
-
-const PRICE_LABELS = { price_in: '输入价格', price_out: '输出价格', cache_price_in: '缓存价格' }
 
 export function BatchAddModelsDialog({
   providers,
@@ -56,7 +48,6 @@ export function BatchAddModelsDialog({
   const [provider, setProvider] = useState(initialProvider)
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [edits, setEdits] = useState<Record<string, Partial<ModelInfo>>>({})
   const [visibleCount, setVisibleCount] = useState(50)
   const [requested, setRequested] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -101,12 +92,12 @@ export function BatchAddModelsDialog({
           new Set()
         )
         return {
-          model: { ...draft, ...edits[model.id] },
+          model: draft,
           exists: existing.has(model.id.trim()),
           displayName: model.name,
         }
       })
-  }, [availableModels, edits, models, provider])
+  }, [availableModels, models, provider])
   const filtered = candidates.filter(({ model, displayName }) =>
     `${model.model_identifier} ${model.name} ${displayName}`
       .toLowerCase()
@@ -118,10 +109,6 @@ export function BatchAddModelsDialog({
     .map(({ model }) => model)
   const allSelected =
     selectable.length > 0 && selectable.every(({ model }) => selected.has(model.model_identifier))
-
-  const updateModel = (id: string, change: Partial<ModelInfo>) => {
-    setEdits((previous) => ({ ...previous, [id]: { ...previous[id], ...change } }))
-  }
 
   const save = async () => {
     setSaving(true)
@@ -143,7 +130,7 @@ export function BatchAddModelsDialog({
         <DialogHeader>
           <DialogTitle>批量添加模型</DialogTitle>
           <DialogDescription>
-            选择提供商并获取模型，勾选后可编辑名称、类型和价格。
+            选择提供商并获取模型，勾选所需模型即可添加。名称、类型和价格可在添加后单独编辑。
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -156,7 +143,6 @@ export function BatchAddModelsDialog({
                 clearModels()
                 setProvider(value)
                 setSelected(new Set())
-                setEdits({})
                 setSearch('')
                 setVisibleCount(50)
                 setRequested(false)
@@ -188,11 +174,6 @@ export function BatchAddModelsDialog({
             )}
             {fetchingModels ? '正在获取' : '获取上游模型'}
           </Button>
-        </div>
-        <div className="bg-muted/30 text-muted-foreground rounded-lg border p-3 text-xs leading-relaxed">
-          价格单位：¥ / 百万 token。内置参考价更新于 {MODEL_PRICE_DATE}，美元按 1 USD ≈ ¥
-          {MODEL_PRICE_USD_TO_CNY} 估算。 未收录模型填
-          0；手动修改的价格会保留。请核对模型类型与提供商实际报价。
         </div>
         {modelFetchError && (
           <Alert variant="destructive">
@@ -239,7 +220,7 @@ export function BatchAddModelsDialog({
         <DialogBody viewportClassName="min-h-0 flex-1 [&>div]:!block">
           <div className="space-y-3 py-1">
             {filtered.slice(0, visibleCount).map(({ model, exists }) => {
-              const checked = !exists && selected.has(model.model_identifier)
+              const checked = exists || selected.has(model.model_identifier)
               return (
                 <section
                   key={model.model_identifier}
@@ -268,75 +249,6 @@ export function BatchAddModelsDialog({
                       </Badge>
                     )}
                   </div>
-                  {checked && (
-                    <div className="mt-4 space-y-3 sm:pl-7">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label
-                          htmlFor={`batch-name-${model.model_identifier}`}
-                          className="grid gap-1.5 text-xs"
-                        >
-                          模型名称
-                          <Input
-                            id={`batch-name-${model.model_identifier}`}
-                            aria-label={`${model.model_identifier} 模型名称`}
-                            value={model.name}
-                            disabled={saving}
-                            onChange={(event) =>
-                              updateModel(model.model_identifier, { name: event.target.value })
-                            }
-                          />
-                        </label>
-                        <div className="grid gap-1.5">
-                          <span className="text-xs">模型类型</span>
-                          <Select
-                            value={model.model_type}
-                            disabled={saving}
-                            onValueChange={(value) =>
-                              updateModel(model.model_identifier, {
-                                model_type: value as ModelInfo['model_type'],
-                              })
-                            }
-                          >
-                            <SelectTrigger aria-label={`${model.model_identifier} 模型类型`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="llm">LLM 模型</SelectItem>
-                              <SelectItem value="embedding">文本嵌入模型</SelectItem>
-                              <SelectItem value="image_embedding">图片嵌入模型</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                        {MODEL_PRICE_FIELDS.map((field) => (
-                          <label
-                            key={field}
-                            htmlFor={`batch-${field}-${model.model_identifier}`}
-                            className="grid gap-1.5 text-xs"
-                          >
-                            {PRICE_LABELS[field]}
-                            <Input
-                              id={`batch-${field}-${model.model_identifier}`}
-                              aria-label={`${model.model_identifier} ${PRICE_LABELS[field]}`}
-                              type="number"
-                              min="0"
-                              step="any"
-                              disabled={saving}
-                              value={model[field] ?? ''}
-                              onChange={(event) =>
-                                updateModel(model.model_identifier, {
-                                  [field]:
-                                    event.target.value === '' ? null : Number(event.target.value),
-                                })
-                              }
-                            />
-                          </label>
-                        ))}
-                      </div>
-                      <ModelPriceHint identifier={model.model_identifier} />
-                    </div>
-                  )}
                 </section>
               )
             })}

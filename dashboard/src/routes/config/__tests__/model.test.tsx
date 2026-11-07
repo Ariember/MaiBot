@@ -395,7 +395,7 @@ describe('ModelConfigPage 特征化', () => {
     expect(within(freshDialog).getByLabelText('输出价格 (¥/M token)')).toHaveValue(0)
   })
 
-  it('批量添加支持去重、搜索全选、保留编辑并一次保存，失败不关闭面板', async () => {
+  it('批量添加仅选择模型，支持去重、搜索全选并一次保存，失败保留选择', async () => {
     const user = userEvent.setup()
     vi.mocked(configApi.fetchProviderModels).mockResolvedValue([
       { id: 'gpt-4', name: 'Existing' },
@@ -414,23 +414,25 @@ describe('ModelConfigPage 特征化', () => {
     expect(within(dialog).getAllByRole('checkbox', { name: '选择 deepseek-flash' })).toHaveLength(1)
     fireEvent.change(within(dialog).getByLabelText('搜索上游模型'), { target: { value: 'deepseek' } })
     await user.click(within(dialog).getByRole('button', { name: '全选搜索结果 (1)' }))
-    expect(within(dialog).getByLabelText('deepseek-flash 输入价格')).toHaveValue(2)
-    fireEvent.change(within(dialog).getByLabelText('deepseek-flash 输入价格'), { target: { value: '0' } })
+    expect(within(dialog).getByRole('checkbox', { name: '选择 deepseek-flash' })).toBeChecked()
     fireEvent.change(within(dialog).getByLabelText('搜索上游模型'), { target: { value: '' } })
     await user.click(within(dialog).getByRole('checkbox', { name: '选择 unknown-model' }))
-    expect(within(dialog).getByLabelText('unknown-model 输入价格')).toHaveValue(0)
+    expect(within(dialog).queryByRole('spinbutton')).not.toBeInTheDocument()
+    expect(within(dialog).queryByLabelText('deepseek-flash 模型名称')).not.toBeInTheDocument()
+    expect(within(dialog).queryByRole('combobox', { name: 'deepseek-flash 模型类型' })).not.toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '获取上游模型' }))
-    expect(await within(dialog).findByLabelText('deepseek-flash 输入价格')).toHaveValue(0)
+    expect(await within(dialog).findByRole('checkbox', { name: '选择 deepseek-flash' })).toBeChecked()
     vi.mocked(configApi.updateModelConfig).mockRejectedValueOnce(new Error('保存失败'))
     await user.click(within(dialog).getByRole('button', { name: '添加所选模型 (2)' }))
     await waitFor(() => expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ title: '批量添加失败' })))
     expect(dialog).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('deepseek-flash 输入价格')).toHaveValue(0)
+    expect(within(dialog).getByRole('checkbox', { name: '选择 deepseek-flash' })).toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: '选择 unknown-model' })).toBeChecked()
     await user.click(within(dialog).getByRole('button', { name: '添加所选模型 (2)' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     const saved = vi.mocked(configApi.updateModelConfig).mock.calls.at(-1)?.[0] as { models: ModelInfo[] }
     expect(saved.models).toHaveLength(3)
-    expect(saved.models.find((model) => model.model_identifier === 'deepseek-flash')).toMatchObject({ price_in: 0, price_out: 8, api_provider: 'openai' })
+    expect(saved.models.find((model) => model.model_identifier === 'deepseek-flash')).toMatchObject({ price_in: 2, price_out: 8, api_provider: 'openai' })
   })
 
   it('初始加载调用 getModelConfigCached + getModelConfigSchema 并渲染', async () => {
