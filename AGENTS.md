@@ -44,6 +44,8 @@
 依赖项以 pyproject.toml 为准，要同步更新requirements.txt
 
 # Webui规范
+界面设计遵循 [WebUI 设计规范](dashboard/docs/design-guidelines.md)，圆角层级、连续曲线和形状例外以该文档为准。
+
 对于dashboard的前端测试，在细节改动，改动范围小时，别测试，别写测试，别build，直接快速做，避免无谓的时间浪费和代码浪费
 修改完webui，如果是小改动小修复，不用急着npm run build。当完成一个较大功能新增或者较广重构时，才需要运行 npm run build。
 

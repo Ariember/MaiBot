@@ -344,6 +344,7 @@ proxy: {
 
 ### 代码规范
 
+- 界面样式遵循 [WebUI 设计规范](docs/design-guidelines.md)，圆角尺寸和连续曲线统一使用主题令牌。
 - 使用 TypeScript 严格模式
 - 遵循 ESLint 规则
 - 使用 Prettier 格式化代码
