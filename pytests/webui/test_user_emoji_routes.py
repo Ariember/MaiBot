@@ -4,6 +4,7 @@ from fastapi import HTTPException
 import pytest
 
 from src.common.data_models.message_component_data_model import EmojiComponent
+from src.core.internal_chat import INTERNAL_CHAT_USER_ID
 from src.webui.routers import user_emoji
 from src.webui.routers.chat.service import create_message_data
 from src.webui.routers.chat.serializers import serialize_message_component
@@ -12,16 +13,18 @@ from src.webui.routers.chat.serializers import serialize_message_component
 GIF_BYTES = b"GIF89a" + b"user-emoji"
 
 
+@pytest.mark.parametrize("user_id", ["webui_example", INTERNAL_CHAT_USER_ID])
 def test_save_and_list_user_emoji(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    user_id: str,
 ) -> None:
     monkeypatch.setattr(user_emoji, "USER_EMOJI_ROOT", tmp_path)
 
-    saved_path = user_emoji.save_user_emoji("webui_example", "image/gif", GIF_BYTES)
-    paths = user_emoji.list_user_emoji_paths("webui_example")
+    saved_path = user_emoji.save_user_emoji(user_id, "image/gif", GIF_BYTES)
+    paths = user_emoji.list_user_emoji_paths(user_id)
 
-    assert saved_path.parent == tmp_path / "webui_example"
+    assert saved_path.parent == tmp_path / user_id
     assert saved_path.suffix == ".gif"
     assert paths == [saved_path]
     assert saved_path.read_bytes() == GIF_BYTES

@@ -1,3 +1,8 @@
+[reply_supplement_retry]
+display_name = "返信補足の再試行"
+advanced = true
+description = "返信補足の出力が無効な場合、エラーの内容を添えてメッセージ構成を再生成します。"
+
 [text_learning_expression]
 display_name = "文章からの表現学習"
 advanced = true

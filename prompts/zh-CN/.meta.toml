@@ -1,3 +1,8 @@
+[reply_supplement_retry]
+display_name = "回复补充器重试"
+advanced = true
+description = "回复补充器输出无效时，携带错误反馈重新生成富文本编排。"
+
 [text_learning_expression]
 display_name = "长文学习表达"
 advanced = true

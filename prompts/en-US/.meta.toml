@@ -1,3 +1,8 @@
+[reply_supplement_retry]
+display_name = "Reply supplement retry"
+advanced = true
+description = "Regenerate rich message composition with error feedback when the reply supplement output is invalid."
+
 [text_learning_expression]
 display_name = "Expressions from passages"
 advanced = true
