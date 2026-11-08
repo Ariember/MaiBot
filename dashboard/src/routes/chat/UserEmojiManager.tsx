@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useToast } from '@/hooks/use-toast'
+import { getLibraryImageUrl } from '@/lib/emoji-api'
+import { ImageLibraryPanel } from '@/routes/resource/emoji/ImageLibraryPanel'
 import {
   addUserEmoji,
   deleteUserEmoji,
@@ -31,6 +33,7 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
   const { toast } = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
+  const [showLibrary, setShowLibrary] = useState(false)
   const [items, setItems] = useState<DisplayUserEmoji[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -152,6 +155,14 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
         side="top"
         className="w-[min(20rem,calc(100vw-1rem))] p-3"
       >
+        <div className="mb-3 flex gap-2" role="group" aria-label="表情包来源">
+          <Button size="xs" variant={showLibrary ? 'ghost' : 'secondary'} aria-pressed={!showLibrary} onClick={() => setShowLibrary(false)}>我的表情</Button>
+          <Button size="xs" variant={showLibrary ? 'secondary' : 'ghost'} aria-pressed={showLibrary} onClick={() => setShowLibrary(true)}>额外图库</Button>
+        </div>
+        {showLibrary ? <ImageLibraryPanel compact onChoose={async item => {
+          await onSendEmoji({ id: item.id, content_type: '', content_url: getLibraryImageUrl(item.id, true), created_at: 0, media_type: item.tags.includes('表情包') ? 'emoji' : 'image' })
+          setOpen(false)
+        }} /> : <>
         <div className="mb-2 flex items-center justify-between gap-2">
           <div>
             <p className="text-sm font-medium">{t('chat.emojiManager.title')}</p>
@@ -244,6 +255,7 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
             </div>
           )}
         </ScrollArea>
+        </>}
       </PopoverContent>
     </Popover>
   )

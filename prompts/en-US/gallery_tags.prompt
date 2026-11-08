@@ -1,0 +1,2 @@
+Generate up to 7 concise Chinese tags covering image category, character features, emotions, actions and text in the image. Include the tag “表情包” for memes.
+Return only JSON: {{"tags":["tag"]}}.

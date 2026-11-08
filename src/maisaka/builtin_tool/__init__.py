@@ -22,6 +22,8 @@ from .reply import get_tool_spec as get_reply_tool_spec
 from .reply import handle_tool as handle_reply_tool
 from .send_emoji import get_tool_spec as get_send_emoji_tool_spec
 from .send_emoji import handle_tool as handle_send_emoji_tool
+from .search_images import get_tool_spec as get_search_images_tool_spec
+from .search_images import handle_tool as handle_search_images_tool
 from .show_emoji_list import get_tool_spec as get_show_emoji_list_tool_spec
 from .show_emoji_list import handle_tool as handle_show_emoji_list_tool
 from .stop import get_tool_spec as get_stop_tool_spec
@@ -112,6 +114,7 @@ BUILTIN_TOOL_ENTRIES: List[BuiltinToolEntry] = [
         stage="action",
     ),
     BuiltinToolEntry("send_emoji", get_send_emoji_tool_spec, handle_send_emoji_tool, stage="action"),
+    BuiltinToolEntry("search_images", get_search_images_tool_spec, handle_search_images_tool, stage="action"),
     BuiltinToolEntry("show_emoji_list", get_show_emoji_list_tool_spec, handle_show_emoji_list_tool, stage="action"),
     BuiltinToolEntry("tool_search", get_tool_search_tool_spec, handle_tool_search_tool, stage="action"),
     BuiltinToolEntry("subagent", get_subagent_tool_spec, handle_subagent_tool, stage="action"),

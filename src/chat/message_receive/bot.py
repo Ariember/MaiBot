@@ -823,6 +823,9 @@ class ChatBot:
             # 如果 Maisaka 需要直接消费图片，会在后续构建 prompt 时按需回填图片二进制数据，
             # 这里不再复制整条原始消息。
             # 入站主链优先保证消息尽快入队，避免图片、表情包、语音分析阻塞适配器超时。
+            from src.emoji_system.image_gallery import collect_message_images
+
+            await collect_message_images(message)
             await message.process(
                 enable_heavy_media_analysis=False,
                 enable_voice_transcription=global_config.voice.enable_asr,

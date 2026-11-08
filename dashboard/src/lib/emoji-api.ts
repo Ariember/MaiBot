@@ -17,6 +17,64 @@ import type {
 
 const API_BASE = '/api/webui/emoji'
 
+export interface LibraryImage {
+  id: string
+  filename: string
+  manual_tags: string[]
+  auto_tags: string[]
+  tags: string[]
+  caption_status: 'pending' | 'done' | 'failed'
+}
+
+export interface ImageLibraryResponse {
+  items: LibraryImage[]
+  total: number
+  pending: number
+  failed: number
+  directory: string
+}
+
+export function getLibraryImages(page = 1, search = '', pageSize = 24) {
+  return backendApi.get<ImageLibraryResponse>(`${API_BASE}/library`, {
+    query: { page, search, page_size: pageSize },
+    errorMessage: '读取图库失败',
+  })
+}
+
+export function getLibraryImageUrl(id: string, original = false): string {
+  return `${API_BASE}/library/${encodeURIComponent(id)}/content${original ? '?original=true' : ''}`
+}
+
+export function uploadLibraryImage(file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return backendApi.post(`${API_BASE}/library/upload`, { body: form, errorMessage: '上传图库图片失败' })
+}
+
+export function syncImageLibrary() {
+  return backendApi.post<{ added: number; existing: number; removed: number; errors: { file: string; error: string }[] }>(
+    `${API_BASE}/library/sync`, { errorMessage: '扫描图库失败' }
+  )
+}
+
+export function retryLibraryTags() {
+  return backendApi.post(`${API_BASE}/library/retry-tags`, { errorMessage: '重试标签失败' })
+}
+
+export function updateLibraryTags(id: string, tags: string) {
+  return backendApi.patch(`${API_BASE}/library/${encodeURIComponent(id)}`, {
+    body: { tags }, errorMessage: '保存图库标签失败',
+  })
+}
+
+export function deleteLibraryImage(id: string) {
+  return backendApi.delete(`${API_BASE}/library/${encodeURIComponent(id)}`, { errorMessage: '删除图库图片失败' })
+}
+
+export function adoptLibraryImage(id: string) {
+  return backendApi.post(`${API_BASE}/library/${encodeURIComponent(id)}/adopt`, { errorMessage: '注册表情包失败' })
+}
+
 /**
  * 获取表情包列表
  */

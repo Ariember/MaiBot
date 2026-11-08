@@ -29,6 +29,12 @@ vi.mock('@/hooks/use-toast', () => ({
 
 vi.mock('@/lib/user-emoji-api', () => apiMocks)
 
+vi.mock('@/routes/resource/emoji/ImageLibraryPanel', () => ({
+  ImageLibraryPanel: ({ onChoose }: { onChoose: (item: unknown) => Promise<void> }) => (
+    <button onClick={() => void onChoose({ id: 'library-image', tags: [], filename: 'photo.png' })}>发送图库图片</button>
+  ),
+}))
+
 // 用受控上下文替代 Radix Popover，规避 jsdom 浮层限制，同时保留 open/onOpenChange 语义
 vi.mock('@/components/ui/popover', async () => {
   const React = await import('react')
@@ -117,6 +123,16 @@ beforeEach(() => {
 afterEach(() => cleanup())
 
 describe('UserEmojiManager', () => {
+  it('passes a gallery original to the real send callback as an image', async () => {
+    const onSendEmoji = vi.fn(async () => {})
+    renderManager({ onSendEmoji })
+    await userEvent.click(screen.getByRole('button', { name: 'chat.actions.openEmojiManager' }))
+    await userEvent.click(screen.getByRole('button', { name: '额外图库' }))
+    await userEvent.click(screen.getByRole('button', { name: '发送图库图片' }))
+    expect(onSendEmoji).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'library-image', media_type: 'image', content_url: '/api/webui/emoji/library/library-image/content?original=true',
+    }))
+  })
   it('禁用时触发按钮不可点击，弹层内容默认不渲染', () => {
     renderManager({ disabled: true })
     expect(screen.getByRole('button', { name: 'chat.actions.openEmojiManager' })).toBeDisabled()

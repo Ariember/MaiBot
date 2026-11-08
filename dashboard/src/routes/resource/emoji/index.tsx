@@ -54,6 +54,7 @@ import { EmojiCacheMaintenancePanel } from './EmojiCacheMaintenancePanel'
 import { EmojiDetailDialog, EmojiEditDialog, EmojiUploadDialog } from './EmojiDialogs'
 import { EmojiBrowser, type EmojiFilters } from './EmojiBrowser'
 import { MobileEmojiGrid } from './MobileEmojiGrid'
+import { ImageLibraryPanel } from './ImageLibraryPanel'
 
 // 页面可见时每 10 秒同步后台收录和使用状态，离开页面后停止轮询。
 const EMOJI_REFRESH_INTERVAL = 10_000
@@ -70,6 +71,21 @@ function alignEmojiPageSize(preferredSize: number, columns: number): number {
 }
 
 export function EmojiManagementPage({ browserHeader }: { browserHeader?: ReactNode }) {
+  const [libraryOpen, setLibraryOpen] = useState(false)
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 gap-2 px-3 pt-3 sm:px-4" role="group" aria-label="表情包来源">
+        <Button size="sm" variant={libraryOpen ? 'outline' : 'default'} aria-pressed={!libraryOpen} onClick={() => setLibraryOpen(false)}>表情包</Button>
+        <Button size="sm" variant={libraryOpen ? 'default' : 'outline'} aria-pressed={libraryOpen} onClick={() => setLibraryOpen(true)}>额外图库</Button>
+      </div>
+      <div className="min-h-0 flex-1">
+        {libraryOpen ? <ImageLibraryPanel browserHeader={browserHeader} /> : <EmojiManagementContent browserHeader={browserHeader} />}
+      </div>
+    </div>
+  )
+}
+
+function EmojiManagementContent({ browserHeader }: { browserHeader?: ReactNode }) {
   const [selectedEmoji, setSelectedEmoji] = useState<Emoji | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)

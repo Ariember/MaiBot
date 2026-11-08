@@ -8,6 +8,7 @@ export interface UserEmojiItem {
   content_type: string
   content_url: string
   created_at: number
+  media_type?: 'image' | 'emoji'
 }
 
 interface UserEmojiListResponse {
@@ -95,6 +96,7 @@ function extensionFromContentType(contentType: string): string {
     'image/jpeg': 'jpg',
     'image/png': 'png',
     'image/webp': 'webp',
+    'image/bmp': 'bmp',
   }
   return extensionMap[contentType] || 'png'
 }

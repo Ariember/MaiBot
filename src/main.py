@@ -247,6 +247,7 @@ class MainSystem:
             from src.chat.image_system.image_cache_cleanup import periodic_image_cache_cleanup
             from src.emoji_system.emoji_cache_cleanup import periodic_emoji_cache_cleanup
             from src.emoji_system.emoji_manager import emoji_manager
+            from src.emoji_system.image_gallery import periodic_gallery_maintenance
             from src.maisaka.display.prompt_preview_logger import PromptPreviewLogger
             from src.services.image_path_maintenance_service import (
                 run_image_path_maintenance_background,
@@ -260,6 +261,7 @@ class MainSystem:
 
             tasks = [
                 emoji_manager.periodic_emoji_maintenance(),
+                periodic_gallery_maintenance(),
                 periodic_emoji_cache_cleanup(),
                 periodic_image_cache_cleanup(),
                 periodic_transfer_temp_cleanup(),

@@ -163,13 +163,13 @@ describe('loadUserEmojiPayload', () => {
   })
 
   it('未知内容类型时扩展名回退为 png', async () => {
-    const item = makeItem({ id: 'emoji-3', content_type: 'image/bmp' })
-    getMock.mockResolvedValue(new Blob(['bmp-bytes'], { type: 'image/bmp' }))
+    const item = makeItem({ id: 'emoji-3', content_type: 'image/unknown' })
+    getMock.mockResolvedValue(new Blob(['unknown-bytes'], { type: 'image/unknown' }))
 
     const payload = await loadUserEmojiPayload(item)
 
     expect(payload.name).toBe('emoji-3.png')
-    expect(payload.mime_type).toBe('image/bmp')
+    expect(payload.mime_type).toBe('image/unknown')
   })
 
   it('内容为空导致 base64 缺失时抛出「用户表情包内容无效」', async () => {

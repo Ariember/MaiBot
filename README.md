@@ -108,6 +108,7 @@ bun run dev
 | [部署与更新](docs/docker-deployment.md) | 容器部署、迁移、备份与恢复 |
 | [WebUI](dashboard/README.md) | 管理界面功能与前端开发 |
 | [文件服务](docs/file-service.md) | 聊天附件、文件管理及接入限制 |
+| [表情包与图库](docs/image-gallery.md) | 图库导入、标签识别、聊天收图与发图 |
 | [Agent 连接](docs/agent-connections.md) | DSH / ACP 本机与远程连接 |
 | [内置桌宠](docs/desktop-pet.md) | Windows 桌宠、皮肤与插件接口 |
 | [内部聊天](docs/internal-chat.md) | 网页聊天室与桌宠的共享身份 |

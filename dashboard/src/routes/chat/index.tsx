@@ -1036,7 +1036,7 @@ export function ChatPage() {
       const timestamp = Date.now() / 1000
 
       await chatWsClient.sendMessage(activeTabId, '', displayName, {
-        emojis: [
+        [item.media_type === 'image' ? 'images' : 'emojis']: [
           {
             name: emoji.name,
             mime_type: emoji.mime_type,
@@ -1048,9 +1048,9 @@ export function ChatPage() {
       addMessageToTab(activeTabId, {
         id: generateMessageId('user-emoji'),
         type: 'user',
-        content: `[${t('chat.media.emoji')}]`,
+        content: `[${t(item.media_type === 'image' ? 'chat.media.image' : 'chat.media.emoji')}]`,
         message_type: 'rich',
-        segments: [{ type: 'emoji', data: emoji.data_url }],
+        segments: [{ type: item.media_type || 'emoji', data: emoji.data_url }],
         timestamp,
         sender: {
           name: displayName,

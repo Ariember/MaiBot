@@ -4454,6 +4454,43 @@ class EmojiConfig(ConfigBase):
     )
     """开启后只保存内容合适的表情。"""
 
+    collect_images: bool = Field(
+        default=False,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "自动收图到额外图库",
+                "en_US": "Collect images to gallery",
+                "ja_JP": "画像を追加ギャラリーに収集",
+            },
+            "x-widget": "switch",
+        },
+    )
+    """开启后收集私聊图片和表情；群聊遵守收图名单。每条消息最多 24 张，单张不超过 16 MB。"""
+
+    image_collection_mode: Literal["whitelist", "blacklist"] = Field(
+        default="whitelist",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "群聊收图名单模式",
+                "en_US": "Group collection list mode",
+                "ja_JP": "グループ収集リスト方式",
+            },
+        },
+    )
+    """白名单只收列表中的群，黑名单收列表以外的群；不影响私聊。"""
+
+    image_collection_groups: List[str] = Field(
+        default_factory=list,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "收图群号列表",
+                "en_US": "Image collection group IDs",
+                "ja_JP": "画像収集グループID",
+            },
+        },
+    )
+    """逐项填写群号；空白名单不收群图，空黑名单收所有群图。"""
+
     cache_cleanup: EmojiCacheCleanupConfig = Field(default_factory=EmojiCacheCleanupConfig)
     """定期清理未注册表情包缓存，减少磁盘占用；已注册表情包不会被清理。"""
 
