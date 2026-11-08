@@ -1068,8 +1068,9 @@ function ModelConfigPageContent() {
                           type="button"
                           className={cn(
                             'flex w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-md px-3 py-2 text-left transition-colors',
-                            isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                            !isSelected && 'hover:bg-muted'
                           )}
+                          data-list-selected={isSelected}
                           initial={reduceTaskMotion ? false : { height: 0, opacity: 0, y: -6 }}
                           animate={{ height: 'auto', opacity: 1, y: 0 }}
                           exit={reduceTaskMotion ? undefined : { height: 0, opacity: 0, y: -6 }}
@@ -1086,7 +1087,7 @@ function ModelConfigPageContent() {
                                 <span
                                   className={cn(
                                     'shrink-0 text-[10px]',
-                                    isSelected ? 'text-primary-foreground/70' : 'text-amber-600 dark:text-amber-400'
+                                    'text-amber-600 dark:text-amber-400'
                                   )}
                                 >
                                   高级
@@ -1096,20 +1097,15 @@ function ModelConfigPageContent() {
                             <ModelIdentifierMarquee
                               text={modelSummary}
                               className="mt-0.5"
-                              textClassName={cn(
-                                'text-xs',
-                                isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                              )}
+                              textClassName="text-muted-foreground text-xs"
                             />
                           </span>
                           <span
                             className={cn(
                               'shrink-0 text-xs',
-                              isSelected
-                                ? 'text-primary-foreground/75'
-                                : isConfigured
-                                  ? 'text-emerald-600 dark:text-emerald-400'
-                                  : 'text-muted-foreground'
+                              isConfigured
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-muted-foreground'
                             )}
                           >
                             {isConfigured ? `已配置 · ${assignedModels.length}` : '未配置'}

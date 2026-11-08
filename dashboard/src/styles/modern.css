@@ -11,6 +11,25 @@
 :root[data-dashboard-style='modern'] {
   --accent: var(--color-muted);
   --accent-foreground: var(--color-foreground);
+
+  /* 雾面分层海拔：发丝描边 + 分层柔影 + 顶部内高光，卡片和小贴片共用。 */
+  --mdn-elev-1: 0 0 0 0.5px hsl(228 20% 20% / 0.04), 0 1px 2px hsl(228 30% 20% / 0.05),
+    0 6px 16px -8px hsl(228 30% 20% / 0.1);
+  --mdn-elev-2: 0 0 0 0.5px hsl(228 20% 20% / 0.05), 0 2px 4px hsl(228 30% 20% / 0.06),
+    0 16px 32px -12px hsl(228 40% 20% / 0.18);
+  --mdn-elev-chip: 0 0 0 0.5px hsl(228 20% 20% / 0.08), 0 1px 2px hsl(228 30% 20% / 0.1);
+  --mdn-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.6);
+  --mdn-hairline: hsl(var(--foreground) / 0.07);
+}
+
+:root.dark[data-dashboard-style='modern'] {
+  --mdn-elev-1: 0 0 0 0.5px hsl(0 0% 0% / 0.3), 0 1px 2px hsl(0 0% 0% / 0.25),
+    0 8px 20px -10px hsl(0 0% 0% / 0.5);
+  --mdn-elev-2: 0 0 0 0.5px hsl(0 0% 0% / 0.3), 0 1px 2px hsl(0 0% 0% / 0.25),
+    0 18px 36px -12px hsl(0 0% 0% / 0.6);
+  --mdn-elev-chip: 0 0 0 0.5px hsl(0 0% 0% / 0.4), 0 1px 2px hsl(0 0% 0% / 0.35);
+  --mdn-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.05);
+  --mdn-hairline: hsl(0 0% 100% / 0.06);
 }
 
 /* 连续曲线用于矩形容器，圆形和胶囊保留圆弧。 */
@@ -438,35 +457,75 @@
 
 @media (min-width: 1024px) {
   :root[data-dashboard-style='modern'] {
-    --mdn-card-shadow: 0 1px 2px rgb(16 24 40 / 0.03), 0 4px 16px -8px rgb(16 24 40 / 0.12);
+    --mdn-card-shadow: var(--mdn-elev-1), var(--mdn-highlight);
     --mdn-glass-alpha: 0.74;
     --mdn-glass-surface-alpha: 0.5;
     --mdn-glass-chart-alpha: 0.6;
     --mdn-glass-edge: var(--foreground) / 0.1;
-    --mdn-glass-shadow: 0 8px 24px rgb(16 24 40 / 0.12);
+    --mdn-glass-shadow: 0 0 0 0.5px hsl(228 20% 20% / 0.08), 0 16px 40px -12px hsl(228 30% 10% / 0.22);
     --mdn-glass-filter: blur(calc(var(--visual-blur-md) * 1.5)) saturate(160%);
     --mdn-scrim: 0 0% 0% / 0.32;
   }
 
   :root.dark[data-dashboard-style='modern'] {
-    --mdn-card-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 4px 16px -8px rgb(0 0 0 / 0.3);
+    --mdn-card-shadow: var(--mdn-elev-1), var(--mdn-highlight);
     --mdn-glass-alpha: 0.72;
     --mdn-glass-surface-alpha: 0.46;
     --mdn-glass-chart-alpha: 0.5;
     --mdn-glass-edge: var(--foreground) / 0.14;
-    --mdn-glass-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+    --mdn-glass-shadow: 0 0 0 0.5px hsl(0 0% 0% / 0.5), 0 16px 40px -12px hsl(0 0% 0% / 0.6);
     --mdn-scrim: 0 0% 0% / 0.5;
   }
 
-  /* ---------- 卡片与页面层次 ---------- */
+  /* ---------- 画布与页面层次 ---------- */
 
+  /* 纯色画布上叠三层极淡的环境光（蓝/紫/青），让白卡片从画布里浮出来；
+     页面背景设为图片/视频时不叠，保持用户自定义背景完整。 */
+  :root[data-dashboard-style='modern']
+    [data-dashboard-shell='true'][data-dashboard-page-background='none'] {
+    background:
+      radial-gradient(1200px 600px at 12% -10%, hsl(var(--color-chart-1) / 0.07), transparent 60%),
+      radial-gradient(900px 520px at 100% 0%, hsl(var(--color-chart-3) / 0.06), transparent 60%),
+      radial-gradient(1000px 700px at 60% 110%, hsl(var(--color-chart-2) / 0.045), transparent 60%),
+      hsl(var(--background));
+  }
+
+  :root.dark[data-dashboard-style='modern']
+    [data-dashboard-shell='true'][data-dashboard-page-background='none'] {
+    background:
+      radial-gradient(1200px 600px at 12% -10%, hsl(var(--color-chart-1) / 0.1), transparent 60%),
+      radial-gradient(900px 520px at 100% 0%, hsl(var(--color-chart-3) / 0.08), transparent 60%),
+      radial-gradient(1000px 700px at 60% 110%, hsl(var(--color-chart-2) / 0.06), transparent 60%),
+      hsl(var(--background));
+  }
+
+  /* 主内容区透出画布环境光（元素本身带着 bg-background 工具类）。 */
+  :root[data-dashboard-style='modern']
+    [data-dashboard-shell='true'][data-dashboard-page-background='none']
+    [data-dashboard-main='true'] {
+    background-color: transparent;
+  }
+
+  /* 侧栏退一步：半透明卡片色叠在画布上，右缘只留发丝线。 */
   :root[data-dashboard-style='modern']
     [data-dashboard-shell='true'][data-dashboard-page-background='none']
     [data-dashboard-sidebar='true']:not(:has([data-background-layer])) {
-    background-color: hsl(var(--card));
+    border-color: var(--mdn-hairline);
+    background-color: hsl(var(--card) / 0.55);
+  }
+
+  :root[data-dashboard-style='modern']
+    [data-dashboard-shell='true'][data-dashboard-page-background='none']
+    [data-dashboard-sidebar-collapsed-divider='true'] {
+    border-color: var(--mdn-hairline);
   }
 
   :root[data-dashboard-style='modern'] [data-dashboard-card='true']:not([data-card-variant='flat']) {
+    box-shadow: var(--mdn-card-shadow);
+  }
+
+  /* 页面外框与卡片同层海拔 */
+  :root[data-dashboard-style='modern'] [data-dashboard-page-frame='true'] {
     box-shadow: var(--mdn-card-shadow);
   }
 
@@ -554,11 +613,12 @@
     transform: translateY(-50%);
   }
 
+  /* 分组标题收小一档、拉开字距，充当导航里的微弱标尺 */
   :root[data-dashboard-style='modern'] [data-dashboard-sidebar-section-title='true'] {
-    color: hsl(var(--muted-foreground));
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0;
+    color: hsl(var(--muted-foreground) / 0.8);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     text-transform: none;
   }
 
@@ -566,11 +626,61 @@
     font-size: 0.875rem;
   }
 
-  /* 当前页：贴着侧栏左缘的 2px 主色线加主色字，不铺底色 */
-  :root[data-dashboard-style='modern'] [data-dashboard-nav-item='true'][data-active='true'] {
-    background-color: transparent;
-    color: hsl(var(--primary));
+  /* 导航项悬停只铺一层极淡的墨，不跳到强调色；只覆盖默认 hover:bg-accent。 */
+  :root[data-dashboard-style='modern']
+    [data-dashboard-nav-item='true'][class*='hover:bg-accent']:hover {
+    background-color: hsl(var(--foreground) / 0.05);
+  }
+
+  /* 每个导航 li 按其在组内的位置轮换 --nav-accent，悬停与当前项的图标取色。 */
+  :root[data-dashboard-style='modern']
+    [data-dashboard-sidebar='true']
+    li:has(> [data-dashboard-nav-item='true']) {
+    --nav-accent: var(--color-chart-1);
+  }
+
+  :root[data-dashboard-style='modern']
+    [data-dashboard-sidebar='true']
+    li:has(> [data-dashboard-nav-item='true']):nth-of-type(5n + 2) {
+    --nav-accent: var(--color-chart-2);
+  }
+
+  :root[data-dashboard-style='modern']
+    [data-dashboard-sidebar='true']
+    li:has(> [data-dashboard-nav-item='true']):nth-of-type(5n + 3) {
+    --nav-accent: var(--color-chart-3);
+  }
+
+  :root[data-dashboard-style='modern']
+    [data-dashboard-sidebar='true']
+    li:has(> [data-dashboard-nav-item='true']):nth-of-type(5n + 4) {
+    --nav-accent: var(--color-chart-4);
+  }
+
+  :root[data-dashboard-style='modern']
+    [data-dashboard-sidebar='true']
+    li:has(> [data-dashboard-nav-item='true']):nth-of-type(5n) {
+    --nav-accent: var(--color-chart-5);
+  }
+
+  :root[data-dashboard-style='modern']
+    [data-dashboard-nav-item='true']:is(:hover, [data-active='true'])
+    [data-dashboard-nav-icon='true'] {
+    color: hsl(var(--nav-accent));
+  }
+
+  /* 当前页：浮起的小贴片，不再用贴边的 2px 主色线；只覆盖默认 bg-accent。 */
+  :root[data-dashboard-style='modern']
+    [data-dashboard-nav-item='true'][data-active='true'][class~='bg-accent'] {
+    background-color: hsl(var(--card));
+    box-shadow: var(--mdn-elev-chip);
+    color: hsl(var(--foreground));
     font-weight: 600;
+  }
+
+  :root.dark[data-dashboard-style='modern']
+    [data-dashboard-nav-item='true'][data-active='true'][class~='bg-accent'] {
+    background-color: hsl(0 0% 100% / 0.07);
   }
 
   :root[data-dashboard-style='modern']
@@ -579,20 +689,15 @@
     font-weight: 600;
   }
 
-  :root[data-dashboard-style='modern']
-    [data-dashboard-nav-item='true'][data-active='true']::before {
-    position: absolute;
-    top: 0.375rem;
-    bottom: 0.375rem;
-    left: calc(-1 * var(--layout-sidebar-nav-padding-collapsed));
-    width: 2px;
-    background-color: hsl(var(--primary));
-    content: '';
-  }
-
+  /* 悬停当前项保持贴片，不落回灰底 */
   :root[data-dashboard-style='modern']
     [data-dashboard-nav-item='true'][data-active='true']:hover {
-    background-color: hsl(var(--accent));
+    background-color: hsl(var(--card));
+  }
+
+  :root.dark[data-dashboard-style='modern']
+    [data-dashboard-nav-item='true'][data-active='true']:hover {
+    background-color: hsl(0 0% 100% / 0.07);
   }
 
   /* ---------- 顶栏：吸顶玻璃，内容滚到下面时透出来 ---------- */
@@ -601,6 +706,7 @@
     [data-dashboard-header='true']:not([data-dashboard-header-collapsed='true']) {
     -webkit-backdrop-filter: var(--mdn-glass-filter);
     backdrop-filter: var(--mdn-glass-filter);
+    border-color: var(--mdn-hairline);
     background-color: hsl(var(--background) / 0.72);
   }
 
@@ -625,8 +731,13 @@
     display: none;
   }
 
-  /* 顶栏里跟随悬停滑动的选中块，收成一条贴底的 2px 线 */
+  /* 顶栏里跟随悬停滑动的选中块，收成一条贴底的 2px 渐变线 */
   :root[data-dashboard-style='modern'] [data-dashboard-topbar-pill='true'] {
+    background-image: linear-gradient(
+      90deg,
+      hsl(var(--color-chart-1)),
+      hsl(var(--color-chart-3))
+    );
     top: auto;
     right: 0.5rem;
     bottom: -0.5rem;
@@ -753,4 +864,401 @@
     border-color: hsl(var(--mdn-glass-edge));
     background-color: hsl(var(--background) / var(--mdn-glass-surface-alpha));
   }
+}
+
+/* ---------- 雾面分层：卡片、分区面板与控件（全宽度生效） ---------- */
+
+/* 卡片只留发丝边，阴影仍由 lg 规则分层提供。放进 base 层：
+   默认边框色本就来自 base 的 `* { @apply border-border }`，
+   同层更高优先级即可生效，同时让位给调用方的 border-* 工具类。 */
+@layer base {
+  :root[data-dashboard-style='modern'] [data-dashboard-card='true'] {
+    border-color: var(--mdn-hairline);
+  }
+}
+
+:root[data-dashboard-style='modern'] [data-dashboard-card-title='true'] {
+  letter-spacing: -0.01em;
+}
+
+/* 可交互卡片悬停时轻轻浮起：位移交给 transform，阴影升一层。 */
+:root[data-dashboard-style='modern']
+  :is([data-plugin-market-card='true'], [data-colorful-item]) {
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out,
+    border-color 200ms ease-out;
+}
+
+:root[data-dashboard-style='modern']
+  :is([data-plugin-market-card='true'], [data-colorful-item]):hover {
+  box-shadow: var(--mdn-elev-2) !important;
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-dashboard-style='modern']
+    :is([data-plugin-market-card='true'], [data-colorful-item]):hover {
+    transform: none;
+  }
+}
+
+:root.no-animations[data-dashboard-style='modern']
+  :is([data-plugin-market-card='true'], [data-colorful-item]):hover {
+  transform: none;
+}
+
+/* 页面外框改回 1px 发丝边；调用方自带 border-* 时不抢。手机上 desktopOnly 仍交出边框与材质。 */
+:root[data-dashboard-style='modern']
+  [data-dashboard-page-frame='true']:not([class*='border-']) {
+  border-width: 1px;
+  border-color: var(--mdn-hairline);
+}
+
+@media (max-width: 767px) {
+  :root[data-dashboard-style='modern']
+    [data-dashboard-page-frame='true'][data-desktop-only='true'] {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+/* 分区面板：头部从所在面板的轮换色里借一层薄雾，标题收紧字距；headerClassName 自带 bg-* 时不盖。 */
+:root[data-dashboard-style='modern']
+  [data-dashboard-section-panel='true']
+  [data-section-part='header']:not([class*='bg-']) {
+  background: linear-gradient(180deg, hsl(var(--colorful-accent) / 0.06), transparent);
+}
+
+:root[data-dashboard-style='modern'] [data-section-part='heading'] h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* 面板头与正文之间的刻线收成单根发丝线；自带 bg-* 的自定义分隔线不动。 */
+:root[data-dashboard-style='modern']
+  [data-dashboard-separator='true'][data-variant='groove'][class~='bg-border'] {
+  background: var(--mdn-hairline);
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-separator='true'][data-variant='groove'][data-orientation='horizontal'] {
+  height: 1px;
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-separator='true'][data-variant='groove'][data-orientation='vertical'] {
+  width: 1px;
+}
+
+/* 页面主标题收紧字距；标题图标套与卡片标题一致的浅色衬底。 */
+:root[data-dashboard-style='modern'] [data-dashboard-main='true'] h1 {
+  letter-spacing: -0.02em;
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-main='true']
+  h1
+  > svg:not([class*='text-']):not([class*='bg-']) {
+  color: hsl(var(--color-chart-1));
+  background-color: hsl(var(--color-chart-1) / 0.1);
+  box-sizing: content-box;
+  flex-shrink: 0;
+  border-radius: var(--visual-radius-md);
+  padding: 0.375rem;
+}
+
+/* ---------- 控件 ---------- */
+
+/* 按钮统一的位移与阴影节奏；顶栏按钮保持现状，不吃这些材质改动。 */
+:root[data-dashboard-style='modern'] [data-dashboard-button='true'] {
+  transition:
+    color 150ms ease-out,
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    box-shadow 200ms ease-out,
+    transform 120ms ease-out;
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-button='true']:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-dashboard-style='modern']
+    [data-dashboard-button='true']:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+:root.no-animations[data-dashboard-style='modern']
+  [data-dashboard-button='true']:active:not(:disabled) {
+  transform: none;
+}
+
+/* 主按钮保持墨黑（暗色浅色），顶部加一道高光让它在表面上有厚度。
+   只在仍带组件默认令牌时生效：bg-primary 没了说明调用方给了自定义底色，shadow 没了说明自定义了投影。 */
+:root[data-dashboard-style='modern']
+  .dashboard-button--default:not([data-dashboard-header='true'] *)[class~='bg-primary'] {
+  background-image: linear-gradient(
+    180deg,
+    hsl(0 0% 100% / 0.1),
+    hsl(0 0% 100% / 0)
+  );
+}
+
+:root[data-dashboard-style='modern']
+  .dashboard-button--default:not([data-dashboard-header='true'] *)[class~='shadow'] {
+  box-shadow:
+    0 1px 2px hsl(228 30% 10% / 0.18),
+    0 4px 10px -4px hsl(228 30% 10% / 0.25),
+    inset 0 1px 0 hsl(0 0% 100% / 0.14);
+}
+
+:root.dark[data-dashboard-style='modern']
+  .dashboard-button--default:not([data-dashboard-header='true'] *)[class~='shadow'] {
+  box-shadow:
+    0 1px 2px hsl(0 0% 0% / 0.4),
+    0 4px 10px -4px hsl(0 0% 0% / 0.5),
+    inset 0 1px 0 hsl(0 0% 100% / 0.5);
+}
+
+:root[data-dashboard-style='modern']
+  .dashboard-button--destructive:not([data-dashboard-header='true'] *)[class~='bg-destructive'] {
+  background-image: linear-gradient(
+    180deg,
+    hsl(0 0% 100% / 0.1),
+    hsl(0 0% 100% / 0)
+  );
+}
+
+:root[data-dashboard-style='modern']
+  .dashboard-button--destructive:not([data-dashboard-header='true'] *)[class~='shadow-sm'] {
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.14);
+}
+
+:root.dark[data-dashboard-style='modern']
+  .dashboard-button--destructive:not([data-dashboard-header='true'] *)[class~='shadow-sm'] {
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.12);
+}
+
+/* 描边按钮落在卡片同色上，悬停才落到 muted；aria-pressed 的按下底保持原状。
+   每条属性各自挂在对应的默认令牌上：bg-background/border-input/hover:bg-accent 被调用方替换后不再生效。 */
+:root[data-dashboard-style='modern']
+  .dashboard-button--outline:not([data-dashboard-header='true'] *):not([aria-pressed='true'])[class~='bg-background'] {
+  background-color: hsl(var(--card));
+}
+
+:root.dark[data-dashboard-style='modern']
+  .dashboard-button--outline:not([data-dashboard-header='true'] *):not([aria-pressed='true'])[class~='bg-background'] {
+  background-color: hsl(0 0% 100% / 0.03);
+}
+
+:root[data-dashboard-style='modern']
+  .dashboard-button--outline:not([data-dashboard-header='true'] *):not([aria-pressed='true'])[class~='border-input'] {
+  border-color: hsl(var(--foreground) / 0.1);
+}
+
+:root[data-dashboard-style='modern']
+  .dashboard-button--outline:not([data-dashboard-header='true'] *):not([aria-pressed='true'])[class~='shadow-sm'] {
+  box-shadow: 0 1px 2px hsl(228 30% 20% / 0.05);
+}
+
+:root[data-dashboard-style='modern']
+  .dashboard-button--outline:not([data-dashboard-header='true'] *):not([aria-pressed='true'])[class~='hover:bg-accent']:hover {
+  background-color: hsl(var(--muted));
+}
+
+:root[data-dashboard-style='modern']
+  .dashboard-button--outline:not([data-dashboard-header='true'] *):not([aria-pressed='true'])[class~='border-input']:hover {
+  border-color: hsl(var(--foreground) / 0.16);
+}
+
+:root[data-dashboard-style='modern']
+  .dashboard-button--ghost:not([data-dashboard-header='true'] *):not([aria-pressed='true'])[class~='hover:bg-accent']:hover {
+  background-color: hsl(var(--foreground) / 0.06);
+}
+
+/* 输入框、下拉触发与文本域：底色对齐卡片，焦点圈统一用 chart-1 蓝。
+   只覆盖默认 bg-transparent 的实例；嵌入式无边框输入（border-0/border-none）与顶栏内控件不动。 */
+:root[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-input='true'],
+    [data-dashboard-select-trigger='true'],
+    textarea[data-dashboard-textarea='true']:not([data-textarea-variant='composer'])
+  ):not([data-dashboard-header='true'] *):not([class~='border-0']):not([class~='border-none'])[class~='bg-transparent'] {
+  background-color: hsl(var(--card));
+}
+
+:root.dark[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-input='true'],
+    [data-dashboard-select-trigger='true'],
+    textarea[data-dashboard-textarea='true']:not([data-textarea-variant='composer'])
+  ):not([data-dashboard-header='true'] *):not([class~='border-0']):not([class~='border-none'])[class~='bg-transparent'] {
+  background-color: hsl(var(--background) / 0.55);
+}
+
+/* 悬停/焦点的边框改写不碰错误态（aria-invalid 与显式 border-destructive/border-red-*）。 */
+:root[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-input='true'],
+    [data-dashboard-select-trigger='true'],
+    textarea[data-dashboard-textarea='true']:not([data-textarea-variant='composer'])
+  ):not([data-dashboard-header='true'] *):not([class~='border-0']):not([class~='border-none']):not([aria-invalid='true']):not([class*='border-destructive']):not([class*='border-red']):hover {
+  border-color: hsl(var(--foreground) / 0.22);
+}
+
+:root[data-dashboard-style='modern']
+  :is(
+    [data-dashboard-input='true'],
+    [data-dashboard-select-trigger='true'],
+    textarea[data-dashboard-textarea='true']:not([data-textarea-variant='composer'])
+  ):not([data-dashboard-header='true'] *):not([class~='border-0']):not([class~='border-none']):not([aria-invalid='true']):not([class*='border-destructive']):not([class*='border-red']):focus-visible,
+:root[data-dashboard-style='modern']
+  [data-dashboard-select-trigger='true']:not([data-dashboard-header='true'] *):not([aria-invalid='true']):not([class*='border-destructive']):not([class*='border-red'])[data-state='open'],
+:root[data-dashboard-style='modern']
+  textarea[data-dashboard-textarea='true']:not([data-textarea-variant='composer']):not([data-dashboard-header='true'] *):not([class~='border-0']):not([class~='border-none']):not([aria-invalid='true']):not([class*='border-destructive']):not([class*='border-red']):focus {
+  border-color: hsl(var(--color-chart-1) / 0.65);
+  box-shadow: 0 0 0 3px hsl(var(--color-chart-1) / 0.16);
+}
+
+/* 交互状态统一 chart-1：开关、复选、单选、滑块——只在仍带各自默认 primary 令牌时生效。 */
+:root[data-dashboard-style='modern']
+  [data-dashboard-switch='true'][data-state='checked'][class*='data-[state=checked]:bg-primary'] {
+  background-color: hsl(var(--color-chart-1));
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-checkbox='true']:is([data-state='checked'], [data-state='indeterminate'])[class*='border-primary'] {
+  border-color: hsl(var(--color-chart-1));
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-checkbox='true'][data-state='checked'][class*='data-[state=checked]:bg-primary'],
+:root[data-dashboard-style='modern']
+  [data-dashboard-checkbox='true'][data-state='indeterminate'][class*='data-[state=indeterminate]:bg-primary'] {
+  background-color: hsl(var(--color-chart-1));
+  color: hsl(0 0% 100%);
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-radio-item='true'][data-state='checked'][class*='border-primary'] {
+  border-color: hsl(var(--color-chart-1));
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-radio-item='true'][data-state='checked'][class*='text-primary'] {
+  color: hsl(var(--color-chart-1));
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-slider-track='true'][class*='bg-primary/20'] {
+  background-color: hsl(var(--foreground) / 0.1);
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-slider-range='true'][class~='bg-primary'] {
+  background-color: hsl(var(--color-chart-1));
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-slider-thumb='true'][class~='bg-background'] {
+  background-color: hsl(0 0% 100%);
+  box-shadow: var(--mdn-elev-chip);
+}
+
+/* 档位滑杆的激活刻度原本吃前景墨色，同样对齐 chart-1。 */
+:root[data-dashboard-style='modern']
+  [data-dashboard-discrete-slider='true']
+  [data-active='true'][class*='bg-foreground/40'] {
+  background-color: hsl(var(--color-chart-1));
+}
+
+/* 标签页：列表退一步用淡墨底，激活页签浮成小贴片；顶栏工作区切换不受影响。
+   list 背景只在默认 bg-muted（或完全没给 bg-*）时改写；激活片只在默认 data-[state=active]:bg-background 令牌还在时改写。 */
+:root[data-dashboard-style='modern']
+  [data-dashboard-tabs-list='true']:not([data-dashboard-workspace-tabs='true']):is([class~='bg-muted'], :not([class*='bg-'])) {
+  background-color: hsl(var(--foreground) / 0.05);
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-tabs-list='true']:not([data-dashboard-workspace-tabs='true'])
+  [data-dashboard-tabs-trigger='true'][data-state='active'][class*='data-[state=active]:bg-background'] {
+  background-color: hsl(var(--card));
+  box-shadow: var(--mdn-elev-chip);
+}
+
+:root.dark[data-dashboard-style='modern']
+  [data-dashboard-tabs-list='true']:not([data-dashboard-workspace-tabs='true'])
+  [data-dashboard-tabs-trigger='true'][data-state='active'][class*='data-[state=active]:bg-background'] {
+  background-color: hsl(0 0% 100% / 0.1);
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-tabs-list='true']:not([data-dashboard-workspace-tabs='true'])
+  [data-dashboard-tabs-trigger='true'][class*='data-[state=active]:bg-background']:not([data-state='active']):hover {
+  color: hsl(var(--foreground));
+}
+
+/* 表格：表头只留文字特征不铺底色（铺色会顶出卡片圆角），行间发丝分隔。
+   行边框色放进 base 层让位给调用方的 border-*；th 与行 hover 仍挂默认令牌。 */
+@layer base {
+  :root[data-dashboard-style='modern']
+    [data-dashboard-table-header='true']
+    [data-dashboard-table-row='true'] {
+    border-bottom-color: hsl(var(--foreground) / 0.08);
+  }
+
+  :root[data-dashboard-style='modern']
+    [data-dashboard-table-body='true']
+    [data-dashboard-table-row='true'] {
+    border-bottom-color: var(--mdn-hairline);
+  }
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-table-head='true'][class*='text-muted-foreground'] {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-table-body='true']
+  [data-dashboard-table-row='true'][class*='hover:bg-muted/50']:not([data-state='selected']):hover {
+  background-color: hsl(var(--color-chart-1) / 0.035);
+}
+
+/* 提示条：只对组件判定的 info 语气铺 chart-1 薄雾；自定义色与 destructive 不动。 */
+:root[data-dashboard-style='modern']
+  [data-dashboard-alert='true'][data-alert-tone='info'] {
+  border-color: hsl(var(--color-chart-1) / 0.2);
+  background-color: hsl(var(--color-chart-1) / 0.05);
+}
+
+:root[data-dashboard-style='modern']
+  [data-dashboard-alert='true'][data-alert-tone='info']
+  > svg:first-of-type {
+  color: hsl(var(--color-chart-1));
+}
+
+/* 滚动条只调颜色对齐新中性色，形状沿用 .custom-scrollbar 既有规则。 */
+:root[data-dashboard-style='modern'] .custom-scrollbar {
+  scrollbar-color: hsl(var(--foreground) / 0.18) transparent;
+}
+
+:root[data-dashboard-style='modern'] .custom-scrollbar::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  background: hsl(var(--foreground) / 0.18);
+  background-clip: content-box;
+}
+
+:root[data-dashboard-style='modern'] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground) / 0.32);
+  background-clip: content-box;
 }

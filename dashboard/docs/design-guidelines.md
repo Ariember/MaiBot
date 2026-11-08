@@ -44,3 +44,14 @@
 - 圆形头像、状态点、开关和胶囊使用 `rounded-full` 或既有圆弧规则，保留圆形和胶囊轮廓。
 - 贴边弹层、拼接控件按布局保留直角和单侧圆角；继承父级圆角的裁剪区域同步继承 `corner-shape`。
 - 未来复古风格（`future-retro`）沿用自身的直角和小圆角规则。
+
+## 层次与色彩
+
+原版风格（`modern`）采用冷调中性色（色相 228、低饱和）与三层海拔，规则集中在 `styles/modern.css` 的 `:root[data-dashboard-style='modern']` 作用域。
+
+- 三层海拔：画布（`--background` 叠淡蓝/紫/青环境光）→ 表面（卡片与页面外框，发丝边 `--mdn-hairline` 加分层柔影 `--mdn-elev-1`）→ 浮层（玻璃 `--mdn-glass-*`）。
+- 选中片、开关、按钮高光等小型浮起用 `--mdn-elev-chip`；可交互卡片悬停升到 `--mdn-elev-2`。
+- 主操作按钮保持墨黑（暗色为浅色）配顶部内高光；焦点圈、开关、复选、单选、滑块与选中行统一使用 `chart-1` 蓝。
+- 列表行选中通用钩子：元素标 `data-list-selected="true"`，材质由 `--list-selected-*` 变量决定；可复用 `data-dashboard-list-item` / `data-dashboard-selection-card` 的 `data-selected` 获得同一效果。
+- 侧栏当前页为凸起小贴片；导航图标按组内位置轮换 `chart-1`~`chart-5`（`--nav-accent`）。
+- 页内多彩沿用既有轮换：卡片、分区面板与资源行按位置取 `--colorful-accent`，首页指标按语义固定图表色。

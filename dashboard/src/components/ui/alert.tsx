@@ -24,11 +24,22 @@ function Alert({
   variant,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
+  // className 里出现任何 bg-/border- 颜色类即视为自定义语气；
+  // bg-card/bg-primary/border-primary 仍是主题令牌，归为 info 交给主题重着色。
+  const tone =
+    variant === 'destructive'
+      ? 'destructive'
+      : /(?:^|\s)(?:[\w-]+:)*(?:bg|border)-(?!card(?:\s|$)|primary(?:\s|\/|$))/.test(
+            className ?? ''
+          )
+        ? 'custom'
+        : 'info'
   return (
     <div
       data-slot="alert"
       role="alert"
       data-dashboard-alert="true"
+      data-alert-tone={tone}
       className={cn(alertVariants({ variant }), className)}
       {...props}
     />

@@ -28,12 +28,13 @@ export function StreamlineIcon({
   className,
   color,
   size = 16,
-}: StreamlineIconProps) {
+  ...rest
+}: StreamlineIconProps & Record<string, unknown>) {
   const { themeConfig } = useTheme()
   const icon = getStreamlineIcon(collection, name)
 
   if ((themeConfig.dashboardStyle !== 'future-retro' || !icon) && Fallback) {
-    return <Fallback className={className} color={color} size={size} />
+    return <Fallback className={className} color={color} size={size} {...rest} />
   }
 
   return (
@@ -43,6 +44,7 @@ export function StreamlineIcon({
       color={color}
       width={size}
       height={size}
+      {...rest}
     />
   )
 }

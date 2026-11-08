@@ -116,19 +116,15 @@ export function ProviderSidebar({
           type="button"
           className={cn(
             'flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors',
-            selectedProvider === '' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+            selectedProvider !== '' && 'hover:bg-muted'
           )}
+          data-list-selected={selectedProvider === ''}
           onClick={() => onSelectProvider('')}
           aria-pressed={selectedProvider === ''}
           aria-label="全部"
         >
           <span className="font-medium">全部</span>
-          <span
-            className={cn(
-              'text-xs',
-              selectedProvider === '' ? 'text-primary-foreground/75' : 'text-muted-foreground'
-            )}
-          >
+          <span className="text-muted-foreground text-xs">
             {totalModels}
           </span>
         </button>
@@ -145,8 +141,9 @@ export function ProviderSidebar({
               key={provider.name}
               className={cn(
                 'group flex min-w-0 items-center gap-1 rounded-md px-3 py-2 text-sm transition-colors',
-                isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                !isSelected && 'hover:bg-muted'
               )}
+              data-list-selected={isSelected}
             >
               <button
                 type="button"
@@ -164,21 +161,11 @@ export function ProviderSidebar({
                 >
                   {provider.name}
                 </span>
-                <span
-                  className={cn(
-                    'mt-0.5 hidden truncate text-[11px] xl:block',
-                    isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                  )}
-                >
+                <span className="text-muted-foreground mt-0.5 hidden truncate text-[11px] xl:block">
                   {provider.base_url}
                 </span>
               </button>
-              <span
-                className={cn(
-                  'w-5 shrink-0 text-right text-xs',
-                  isSelected ? 'text-primary-foreground/75' : 'text-muted-foreground'
-                )}
-              >
+              <span className="text-muted-foreground w-5 shrink-0 text-right text-xs">
                 {modelCounts.get(provider.name) ?? 0}
               </span>
             </div>
