@@ -121,10 +121,10 @@ export function Sidebar({
         setHoverExpanded(false)
       }}
       className={cn(
-        'fixed inset-y-0 left-0 isolate z-50 flex flex-col border-r transition-transform duration-300 motion-reduce:transition-none lg:relative lg:z-0 lg:h-full lg:w-[var(--layout-sidebar-width)] lg:transition-[clip-path] lg:duration-[220ms] lg:ease-[cubic-bezier(0.22,1,0.36,1)] lg:will-change-[clip-path]',
+        'fixed inset-y-0 left-0 isolate z-50 flex flex-col border-r transition-transform duration-300 motion-reduce:transition-none lg:relative lg:z-0 lg:h-full lg:w-(--layout-sidebar-width) lg:transition-[clip-path] lg:duration-220 lg:ease-[cubic-bezier(0.22,1,0.36,1)] lg:will-change-[clip-path]',
         inheritsPageBackground ? 'bg-transparent' : 'bg-card',
         // 桌面端始终保持完整内容宽度，仅用裁剪展示折叠状态，避免悬浮时反复触发布局计算。
-        'w-[var(--layout-sidebar-width)]',
+        'w-(--layout-sidebar-width)',
         sidebarRevealed
           ? 'lg:[clip-path:inset(0_0_0_0)]'
           : 'lg:[clip-path:inset(0_calc(var(--layout-sidebar-width)-var(--layout-sidebar-collapsed-width))_0_0)]',
@@ -137,7 +137,7 @@ export function Sidebar({
         <div
           aria-hidden="true"
           data-dashboard-sidebar-collapsed-divider="true"
-          className="border-border pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[var(--layout-sidebar-collapsed-width)] border-r lg:block"
+          className="border-border pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-(--layout-sidebar-collapsed-width) border-r lg:block"
         />
       )}
 
@@ -157,7 +157,7 @@ export function Sidebar({
             }}
             className="text-muted-foreground/55 hover:text-primary focus-visible:ring-ring absolute right-4 bottom-3 z-20 hidden h-7 w-7 items-center justify-center border-0 bg-transparent p-0 shadow-none transition-colors focus-visible:ring-2 focus-visible:outline-none lg:flex"
           >
-            <PanelLeftOpen aria-hidden="true" className="h-[1.125rem] w-[1.125rem]" />
+            <PanelLeftOpen aria-hidden="true" className="h-4.5 w-4.5" />
           </button>
         )}
         {sidebarOpen && onSidebarToggle && (
@@ -170,7 +170,7 @@ export function Sidebar({
             onClick={onSidebarToggle}
             className="text-muted-foreground/55 hover:text-primary focus-visible:ring-ring absolute right-4 bottom-3 z-20 hidden h-7 w-7 items-center justify-center border-0 bg-transparent p-0 shadow-none transition-colors focus-visible:ring-2 focus-visible:outline-none lg:flex"
           >
-            <PanelLeftClose aria-hidden="true" className="h-[1.125rem] w-[1.125rem]" />
+            <PanelLeftClose aria-hidden="true" className="h-4.5 w-4.5" />
           </button>
         )}
       </div>
@@ -180,21 +180,21 @@ export function Sidebar({
         className={cn(
           'relative z-10',
           'min-h-0 flex-1 overflow-x-hidden',
-          !visuallyOpen && 'lg:w-[var(--layout-sidebar-collapsed-width)]'
+          !visuallyOpen && 'lg:w-(--layout-sidebar-collapsed-width)'
         )}
         viewportClassName="[&>div]:!block"
       >
         <nav
           aria-label={t('a11y.sidebarNav')}
           className={cn(
-            'px-[var(--layout-sidebar-nav-padding-collapsed)] py-[var(--layout-sidebar-nav-padding)]',
-            !visuallyOpen && 'lg:w-[var(--layout-sidebar-collapsed-width)]'
+            'px-(--layout-sidebar-nav-padding-collapsed) py-(--layout-sidebar-nav-padding)',
+            !visuallyOpen && 'lg:w-(--layout-sidebar-collapsed-width)'
           )}
         >
           <ul
             className={cn(
               // 移动端始终使用正常间距,桌面端根据 sidebarOpen 切换
-              'flex flex-col gap-[var(--layout-sidebar-section-gap)]',
+              'flex flex-col gap-(--layout-sidebar-section-gap)',
               !visuallyOpen && 'lg:w-full'
             )}
           >
@@ -206,14 +206,14 @@ export function Sidebar({
                 {/* 块标题 - 移动端始终可见，桌面端根据 sidebarOpen 切换 */}
                 <div
                   className={cn(
-                    'h-[var(--layout-sidebar-section-title-height)] px-[var(--layout-sidebar-nav-item-padding-x)]',
+                    'h-(--layout-sidebar-section-title-height) px-(--layout-sidebar-nav-item-padding-x)',
                     section.title === 'sidebar.groups.overview' && 'hidden',
                     // 移动端始终显示，桌面端根据状态切换
-                    'mb-[var(--layout-sidebar-section-title-margin-bottom)]',
-                    'transition-opacity duration-[220ms] motion-reduce:transition-none',
+                    'mb-(--layout-sidebar-section-title-margin-bottom)',
+                    'transition-opacity duration-220 motion-reduce:transition-none',
                     !sidebarRevealed && 'lg:opacity-0',
                     !sidebarRevealed &&
-                      'lg:mb-[var(--layout-sidebar-section-title-margin-bottom-collapsed)]'
+                      'lg:mb-(--layout-sidebar-section-title-margin-bottom-collapsed)'
                   )}
                 >
                   <h3
@@ -230,14 +230,14 @@ export function Sidebar({
                     aria-hidden="true"
                     data-dashboard-sidebar-section-divider="true"
                     className={cn(
-                      'border-border mb-2 hidden border-t transition-opacity duration-[220ms] motion-reduce:transition-none lg:block',
+                      'border-border mb-2 hidden border-t transition-opacity duration-220 motion-reduce:transition-none lg:block',
                       sidebarRevealed && 'lg:opacity-0'
                     )}
                   />
                 )}
 
                 {/* 菜单项列表 */}
-                <ul className="flex flex-col gap-[var(--layout-sidebar-nav-item-gap)]">
+                <ul className="flex flex-col gap-(--layout-sidebar-nav-item-gap)">
                   {section.items.map((item) => (
                     <NavItem
                       key={item.path}

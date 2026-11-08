@@ -89,7 +89,7 @@ describe('Select 包装层', () => {
 
     const viewport = content?.querySelector('[class*="radix-select-trigger-height"]')
     expect(viewport).not.toBeNull()
-    expect(viewport).toHaveClass('h-[var(--radix-select-trigger-height)]', 'w-full')
+    expect(viewport).toHaveClass('h-(--radix-select-trigger-height)', 'w-full')
   })
 
   it('position=item-aligned 时不追加 popper 偏移与视口高度类', () => {
@@ -101,7 +101,7 @@ describe('Select 包装层', () => {
 
     const viewport = content?.querySelector('.p-1')
     expect(viewport).not.toBeNull()
-    expect(viewport).not.toHaveClass('h-[var(--radix-select-trigger-height)]')
+    expect(viewport).not.toHaveClass('h-(--radix-select-trigger-height)')
   })
 
   it('自定义 style 会覆盖默认 maxHeight', () => {

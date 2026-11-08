@@ -316,7 +316,7 @@ describe('Layout 工作区切换', () => {
       '[data-dashboard-sidebar-layout="true"]'
     )
     expect(sidebarLayout).toHaveAttribute('data-motion-layout', 'false')
-    expect(sidebarLayout).toHaveClass('transition-[width]', 'duration-[220ms]')
+    expect(sidebarLayout).toHaveClass('transition-[width]', 'duration-220')
     expect(sidebarLayout).toHaveStyle({
       width: 'var(--layout-sidebar-collapsed-width)',
     })

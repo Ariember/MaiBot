@@ -171,7 +171,7 @@ describe('LogoArea 与 Sidebar', () => {
     expect(aside).toHaveAttribute('data-dashboard-sidebar-mode', 'hover')
     expect(aside).toHaveAttribute('data-dashboard-sidebar-visually-open', 'false')
     expect(aside).toHaveClass(
-      'lg:w-[var(--layout-sidebar-width)]',
+      'lg:w-(--layout-sidebar-width)',
       'lg:transition-[clip-path]',
       'lg:[clip-path:inset(0_calc(var(--layout-sidebar-width)-var(--layout-sidebar-collapsed-width))_0_0)]'
     )
@@ -193,11 +193,11 @@ describe('LogoArea 与 Sidebar', () => {
     const hoverNavigation = screen.getByRole('navigation')
     const hoverNavigationClassName = hoverNavigation.className
     expect(hoverNavigation).toHaveClass(
-      'px-[var(--layout-sidebar-nav-padding-collapsed)]',
-      'py-[var(--layout-sidebar-nav-padding)]'
+      'px-(--layout-sidebar-nav-padding-collapsed)',
+      'py-(--layout-sidebar-nav-padding)'
     )
     expect(screen.getByText('sidebar.groups.resources').parentElement).not.toHaveClass(
-      'lg:mb-[var(--layout-sidebar-section-title-margin-bottom-collapsed)]'
+      'lg:mb-(--layout-sidebar-section-title-margin-bottom-collapsed)'
     )
     expect(container.querySelector('.border-t')).toHaveClass('lg:opacity-0')
     expect(screen.getByRole('button', { name: '首页' })).toHaveAttribute(

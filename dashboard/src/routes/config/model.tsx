@@ -789,7 +789,7 @@ function ModelConfigPageContent() {
                 value="active"
                 label="模型配置副本"
                 icon={<History />}
-                className="flex-1 sm:w-[190px] sm:flex-none"
+                className="flex-1 sm:w-47.5 sm:flex-none"
                 disabled={versionsLoading || saving || autoSaving || Boolean(switchingConfigVersion)}
                 onValueChange={(value) => {
                   if (value !== 'active') {
@@ -1557,7 +1557,7 @@ function ModelConfigPageContent() {
                 <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                   <Label
                     htmlFor="model_name"
-                    className={`sm:w-28 sm:flex-shrink-0 ${formErrors.name ? 'text-destructive' : ''}`}
+                    className={`sm:w-28 sm:shrink-0 ${formErrors.name ? 'text-destructive' : ''}`}
                   >
                     模型名称 *
                   </Label>
@@ -1590,7 +1590,7 @@ function ModelConfigPageContent() {
                 <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                   <Label
                     htmlFor="api_provider"
-                    className={`sm:w-28 sm:flex-shrink-0 ${formErrors.api_provider ? 'text-destructive' : ''}`}
+                    className={`sm:w-28 sm:shrink-0 ${formErrors.api_provider ? 'text-destructive' : ''}`}
                   >
                     API 提供商 *
                   </Label>
@@ -1682,10 +1682,10 @@ function ModelConfigPageContent() {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="z-[60] p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                    <PopoverContent className="z-60 p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                       <Command>
                         <CommandInput placeholder="搜索模型..." />
-                        <CommandList className="max-h-[300px]">
+                        <CommandList className="max-h-75">
                           <CommandEmpty>
                             {modelFetchError ? (
                               <div className="py-4 px-2 text-center space-y-2">

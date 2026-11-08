@@ -110,11 +110,11 @@ export function DiscreteSlider<T extends string | number>({
       </div>
       <div className="relative isolate mt-1 grid" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {selected && <motion.div aria-hidden="true" data-discrete-slider-plate="true"
-          data-disabled={disabled} className="pointer-events-none absolute inset-y-0 -z-10 rounded-[var(--surface-radius)] bg-secondary"
+          data-disabled={disabled} className="pointer-events-none absolute inset-y-0 -z-10 rounded-(--surface-radius) bg-secondary"
           style={{ left: plateLeft, width: plateWidth }} />}
         {options.map((option, index) => (
           <button key={option.value} type="button" data-discrete-slider-label="true"
-            className="mx-0.5 min-h-[var(--control-height-xs)] min-w-0 cursor-pointer rounded-[var(--surface-radius)] px-1 py-1 text-xs font-medium whitespace-normal break-words leading-snug focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            className="mx-0.5 min-h-(--control-height-xs) min-w-0 cursor-pointer rounded-(--surface-radius) px-1 py-1 text-xs font-medium whitespace-normal wrap-break-word leading-snug focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             aria-pressed={index === previewIndex} disabled={disabled}
             title={option.description} onClick={() => onValueChange(option.value)}>
             {option.label}

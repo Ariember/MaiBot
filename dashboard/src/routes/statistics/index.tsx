@@ -133,11 +133,11 @@ function StatisticsTooltipContent({
       formatter={(value, name, item) => (
         <>
           <span
-            className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+            className="h-2.5 w-2.5 shrink-0 rounded-xs"
             style={{ backgroundColor: item.payload.fill ?? item.color }}
           />
           <div className="flex min-w-0 flex-1 items-center justify-between gap-3 leading-none">
-            <span className="text-muted-foreground break-words">{name}</span>
+            <span className="text-muted-foreground wrap-break-word">{name}</span>
             <span className="text-foreground shrink-0 font-mono font-medium tabular-nums">
               {formatValue(value)}
             </span>
@@ -157,7 +157,7 @@ function StatisticsPageSkeleton() {
           <Skeleton key={index} className="h-28" />
         ))}
       </div>
-      <Skeleton className="h-[360px] w-full" />
+      <Skeleton className="h-90 w-full" />
     </div>
   )
 }
@@ -309,7 +309,7 @@ function BreakdownTable({ rows, locale, embedding = false }: {
               {metrics.filter((metric) => Boolean(metric.primary) === primary).map((metric) => (
                 <div key={metric.key} className="min-w-0">
                   <dt className="text-muted-foreground text-xs">{t(`statisticsPage.table.${metric.key}`)}</dt>
-                  <dd className="mt-1 break-words font-medium tabular-nums">{metric.value}</dd>
+                  <dd className="mt-1 wrap-break-word font-medium tabular-nums">{metric.value}</dd>
                 </div>
               ))}
             </dl>
@@ -317,7 +317,7 @@ function BreakdownTable({ rows, locale, embedding = false }: {
           return (
             <div key={row.name} className="min-w-0 rounded-md border p-3">
               <details>
-                <summary className="cursor-pointer break-words text-sm font-semibold [overflow-wrap:anywhere]">
+                <summary className="cursor-pointer text-sm font-semibold wrap-anywhere">
                   {row.name}
                 </summary>
                 <div className="mt-3 border-t border-dashed pt-3">{renderMetrics(false)}</div>
@@ -328,7 +328,7 @@ function BreakdownTable({ rows, locale, embedding = false }: {
         })}
       </div>
     <div className="hidden overflow-hidden rounded-md border sm:block">
-      <Table className={embedding ? 'min-w-[700px]' : 'min-w-[1460px]'}>
+      <Table className={embedding ? 'min-w-175' : 'min-w-365'}>
         <TableHeader className="bg-muted/60">
           <TableRow>
             <TableHead
@@ -417,7 +417,7 @@ function ChatTable({ period, locale }: { period: DetailedStatisticsPeriod; local
         <TableBody>
           {period.chats.map((chat) => (
             <TableRow key={chat.name}>
-              <TableCell className="break-words font-medium [overflow-wrap:anywhere]">{chat.name}</TableCell>
+              <TableCell className="font-medium wrap-anywhere">{chat.name}</TableCell>
               <TableCell className="text-right tabular-nums">
                 {formatNumber(chat.message_count, locale)}
               </TableCell>
@@ -537,19 +537,19 @@ function DistributionChart({
 
   return (
     <Card className="min-w-0 overflow-hidden shadow-sm">
-      <CardHeader className="border-b pb-3 max-sm:!px-2 max-sm:!py-2">
-        <CardTitle className="text-sm max-sm:!text-xs max-sm:break-words sm:truncate" title={title}>
+      <CardHeader className="border-b pb-3 max-sm:px-2! max-sm:py-2!">
+        <CardTitle className="text-sm max-sm:text-xs! max-sm:wrap-break-word sm:truncate" title={title}>
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-4 max-sm:!p-2 sm:pt-4">
+      <CardContent className="pt-4 max-sm:p-2! sm:pt-4">
         {data.length === 0 ? (
           <EmptyState />
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <ChartContainer
               config={config}
-              className="aspect-auto h-[150px] w-full min-w-0 sm:h-[340px] sm:flex-1"
+              className="aspect-auto h-37.5 w-full min-w-0 sm:h-85 sm:flex-1"
             >
               <PieChart>
                 {/* 关闭 recharts 默认的位移过渡，改用提示框内容淡入 */}
@@ -572,7 +572,7 @@ function DistributionChart({
                 </Pie>
               </PieChart>
             </ChartContainer>
-            <div className="grid max-h-28 shrink-0 grid-cols-1 content-start gap-1 overflow-y-auto sm:max-h-[340px] sm:w-44 lg:w-52">
+            <div className="grid max-h-28 shrink-0 grid-cols-1 content-start gap-1 overflow-y-auto sm:max-h-85 sm:w-44 lg:w-52">
               {chartData.map((item) => {
                 const hidden = hiddenNames.has(item.name)
                 return (
@@ -753,7 +753,7 @@ function MultiSeriesChart({
           <EmptyState />
         ) : (
           <>
-            <ChartContainer config={config} className="aspect-auto h-[340px] w-full min-w-0">
+            <ChartContainer config={config} className="aspect-auto h-85 w-full min-w-0">
               <LineChart data={chartData} margin={{ left: 8, right: 8, top: 8 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
@@ -844,7 +844,7 @@ function SingleSeriesChart({
         <CardTitle className="text-sm">{title}</CardTitle>
       </CardHeader>
       <CardContent className="pt-4 sm:pt-4">
-        <ChartContainer config={config} className="aspect-auto h-[320px] w-full min-w-0">
+        <ChartContainer config={config} className="aspect-auto h-80 w-full min-w-0">
           <LineChart data={data} margin={{ left: 8, right: 8, top: 8 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
@@ -1022,7 +1022,7 @@ export function StatisticsPage() {
 
   return (
     <div className="flex min-h-full flex-col p-4 sm:p-6">
-      <div className="mx-auto w-full max-w-[1800px]">
+      <div className="mx-auto w-full max-w-450">
         <header className="border-primary/30 bg-card relative mb-5 overflow-hidden rounded-xl border p-5 shadow-sm sm:p-6">
           <div className="bg-primary absolute inset-y-0 left-0 w-1.5" aria-hidden="true" />
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">

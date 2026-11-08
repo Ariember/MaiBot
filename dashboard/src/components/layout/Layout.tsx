@@ -400,7 +400,7 @@ export function Layout({ children }: LayoutProps) {
         data-dashboard-shell="true"
         data-dashboard-page-background={pageBg.type}
         className={cn(
-          'relative isolate flex h-[100dvh] overflow-hidden overscroll-none',
+          'relative isolate flex h-dvh overflow-hidden overscroll-none',
           isElectron() && 'pt-8'
         )}
       >
@@ -416,7 +416,7 @@ export function Layout({ children }: LayoutProps) {
               }
               layout={false}
               className={cn(
-                'relative z-40 hidden shrink-0 transition-[width] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:block',
+                'relative z-40 hidden shrink-0 transition-[width] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:block',
                 sidebarExiting ? 'overflow-hidden' : 'overflow-visible',
                 skipSidebarResizeAnimation && 'transition-none'
               )}
@@ -485,7 +485,7 @@ export function Layout({ children }: LayoutProps) {
               className={cn(
                 'relative isolate min-h-0 flex-1 outline-none',
                 // 移动端给底部标签栏让出位置，高度由标签栏按实际占用写入
-                'max-lg:pb-[var(--mobile-dock-height,0px)]',
+                'max-lg:pb-(--mobile-dock-height,0px)',
                 // 手机上没有顶栏，页面内容自己避开状态栏
                 'max-lg:pt-[env(safe-area-inset-top)]',
                 workspaceTransitionStage !== 'idle'

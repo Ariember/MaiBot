@@ -29,7 +29,7 @@ export function NavItem({
       <span className="relative flex shrink-0">
         <Icon
           data-dashboard-nav-icon="true"
-          className={cn('h-5 w-5 flex-shrink-0', isActive && 'text-primary')}
+          className={cn('h-5 w-5 shrink-0', isActive && 'text-primary')}
           size={20}
         />
         {promptWarning && <PromptWarningDot className="absolute -top-1 -right-1" />}
@@ -39,8 +39,8 @@ export function NavItem({
         className={cn(
           'text-base font-medium whitespace-nowrap transition-opacity duration-150',
           sidebarOpen
-            ? 'max-w-[160px] min-w-0 overflow-hidden text-ellipsis opacity-100'
-            : 'max-w-[200px] opacity-100 lg:max-w-0 lg:overflow-hidden lg:opacity-0'
+            ? 'max-w-40 min-w-0 overflow-hidden text-ellipsis opacity-100'
+            : 'max-w-50 opacity-100 lg:max-w-0 lg:overflow-hidden lg:opacity-0'
         )}
         title={label}
       >

@@ -75,7 +75,7 @@ export function SplitDropdownSelect({
         <span className="min-w-0 flex-1 truncate">{selectedOption?.label ?? placeholder}</span>
         <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className={cn('flex w-[420px] max-w-[calc(100vw-2rem)] p-0', contentClassName)}>
+      <DropdownMenuContent align="end" className={cn('flex w-105 max-w-[calc(100vw-2rem)] p-0', contentClassName)}>
         <DropdownMenuGroup aria-label={`${label}操作`} className="flex shrink-0 flex-col gap-2 border-r p-2">
           {actions.map((action) => (
             <DropdownMenuItem key={action.id} asChild disabled={action.disabled} onSelect={action.onSelect}>
@@ -95,7 +95,7 @@ export function SplitDropdownSelect({
           {options.map((option) => (
             <DropdownMenuRadioItem key={option.value} value={option.value} disabled={option.disabled}>
               <span className="min-w-0">
-                <span className="block break-words">{option.label}</span>
+                <span className="block wrap-break-word">{option.label}</span>
                 {option.description && <span className="block text-xs text-muted-foreground">{option.description}</span>}
               </span>
             </DropdownMenuRadioItem>
