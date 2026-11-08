@@ -204,7 +204,9 @@ async def test_search_excludes_banned_native_emoji(library, png, monkeypatch):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("is_emoji", [False, True])
 @pytest.mark.parametrize("target_id,sent", [("post:123", True), ("post:123", False), ("unknown", True), ("", True)])
-async def test_search_tool_sends_original_bytes_to_existing_stream(library, png, monkeypatch, target_id, sent, is_emoji):
+async def test_search_tool_sends_original_bytes_to_existing_stream(
+    library, png, monkeypatch, target_id, sent, is_emoji
+):
     item, _ = library.add_bytes(png, "test.png", ["表情包"] if is_emoji else ["开心"])
     target = object()
     ctx = SimpleNamespace(
