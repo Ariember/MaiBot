@@ -21,22 +21,6 @@
   --surface-focus: hsl(var(--ring));
 }
 
-:root[data-dashboard-style='future-retro'] {
-  --surface-frame-bg: transparent;
-  --surface-data-bg: var(--retro-recessed);
-  --surface-line: var(--retro-line);
-  --surface-ink: var(--retro-ink);
-  --surface-radius: 0;
-  --surface-list-padding: 0;
-  --surface-data-stroke: var(--retro-stroke);
-  --list-selected-bg: var(--retro-rust);
-  /* 选中文字使用前景色；夜间纸面变黑，不能把它当作强调底色上的文字色。 */
-  --list-selected-ink: hsl(var(--primary-foreground));
-  --list-selected-ring: none;
-  --list-hover-bg: var(--retro-recessed);
-  --surface-focus: var(--retro-ink);
-}
-
 /* modern 的选中行：浅蓝底加同色内描边，文字保持前景色而非反白。 */
 :root[data-dashboard-style='modern'] {
   --list-selected-bg: hsl(var(--color-chart-1) / 0.11);
@@ -54,16 +38,6 @@
   border: 2px solid var(--surface-line);
   border-radius: var(--surface-radius);
   box-shadow: var(--surface-frame-shadow);
-}
-
-/* 正向徽标复用主题的成功色，不借用会被主题映射成中性色的 secondary。 */
-:root[data-dashboard-style='future-retro'] [data-dashboard-badge='true'][data-badge-variant='success'] {
-  background-color: var(--retro-success-soft);
-  border-color: var(--retro-success-border);
-  color: var(--retro-success-strong);
-}
-:root.dark[data-dashboard-style='future-retro'] [data-dashboard-badge='true'][data-badge-variant='success'] {
-  color: var(--retro-success);
 }
 
 [data-dashboard-data-panel='true'] {
@@ -124,7 +98,6 @@
   outline: 2px solid var(--surface-focus) !important;
   outline-offset: -2px;
 }
-:root:not([data-dashboard-style='modern']) [data-dashboard-list-item='true'] { border-radius: 0; }
 
 /* 普通线使用主题线宽；刻线保留凹下的明暗两边。 */
 [data-dashboard-separator='true'] { background-color: var(--surface-line); }

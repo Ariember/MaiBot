@@ -151,39 +151,15 @@ export type ThemePreset = {
   isDark: boolean
 }
 
-export type DashboardStyle = 'modern' | 'future-retro'
+export type DashboardStyle = 'modern'
 
-export const DASHBOARD_STYLES: readonly DashboardStyle[] = ['modern', 'future-retro']
+export const DASHBOARD_STYLES: readonly DashboardStyle[] = ['modern']
 
 export type StyleTokenOverrides = Partial<Record<DashboardStyle, Partial<ThemeTokens>>>
 export type StyleCustomCSS = Partial<Record<DashboardStyle, string>>
 export type StyleBackgroundConfigMap = Partial<Record<DashboardStyle, BackgroundConfigMap>>
 
-export type FutureRetroTextureStyle = 'fine' | 'coarse' | 'dot-grid' | 'ruled' | 'none'
-
-export type FutureRetroStyleConfig = {
-  paperWarmth: number
-  textureStyle: FutureRetroTextureStyle
-  textureIntensity: number
-  panelDepth: number
-}
-
-export type DashboardStyleConfig = {
-  futureRetro: FutureRetroStyleConfig
-}
-
 export const DEFAULT_DASHBOARD_STYLE: DashboardStyle = 'modern'
-
-export const DEFAULT_FUTURE_RETRO_STYLE_CONFIG: FutureRetroStyleConfig = {
-  paperWarmth: 89,
-  textureStyle: 'coarse',
-  textureIntensity: 64,
-  panelDepth: 100,
-}
-
-export const DEFAULT_DASHBOARD_STYLE_CONFIG: DashboardStyleConfig = {
-  futureRetro: DEFAULT_FUTURE_RETRO_STYLE_CONFIG,
-}
 
 export type UserThemeConfig = {
   selectedPreset: string
@@ -191,7 +167,6 @@ export type UserThemeConfig = {
   styleCustomCSS: StyleCustomCSS
   styleBackgroundConfig?: StyleBackgroundConfigMap
   dashboardStyle: DashboardStyle
-  styleConfig: DashboardStyleConfig
 }
 
 // ============================================================================
@@ -405,132 +380,6 @@ export const defaultDarkTokens: ThemeTokens = {
     'transition-colors': 'color 300ms cubic-bezier(0.4, 0, 0.2, 1)',
     'transition-transform': 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)',
     'transition-opacity': 'opacity 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-  },
-}
-
-// ============================================================================
-// Future Retro Tokens (MaiBotOneKey shell inspired)
-// ============================================================================
-
-const futureRetroBaseTypography = {
-  'font-family-base': '"MaiRetroText", "Microsoft YaHei UI", system-ui, sans-serif',
-  'font-family-code': '"Agency FB", "Cascadia Mono", "JetBrains Mono", Consolas, monospace',
-  'font-weight-normal': 700,
-  'font-weight-medium': 700,
-  'font-weight-semibold': 800,
-  'font-weight-bold': 800,
-  'letter-spacing-tight': '0em',
-  'letter-spacing-normal': '0em',
-  'letter-spacing-wide': '0em',
-} satisfies Partial<TypographyTokens>
-
-const futureRetroBaseVisual = {
-  'radius-sm': '2px',
-  'radius-md': '3px',
-  'radius-lg': '4px',
-  'radius-xl': '4px',
-  'shadow-sm': 'none',
-  'shadow-md': 'none',
-  'shadow-lg': 'none',
-  'shadow-xl': 'none',
-} satisfies Partial<VisualTokens>
-
-const futureRetroBaseLayout = {
-  'sidebar-width': '11rem',
-  'sidebar-logo-height': '5rem',
-  'sidebar-logo-padding-x': '0.75rem',
-  'sidebar-nav-padding': '1rem',
-  'sidebar-nav-padding-collapsed': '0.5rem',
-  'sidebar-section-gap': '0.75rem',
-  'sidebar-section-title-height': '1.25rem',
-  'sidebar-section-title-margin-bottom': '0.5rem',
-  'sidebar-section-title-margin-bottom-collapsed': '0.25rem',
-  'sidebar-nav-item-gap': '0.25rem',
-  'sidebar-collapsed-width': '4rem',
-  'sidebar-nav-item-height': '2.4rem',
-  'sidebar-nav-item-padding-x': '0.75rem',
-  'sidebar-nav-item-collapsed-width': '3rem',
-} satisfies Partial<LayoutTokens>
-
-export const futureRetroLightTokens: Partial<ThemeTokens> = {
-  color: {
-    ...defaultLightTokens.color,
-    primary: '15.6 68.7% 45.1%',
-    'primary-foreground': '39.5 100% 92%',
-    'primary-gradient': 'none',
-    secondary: '34.1 54.8% 81.8%',
-    'secondary-foreground': '189.1 59.6% 17.5%',
-    muted: '34.9 48.3% 82.5%',
-    'muted-foreground': '39.1 11.6% 39%',
-    accent: '34.7 45.6% 75.5%',
-    'accent-foreground': '189 72% 18.2%',
-    background: '35.4 61.9% 87.6%',
-    foreground: '189 72% 18.2%',
-    card: '35.4 61.9% 87.6%',
-    'card-foreground': '189 72% 18.2%',
-    popover: '36 66% 89.6%',
-    'popover-foreground': '189 72% 18.2%',
-    border: '188.1 74% 19.6%',
-    input: '39.1 11.6% 43.5%',
-    ring: '15.6 68.7% 45.1%',
-    'chart-1': '15.6 68.7% 45.1%',
-    'chart-2': '189 72% 18.2%',
-    'chart-3': '39.7 56.3% 51.6%',
-    'chart-4': '39.1 11.6% 39%',
-    'chart-5': '34.1 54.8% 81.8%',
-  },
-  typography: {
-    ...defaultLightTokens.typography,
-    ...futureRetroBaseTypography,
-  },
-  visual: {
-    ...defaultLightTokens.visual,
-    ...futureRetroBaseVisual,
-  },
-  layout: {
-    ...defaultLightTokens.layout,
-    ...futureRetroBaseLayout,
-  },
-}
-
-export const futureRetroDarkTokens: Partial<ThemeTokens> = {
-  color: {
-    ...defaultDarkTokens.color,
-    primary: '19.2 44.7% 42.5%',
-    'primary-foreground': '34 40% 86%',
-    'primary-gradient': 'none',
-    secondary: '24 16% 18%',
-    'secondary-foreground': '34 28% 76%',
-    muted: '24 14% 17%',
-    'muted-foreground': '34 19% 58%',
-    accent: '40 24% 28%',
-    'accent-foreground': '34 30% 78%',
-    background: '17 25.9% 10.6%',
-    foreground: '34.3 31.8% 74.3%',
-    card: '20 21.3% 13.9%',
-    'card-foreground': '34.3 31.8% 74.3%',
-    popover: '24 20% 15%',
-    'popover-foreground': '34.3 31.8% 74.3%',
-    border: '31 18% 28%',
-    input: '31 16% 30%',
-    ring: '20 43% 45%',
-    'chart-1': '19.2 44.7% 42.5%',
-    'chart-2': '40.3 33.3% 46.9%',
-    'chart-3': '91 14% 42%',
-    'chart-4': '8 24% 43%',
-    'chart-5': '34.3 31.8% 74.3%',
-  },
-  typography: {
-    ...defaultDarkTokens.typography,
-    ...futureRetroBaseTypography,
-  },
-  visual: {
-    ...defaultDarkTokens.visual,
-    ...futureRetroBaseVisual,
-  },
-  layout: {
-    ...defaultDarkTokens.layout,
-    ...futureRetroBaseLayout,
   },
 }
 

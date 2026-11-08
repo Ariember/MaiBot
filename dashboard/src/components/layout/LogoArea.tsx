@@ -1,7 +1,6 @@
 import { useId } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 
-import { useTheme } from '@/components/use-theme'
 import { cn } from '@/lib/utils'
 
 interface LogoAreaProps {
@@ -15,9 +14,7 @@ const SIDEBAR_SPECTRUM_TRANSITION = {
 
 export function LogoArea({ sidebarOpen }: LogoAreaProps) {
   const spectrumLayoutId = useId()
-  const { themeConfig } = useTheme()
-  // 原版风格的 Logo 行与顶栏同高：色块在前、字标在后，字标用大小写混排。
-  const isModernStyle = themeConfig.dashboardStyle === 'modern'
+  // Logo 行与顶栏同高：色块在前、字标在后，字标用大小写混排。
   const prefersReducedMotion = useReducedMotion()
   const spectrumTransition = prefersReducedMotion
     ? { duration: 0 }
@@ -42,7 +39,7 @@ export function LogoArea({ sidebarOpen }: LogoAreaProps) {
             data-dashboard-logo-title="true"
             className="w-28 whitespace-nowrap text-xl font-bold text-primary-gradient"
           >
-            {isModernStyle ? 'MaiBot' : 'MAIBOT'}
+            MaiBot
           </span>
           {sidebarOpen && (
             <motion.span

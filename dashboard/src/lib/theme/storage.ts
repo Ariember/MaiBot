@@ -2,16 +2,9 @@
  * 主题配置的 localStorage 存储管理模块。
  */
 
-import {
-  DASHBOARD_STYLES,
-  DEFAULT_DASHBOARD_STYLE,
-  DEFAULT_DASHBOARD_STYLE_CONFIG,
-  DEFAULT_FUTURE_RETRO_STYLE_CONFIG,
-} from './tokens'
+import { DASHBOARD_STYLES, DEFAULT_DASHBOARD_STYLE } from './tokens'
 import type {
   BackgroundConfigMap,
-  DashboardStyle,
-  DashboardStyleConfig,
   StyleBackgroundConfigMap,
   StyleCustomCSS,
   StyleTokenOverrides,
@@ -25,7 +18,6 @@ export const THEME_STORAGE_KEYS = {
   STYLE_CUSTOM_CSS: 'maibot-theme-style-custom-css',
   STYLE_BACKGROUND_CONFIG: 'maibot-theme-style-background',
   DASHBOARD_STYLE: 'maibot-theme-dashboard-style',
-  STYLE_CONFIG: 'maibot-theme-style-config',
 } as const
 
 const DEFAULT_THEME_CONFIG: UserThemeConfig = {
@@ -34,7 +26,6 @@ const DEFAULT_THEME_CONFIG: UserThemeConfig = {
   styleCustomCSS: {},
   styleBackgroundConfig: {},
   dashboardStyle: DEFAULT_DASHBOARD_STYLE,
-  styleConfig: DEFAULT_DASHBOARD_STYLE_CONFIG,
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -54,14 +45,6 @@ function hasRequiredImportThemeFields(
   }
 
   return valid
-}
-
-function normalizeDashboardStyle(value: unknown): DashboardStyle {
-  if (DASHBOARD_STYLES.includes(value as DashboardStyle)) {
-    return value as DashboardStyle
-  }
-
-  return DEFAULT_DASHBOARD_STYLE
 }
 
 function normalizeStyleTokenOverrides(value: unknown): StyleTokenOverrides {
@@ -107,42 +90,6 @@ function normalizeStyleBackgroundConfig(value: unknown): StyleBackgroundConfigMa
   return nextBackgroundConfig
 }
 
-function normalizeStyleConfig(value: unknown): DashboardStyleConfig {
-  const config = isRecord(value) ? value : {}
-  const futureRetro = isRecord(config.futureRetro) ? config.futureRetro : {}
-  const textureStyles = new Set(['fine', 'coarse', 'dot-grid', 'ruled', 'none'])
-  const clampPercent = (candidate: unknown, fallback: number) =>
-    typeof candidate === 'number' && Number.isFinite(candidate)
-      ? Math.max(0, Math.min(100, candidate))
-      : fallback
-  const legacyTextureStyle =
-    futureRetro.paperTexture === false
-      ? 'none'
-      : DEFAULT_FUTURE_RETRO_STYLE_CONFIG.textureStyle
-
-  return {
-    futureRetro: {
-      paperWarmth: clampPercent(
-        futureRetro.paperWarmth,
-        DEFAULT_FUTURE_RETRO_STYLE_CONFIG.paperWarmth
-      ),
-      textureStyle:
-        typeof futureRetro.textureStyle === 'string' &&
-        textureStyles.has(futureRetro.textureStyle)
-          ? (futureRetro.textureStyle as DashboardStyleConfig['futureRetro']['textureStyle'])
-          : legacyTextureStyle,
-      textureIntensity: clampPercent(
-        futureRetro.textureIntensity,
-        DEFAULT_FUTURE_RETRO_STYLE_CONFIG.textureIntensity
-      ),
-      panelDepth: clampPercent(
-        futureRetro.panelDepth,
-        DEFAULT_FUTURE_RETRO_STYLE_CONFIG.panelDepth
-      ),
-    },
-  }
-}
-
 function parseJSONStorage(key: string): unknown {
   const value = localStorage.getItem(key)
   if (!value) {
@@ -154,12 +101,10 @@ function parseJSONStorage(key: string): unknown {
 
 export function loadThemeConfig(): UserThemeConfig {
   const preset = localStorage.getItem(THEME_STORAGE_KEYS.PRESET)
-  const dashboardStyle = localStorage.getItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE)
 
   let styleTokenOverrides: StyleTokenOverrides = {}
   let styleCustomCSS: StyleCustomCSS = {}
   let styleBackgroundConfig: StyleBackgroundConfigMap = {}
-  let styleConfig: DashboardStyleConfig = DEFAULT_THEME_CONFIG.styleConfig
 
   try {
     styleTokenOverrides = normalizeStyleTokenOverrides(
@@ -183,19 +128,12 @@ export function loadThemeConfig(): UserThemeConfig {
     styleBackgroundConfig = {}
   }
 
-  try {
-    styleConfig = normalizeStyleConfig(parseJSONStorage(THEME_STORAGE_KEYS.STYLE_CONFIG))
-  } catch {
-    styleConfig = DEFAULT_THEME_CONFIG.styleConfig
-  }
-
   return {
     selectedPreset: preset || DEFAULT_THEME_CONFIG.selectedPreset,
     styleTokenOverrides,
     styleCustomCSS,
     styleBackgroundConfig,
-    dashboardStyle: normalizeDashboardStyle(dashboardStyle),
-    styleConfig,
+    dashboardStyle: DEFAULT_DASHBOARD_STYLE,
   }
 }
 
@@ -213,14 +151,7 @@ export function saveThemeConfig(config: UserThemeConfig): void {
     THEME_STORAGE_KEYS.STYLE_BACKGROUND_CONFIG,
     JSON.stringify(normalizeStyleBackgroundConfig(config.styleBackgroundConfig))
   )
-  localStorage.setItem(
-    THEME_STORAGE_KEYS.DASHBOARD_STYLE,
-    normalizeDashboardStyle(config.dashboardStyle)
-  )
-  localStorage.setItem(
-    THEME_STORAGE_KEYS.STYLE_CONFIG,
-    JSON.stringify(normalizeStyleConfig(config.styleConfig))
-  )
+  localStorage.setItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE, DEFAULT_DASHBOARD_STYLE)
 }
 
 export function saveThemePartial(partial: Partial<UserThemeConfig>): void {
@@ -278,12 +209,6 @@ export function importThemeJSON(json: string): { success: boolean; errors: strin
   if (config.dashboardStyle !== undefined && typeof config.dashboardStyle !== 'string') {
     errors.push('dashboardStyle must be a string')
   }
-  if (
-    config.styleConfig !== undefined &&
-    (typeof config.styleConfig !== 'object' || config.styleConfig === null)
-  ) {
-    errors.push('styleConfig must be an object')
-  }
 
   if (errors.length > 0) {
     return { success: false, errors }
@@ -298,8 +223,7 @@ export function importThemeJSON(json: string): { success: boolean; errors: strin
     styleTokenOverrides: normalizeStyleTokenOverrides(config.styleTokenOverrides),
     styleCustomCSS: normalizeStyleCustomCSS(config.styleCustomCSS),
     styleBackgroundConfig: normalizeStyleBackgroundConfig(config.styleBackgroundConfig),
-    dashboardStyle: normalizeDashboardStyle(config.dashboardStyle),
-    styleConfig: normalizeStyleConfig(config.styleConfig),
+    dashboardStyle: DEFAULT_DASHBOARD_STYLE,
   })
 
   return { success: true, errors: [] }

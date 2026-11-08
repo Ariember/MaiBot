@@ -72,30 +72,6 @@ footer { margin-top: 20px; font-size: 13px; }
 """
 
 
-_STYLE_NAMES = {0: "modern", 1: "future-retro", 2: "modern"}
-
-# 配色与材质对应 dashboard/src/index.css；历史编号 2 按原版渲染。
-# 跟随服务端 webui.webui_style；浏览器私有的深浅色与字体选择不在该配置中。
-_STYLE_VARIANTS = {
-    0: "",
-    1: """
-body { background: #f3e3cc; color: #0a4550; font-weight: 700;
-  background-image: repeating-linear-gradient(0deg, #0a455008 0 1px, transparent 1px 4px); }
-header { border-bottom: 3px solid #0a4550; }
-.brand { color: #c24d24; }
-.muted, dt, footer { color: #0d4650ad; }
-section { border: 2px solid #0d4650d1; border-radius: 4px; background: #f3e3cc;
-  box-shadow: 4px 4px 0 #49301624; }
-h2 { border-bottom: 2px solid #0d4650d1; background: #dec5a5; }
-article { background: transparent; }
-article + article { border-top: 1px solid #0d465066; }
-.badge { border-radius: 2px; border: 1px solid #0a4550; }
-.disabled { background: #dec5a5; color: #0a4550; }
-""",
-    2: "",
-}
-
-
 def _estimate_command_height(command: Dict[str, Any], text_capacity: int = 82) -> int:
     """按中文全宽字符保守估算换行高度，让常规目录优先放进一张长图。"""
     height = 72
@@ -148,9 +124,8 @@ def _render_group(name: str, commands: List[Dict[str, Any]]) -> str:
     return f"<section><h2>{escape(name)}</h2>{''.join(rows)}</section>"
 
 
-def build_command_pages(groups: CommandGroups, webui_style: int) -> List[str]:
+def build_command_pages(groups: CommandGroups) -> List[str]:
     """短目录单列，长目录双列；双列仍过长时再分页。"""
-    style_name = _STYLE_NAMES[webui_style]
     estimated_height = 300 + sum(
         90 + sum(_estimate_command_height(command) for command in commands) for _, commands in groups
     )
@@ -186,8 +161,8 @@ def build_command_pages(groups: CommandGroups, webui_style: int) -> List[str]:
         page_label = f" · 第 {number} / {len(pages)} 页" if len(pages) > 1 else ""
         layout = "catalog two-columns" if columns == 2 else "catalog"
         documents.append(
-            f'<!doctype html><html lang="zh-CN" data-dashboard-style="{style_name}"><meta charset="utf-8">'
-            f"<style>{_STYLE}{_STYLE_VARIANTS[webui_style]}</style>"
+            '<!doctype html><html lang="zh-CN" data-dashboard-style="modern"><meta charset="utf-8">'
+            f"<style>{_STYLE}</style>"
             "<body><main><header><div class='brand'>MAIBOT · PLUGINS</div>"
             f"<h1>插件指令列表</h1><div class='muted'>{len(groups)} 个插件 · {total_commands} 条指令"
             f"{page_label}</div></header><div class='{layout}'>{content}</div>"

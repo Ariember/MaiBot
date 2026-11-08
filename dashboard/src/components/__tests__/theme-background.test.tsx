@@ -8,12 +8,10 @@ import { BackgroundLayer } from '@/components/background-layer'
 import { ThemeProvider } from '@/components/theme-provider'
 import { useTheme } from '@/components/use-theme'
 import type { BackgroundConfig, BackgroundEffects, UserThemeConfig } from '@/lib/theme/tokens'
-import { DEFAULT_DASHBOARD_STYLE_CONFIG, defaultBackgroundEffects } from '@/lib/theme/tokens'
+import { defaultBackgroundEffects } from '@/lib/theme/tokens'
 
 const mocks = vi.hoisted(() => ({
   getAssetUrl: vi.fn(),
-  getBotConfig: vi.fn(),
-  updateBotConfigSection: vi.fn(),
   loadThemeConfig: vi.fn(),
   resetThemeToDefault: vi.fn(),
   saveThemePartial: vi.fn(),
@@ -23,11 +21,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/asset-store-context', () => ({
   useAssetStore: () => ({ getAssetUrl: mocks.getAssetUrl }),
-}))
-
-vi.mock('@/lib/config-api', () => ({
-  getBotConfig: mocks.getBotConfig,
-  updateBotConfigSection: mocks.updateBotConfigSection,
 }))
 
 vi.mock('@/lib/theme/storage', () => ({
@@ -99,7 +92,6 @@ function makeThemeConfig(overrides: Partial<UserThemeConfig> = {}): UserThemeCon
     styleCustomCSS: {},
     styleBackgroundConfig: {},
     dashboardStyle: 'modern',
-    styleConfig: DEFAULT_DASHBOARD_STYLE_CONFIG,
     ...overrides,
   }
 }
@@ -128,8 +120,8 @@ function ThemeProbe() {
       <button type="button" onClick={() => setTheme('light')}>
         切到亮色
       </button>
-      <button type="button" onClick={() => updateThemeConfig({ dashboardStyle: 'future-retro' })}>
-        切到复古
+      <button type="button" onClick={() => updateThemeConfig({ selectedPreset: 'dark' })}>
+        更新配色
       </button>
       <button type="button" onClick={resetTheme}>
         重置主题
@@ -148,8 +140,6 @@ describe('ThemeProvider', () => {
     localStorage.clear()
     window.history.replaceState(null, '', '/')
     mocks.loadThemeConfig.mockReturnValue(makeThemeConfig())
-    mocks.getBotConfig.mockResolvedValue({ webui: {} })
-    mocks.updateBotConfigSection.mockResolvedValue(undefined)
     vi.stubGlobal(
       'matchMedia',
       vi.fn((query: string) => {
@@ -171,12 +161,6 @@ describe('ThemeProvider', () => {
     cleanup()
     document.documentElement.classList.remove('light', 'dark')
     delete document.documentElement.dataset.dashboardStyle
-    delete document.documentElement.dataset.retroFocusHighlight
-    delete document.documentElement.dataset.retroTextureStyle
-    document.documentElement.style.removeProperty('--retro-paper-warmth')
-    document.documentElement.style.removeProperty('--retro-panel-depth')
-    document.documentElement.style.removeProperty('--retro-configured-paper-texture')
-    document.documentElement.style.removeProperty('--retro-paper-texture-size')
     vi.clearAllMocks()
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
@@ -221,49 +205,25 @@ describe('ThemeProvider', () => {
     expect(screen.getByTestId('theme-state')).toHaveTextContent('system:dark:modern')
   })
 
-  it('读取远端 WebUI 风格，并在本地切换时写回数值协议', async () => {
-    mocks.getBotConfig.mockResolvedValue({ webui: { webui_style: 1 } })
+  it('更新配色时保存本地主题配置', () => {
     render(
       <ThemeProvider>
         <ThemeProbe />
       </ThemeProvider>
     )
 
-    await waitFor(() =>
-      expect(screen.getByTestId('theme-state')).toHaveTextContent('system:light:future-retro')
-    )
-    expect(mocks.saveThemePartial).toHaveBeenCalledWith({
-      dashboardStyle: 'future-retro',
-    })
-
-    fireEvent.click(screen.getByRole('button', { name: '切到复古' }))
-    await waitFor(() =>
-      expect(mocks.updateBotConfigSection).toHaveBeenCalledWith('webui', {
-        webui_style: 1,
-      })
+    fireEvent.click(screen.getByRole('button', { name: '更新配色' }))
+    expect(mocks.saveThemePartial).toHaveBeenCalledWith({ selectedPreset: 'dark' })
+    expect(mocks.applyThemePipeline).toHaveBeenLastCalledWith(
+      expect.objectContaining({ selectedPreset: 'dark' }),
+      false
     )
   })
 
-  it.each([0, 2])('远端风格 %s 使用原版，兼容已移除皮肤的配置', async (style) => {
-    mocks.loadThemeConfig.mockReturnValue(makeThemeConfig({ dashboardStyle: 'future-retro' }))
-    mocks.getBotConfig.mockResolvedValue({ webui: { webui_style: style } })
-    render(
-      <ThemeProvider>
-        <ThemeProbe />
-      </ThemeProvider>
-    )
-
-    await waitFor(() =>
-      expect(screen.getByTestId('theme-state')).toHaveTextContent('system:light:modern')
-    )
-    expect(mocks.saveThemePartial).toHaveBeenCalledWith({ dashboardStyle: 'modern' })
-    expect(mocks.updateBotConfigSection).not.toHaveBeenCalled()
-  })
-
-  it('重置主题时清理自定义 CSS，并把默认风格同步到远端', async () => {
+  it('重置主题时清理自定义 CSS 并恢复默认配色', () => {
     mocks.loadThemeConfig
-      .mockReturnValueOnce(makeThemeConfig({ dashboardStyle: 'future-retro' }))
-      .mockReturnValueOnce(makeThemeConfig({ dashboardStyle: 'modern' }))
+      .mockReturnValueOnce(makeThemeConfig({ selectedPreset: 'dark' }))
+      .mockReturnValueOnce(makeThemeConfig())
     render(
       <ThemeProvider>
         <ThemeProbe />
@@ -274,28 +234,10 @@ describe('ThemeProvider', () => {
 
     expect(mocks.resetThemeToDefault).toHaveBeenCalledOnce()
     expect(mocks.removeCustomCSS).toHaveBeenCalledOnce()
-    await waitFor(() =>
-      expect(mocks.updateBotConfigSection).toHaveBeenCalledWith('webui', {
-        webui_style: 0,
-      })
+    expect(mocks.applyThemePipeline).toHaveBeenLastCalledWith(
+      expect.objectContaining({ selectedPreset: 'light' }),
+      false
     )
-  })
-
-  it('认证页跳过远端读取和写入', async () => {
-    window.history.replaceState(null, '', '/auth')
-    render(
-      <ThemeProvider>
-        <ThemeProbe />
-      </ThemeProvider>
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: '切到复古' }))
-    await act(async () => {
-      await Promise.resolve()
-    })
-
-    expect(mocks.getBotConfig).not.toHaveBeenCalled()
-    expect(mocks.updateBotConfigSection).not.toHaveBeenCalled()
   })
 })
 

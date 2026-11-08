@@ -947,7 +947,7 @@ export function KnowledgeBasePage() {
   const shouldShowPanelFallback = (tab: LoadableMemoryTab) => !loadedPanelDataRef.current.has(tab)
   const renderPanelFallback = (tab: LoadableMemoryTab) => (
     <TabsContent value={tab} className="space-y-4">
-      <AccentPanel showRetroStripes={false} className="bg-background/70 rounded-xl border">
+      <AccentPanel className="bg-background/70 rounded-xl border">
         <div className="text-muted-foreground flex min-h-[240px] items-center justify-center text-sm">
           <ThinkingIllustration size={tabLoading[tab] ? 'md' : 'sm'} />
         </div>

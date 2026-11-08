@@ -25,10 +25,7 @@ import { DiscreteSlider } from '@/components/ui/discrete-slider'
 import { Switch, SwitchField } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { buildFutureRetroTexture } from '@/lib/theme/future-retro'
 import { applyThemePipeline } from '@/lib/theme/pipeline'
-import { DEFAULT_DASHBOARD_STYLE_CONFIG, DEFAULT_FUTURE_RETRO_STYLE_CONFIG } from '@/lib/theme/tokens'
-import type { DashboardStyle } from '@/lib/theme/tokens'
 
 import '@/index.css'
 import '@/styles/controls.css'
@@ -52,12 +49,7 @@ import { SetupReview } from './setup-review'
 import { OrderControls } from '@/components/ui/order-controls'
 
 // 独立的 Vite 开发入口，不加入生产路由，也不读写用户的主题偏好或业务数据。
-const styles: { id: DashboardStyle; label: string }[] = [
-  { id: 'modern', label: '现代' },
-  { id: 'future-retro', label: '未来复古' },
-]
 const params = new URLSearchParams(window.location.search)
-const selectedStyle = styles.find((style) => style.id === params.get('style'))
 const isDark = params.get('mode') === 'dark'
 const embedded = params.get('embedded') === '1'
 document.documentElement.dataset.reviewEmbedded = String(embedded)
@@ -76,23 +68,16 @@ const pagePreviews = {
 const activePreviewPage = previewPage && Object.hasOwn(pagePreviews, previewPage)
   ? previewPage as keyof typeof pagePreviews
   : null
-function applyPreviewTheme(style: DashboardStyle, dark: boolean) {
+function applyPreviewTheme(dark: boolean) {
   const root = document.documentElement
   root.classList.toggle('dark', dark)
   root.classList.toggle('light', !dark)
-  root.dataset.dashboardStyle = style
-  const retro = DEFAULT_FUTURE_RETRO_STYLE_CONFIG
-  root.dataset.retroTextureStyle = retro.textureStyle
-  root.style.setProperty('--retro-paper-warmth', `${retro.paperWarmth}%`)
-  root.style.setProperty('--retro-panel-depth', String(retro.panelDepth / 100))
-  root.style.setProperty('--retro-configured-paper-texture', buildFutureRetroTexture(retro.textureStyle, retro.textureIntensity, dark))
-  root.style.setProperty('--retro-paper-texture-size', '220px 220px')
+  root.dataset.dashboardStyle = 'modern'
   applyThemePipeline({
     selectedPreset: dark ? 'dark' : 'light',
     styleTokenOverrides: {},
     styleCustomCSS: {},
-    dashboardStyle: style,
-    styleConfig: DEFAULT_DASHBOARD_STYLE_CONFIG,
+    dashboardStyle: 'modern',
   }, dark)
 }
 
@@ -333,21 +318,21 @@ function Samples({ label, dark }: { label: string; dark: boolean }) {
 function Overview() {
   return (
     <main className="control-overview">
-      <h1>基础控件 · 三种主题 × 日间 / 夜间</h1>
+      <h1>基础控件 · 日间 / 夜间</h1>
       <p>点击标题打开完整尺寸预览。每组均可操作，使用实际主题样式，不修改当前 WebUI 设置。</p>
       <div className="comparison-grid">
-        {(['light', 'dark'] as const).flatMap((mode) => styles.map((style) => {
-          const url = `?style=${style.id}&mode=${mode}`
-          const title = `${style.label} · ${mode === 'dark' ? '夜间' : '日间'}`
-          return <section key={`${style.id}-${mode}`}><a href={url}>{title} ↗</a><div className="comparison-frame"><iframe title={title} src={`${url}&embedded=1`} /></div></section>
-        }))}
+        {(['light', 'dark'] as const).map((mode) => {
+          const url = `?mode=${mode}`
+          const title = `原版 · ${mode === 'dark' ? '夜间' : '日间'}`
+          return <section key={mode}><a href={url}>{title} ↗</a><div className="comparison-frame"><iframe title={title} src={`${url}&embedded=1`} /></div></section>
+        })}
       </div>
     </main>
   )
 }
 
 const previewNames = {
-  all: '全部控件', comparison: '六种主题对照', expression: '表达方式', jargon: '黑话',
+  all: '全部控件', comparison: '明暗主题对照', expression: '表达方式', jargon: '黑话',
   transfer: '导入导出', adapters: '适配器', emoji: '表情包', chat: '麦麦聊天', thinking: '聊天观察',
   'plugin-pages': '插件页面设置',
   setup: '首次引导',
@@ -355,7 +340,6 @@ const previewNames = {
 type PreviewView = keyof typeof previewNames
 
 function ReviewPage() {
-  const [style, setStyle] = useState<DashboardStyle>(selectedStyle?.id ?? 'modern')
   const [dark, setDark] = useState(isDark)
   const [view, setView] = useState<PreviewView>(params.get('page') === 'comparison' ? 'comparison' : activePreviewPage ?? 'all')
   const [themeOpen, setThemeOpen] = useState(false)
@@ -364,15 +348,15 @@ function ReviewPage() {
   const [command, setCommand] = useState<{ action: 'fit' | 'in' | 'out' | 'reset'; revision: number }>({ action: 'fit', revision: 0 })
   const commandCanvas = (action: typeof command.action) => setCommand(previous => ({ action, revision: previous.revision + 1 }))
   useEffect(() => {
-    applyPreviewTheme(style, dark)
+    applyPreviewTheme(dark)
     const url = new URL(window.location.href)
-    url.searchParams.set('style', style)
+    url.searchParams.delete('style')
     url.searchParams.set('mode', dark ? 'dark' : 'light')
     url.searchParams.set('page', view)
     window.history.replaceState(null, '', url)
-  }, [style, dark, view])
+  }, [dark, view])
   const Preview = view in pagePreviews ? pagePreviews[view as keyof typeof pagePreviews] : null
-  const content = Preview ? <Preview /> : view === 'comparison' ? <Overview /> : <Samples label={styles.find(item => item.id === style)!.label} dark={dark} />
+  const content = Preview ? <Preview /> : view === 'comparison' ? <Overview /> : <Samples label="原版" dark={dark} />
   if (embedded) return content
   return (
     <div className="review-studio">
@@ -397,15 +381,13 @@ function ReviewPage() {
       <aside className="review-theme-tools" aria-label="预览外观">
         {themeOpen && <div id="review-theme-panel" className="review-theme-panel">
           <div className="review-theme-heading"><strong>画布外观</strong><button aria-label="关闭外观面板" onClick={() => setThemeOpen(false)}><X size={16} /></button></div>
-          <p>风格</p>
-          <div className="review-theme-options">{styles.map(item => <button key={item.id} aria-pressed={style === item.id} onClick={() => setStyle(item.id)}>{item.label}</button>)}</div>
           <p>明暗</p>
           <div className="review-theme-options"><button aria-pressed={!dark} onClick={() => setDark(false)}><Sun size={16} />日间</button><button aria-pressed={dark} onClick={() => setDark(true)}><Moon size={16} />夜间</button></div>
           <small>只改变预览，不修改 WebUI 设置</small>
         </div>}
         <div className="review-theme-buttons">
           <button aria-label={dark ? '切换日间' : '切换夜间'} title={dark ? '切换日间' : '切换夜间'} onClick={() => setDark(!dark)}>{dark ? <Sun size={20} /> : <Moon size={20} />}</button>
-          <button aria-label="切换风格" aria-expanded={themeOpen} aria-controls="review-theme-panel" onClick={() => setThemeOpen(!themeOpen)}><Palette size={20} />外观</button>
+          <button aria-label="外观设置" aria-expanded={themeOpen} aria-controls="review-theme-panel" onClick={() => setThemeOpen(!themeOpen)}><Palette size={20} />外观</button>
         </div>
       </aside>
     </div>

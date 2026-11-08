@@ -13,21 +13,16 @@ import {
   removeAllComponentCSS,
   removeCustomCSS,
 } from '../pipeline'
-import {
-  DEFAULT_DASHBOARD_STYLE_CONFIG,
-  defaultBackgroundConfig,
-  defaultLightTokens,
-} from '../tokens'
+import { defaultBackgroundConfig, defaultDarkTokens, defaultLightTokens } from '../tokens'
 import type { ThemeTokens, UserThemeConfig } from '../tokens'
 
-/** 构造一份合法的完整主题配置，默认使用 modern 风格便于隔离复古令牌 */
+/** 构造一份合法的完整主题配置，按需覆盖字段 */
 const buildConfig = (overrides: Partial<UserThemeConfig> = {}): UserThemeConfig => ({
   selectedPreset: 'light',
   styleTokenOverrides: {},
   styleCustomCSS: {},
   styleBackgroundConfig: {},
   dashboardStyle: 'modern',
-  styleConfig: DEFAULT_DASHBOARD_STYLE_CONFIG,
   ...overrides,
 })
 
@@ -44,34 +39,25 @@ describe('getComputedTokens', () => {
     expect(tokens.color.primary).toBe(defaultLightTokens.color.primary)
     expect(tokens.color.accent).toBe(defaultLightTokens.color.accent)
     expect(tokens.color['accent-foreground']).toBe(defaultLightTokens.color['accent-foreground'])
-    // modern 风格不合并复古排版令牌
     expect(tokens.typography).toEqual(defaultLightTokens.typography)
   })
 
-  it('future-retro 风格按明暗合并对应复古令牌', () => {
-    const light = getComputedTokens(buildConfig({ dashboardStyle: 'future-retro' }), false)
-    expect(light.color.primary).toBe('15.6 68.7% 45.1%')
-    expect(light.typography['font-family-base']).toContain('MaiRetroText')
-
-    const dark = getComputedTokens(buildConfig({ dashboardStyle: 'future-retro' }), true)
-    expect(dark.color.primary).toBe('19.2 44.7% 42.5%')
+  it('暗色使用默认暗色令牌', () => {
+    expect(getComputedTokens(buildConfig(), true)).toEqual(defaultDarkTokens)
   })
 
-  it('仅当前风格的 token 覆盖最后生效', () => {
+  it('自定义 token 覆盖最后生效', () => {
     const tokens = getComputedTokens(
       buildConfig({
         dashboardStyle: 'modern',
         styleTokenOverrides: {
           modern: { color: { primary: '1 2% 3%' } as ThemeTokens['color'] },
-          'future-retro': { color: { primary: '9 9% 9%' } as ThemeTokens['color'] },
         },
       }),
       false
     )
 
     expect(tokens.color.primary).toBe('1 2% 3%')
-    // 非当前风格的覆盖不生效
-    expect(tokens.color.primary).not.toBe('9 9% 9%')
     // 未覆盖的字段仍保留默认令牌
     expect(tokens.color.accent).toBe(defaultLightTokens.color.accent)
   })
@@ -180,23 +166,6 @@ describe('applyThemePipeline', () => {
     )
 
     expect(document.getElementById('maibot-custom-css')).toBeNull()
-  })
-
-  it('future-retro 风格：忽略全局自定义 CSS 并应用复古暗色令牌', () => {
-    injectCustomCSS('.stale { color: blue; }')
-
-    applyThemePipeline(
-      buildConfig({
-        dashboardStyle: 'future-retro',
-        styleCustomCSS: { modern: '.x { color: red; }' },
-      }),
-      true
-    )
-
-    expect(document.getElementById('maibot-custom-css')).toBeNull()
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe(
-      '19.2 44.7% 42.5%'
-    )
   })
 
   it('组件背景配置：有 customCSS 的组件注入样式，无配置时全部清理', () => {

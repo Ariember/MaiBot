@@ -58,16 +58,6 @@
   --tw-shadow: 0 0 #0000;
 }
 
-/* 主题的通用纸面压平规则不能盖掉按钮状态；ghost/link 也不继承实体键的描边。 */
-:root[data-dashboard-style='future-retro'] .dashboard-button[aria-pressed='true'] {
-  background-color: var(--retro-rust);
-  color: hsl(var(--primary-foreground));
-}
-:root[data-dashboard-style='future-retro']
-  :is(.dashboard-button--ghost, .dashboard-button--link) {
-  border: 0;
-}
-
 /* 仅扩大公共小控件的触控区域，不占用标签页和菜单项的伪元素。 */
 @media (pointer: coarse) {
   :is([data-dashboard-checkbox='true'], [data-dashboard-switch='true'], [data-dashboard-slider-thumb='true']) { position: relative; }

@@ -7,7 +7,6 @@ import type { ThemeProviderState } from '@/lib/theme-context'
 import { ThemeProviderContext } from '@/lib/theme-context'
 import type { BackgroundConfig, UserThemeConfig } from '@/lib/theme/tokens'
 import {
-  DEFAULT_DASHBOARD_STYLE_CONFIG,
   defaultBackgroundConfig,
   defaultBackgroundEffects,
 } from '@/lib/theme/tokens'
@@ -25,14 +24,13 @@ function makeBackgroundConfig(overrides: Partial<BackgroundConfig> = {}): Backgr
   }
 }
 
-/** 构造完整的用户主题配置，默认风格为 future-retro */
+/** 构造完整的原版用户主题配置 */
 function makeThemeConfig(overrides: Partial<UserThemeConfig> = {}): UserThemeConfig {
   return {
     selectedPreset: 'light',
     styleTokenOverrides: {},
     styleCustomCSS: {},
-    dashboardStyle: 'future-retro',
-    styleConfig: DEFAULT_DASHBOARD_STYLE_CONFIG,
+    dashboardStyle: 'modern',
     ...overrides,
   }
 }
@@ -70,7 +68,7 @@ describe('useBackground', () => {
     const { result } = renderHook(() => useBackground('page'), {
       wrapper: makeWrapper(
         makeThemeConfig({
-          styleBackgroundConfig: { 'future-retro': { page: pageConfig } },
+          styleBackgroundConfig: { modern: { page: pageConfig } },
         })
       ),
     })
@@ -80,31 +78,13 @@ describe('useBackground', () => {
     expect(result.current.inheritedFrom).toBeNull()
   })
 
-  it('读取的是 dashboardStyle 对应风格下的配置', () => {
-    const modernPage = makeBackgroundConfig({ assetId: 'modern-page' })
-    const retroPage = makeBackgroundConfig({ assetId: 'retro-page' })
-    const { result } = renderHook(() => useBackground('page'), {
-      wrapper: makeWrapper(
-        makeThemeConfig({
-          dashboardStyle: 'modern',
-          styleBackgroundConfig: {
-            modern: { page: modernPage },
-            'future-retro': { page: retroPage },
-          },
-        })
-      ),
-    })
-
-    expect(result.current.config).toBe(modernPage)
-  })
-
   it('非 page 层开启 inherit 时返回 page 配置并标记继承来源', () => {
     const pageConfig = makeBackgroundConfig({ assetId: 'page-bg' })
     const cardConfig = makeBackgroundConfig({ assetId: 'card-bg', inherit: true })
     const { result } = renderHook(() => useBackground('card'), {
       wrapper: makeWrapper(
         makeThemeConfig({
-          styleBackgroundConfig: { 'future-retro': { page: pageConfig, card: cardConfig } },
+          styleBackgroundConfig: { modern: { page: pageConfig, card: cardConfig } },
         })
       ),
     })
@@ -119,7 +99,7 @@ describe('useBackground', () => {
     const { result } = renderHook(() => useBackground('sidebar'), {
       wrapper: makeWrapper(
         makeThemeConfig({
-          styleBackgroundConfig: { 'future-retro': { sidebar: sidebarConfig } },
+          styleBackgroundConfig: { modern: { sidebar: sidebarConfig } },
         })
       ),
     })
@@ -135,7 +115,7 @@ describe('useBackground', () => {
       wrapper: makeWrapper(
         makeThemeConfig({
           styleBackgroundConfig: {
-            'future-retro': {
+            modern: {
               page: makeBackgroundConfig({ assetId: 'page-bg' }),
               header: headerConfig,
             },
@@ -154,7 +134,7 @@ describe('useBackground', () => {
     const { result } = renderHook(() => useBackground('page'), {
       wrapper: makeWrapper(
         makeThemeConfig({
-          styleBackgroundConfig: { 'future-retro': { page: pageConfig } },
+          styleBackgroundConfig: { modern: { page: pageConfig } },
         })
       ),
     })

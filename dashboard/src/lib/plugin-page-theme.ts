@@ -73,14 +73,8 @@ export function readPluginPageTheme(probes: HTMLElement, language: string): Plug
   const dashboardStyle = root.dataset.dashboardStyle ?? 'modern'
   const variable = (name: string, fallback: string) =>
     style.getPropertyValue(name).trim() || fallback
-  const background =
-    dashboardStyle === 'future-retro'
-      ? variable('--retro-paper', card.backgroundColor)
-      : samples.background.backgroundColor
-  const texture =
-    dashboardStyle === 'future-retro' ? variable('--retro-paper-texture', 'none') : 'none'
   const tokens = {
-    background,
+    background: samples.background.backgroundColor,
     surface: card.backgroundColor,
     foreground: card.color,
     muted: muted.color,
@@ -94,7 +88,7 @@ export function readPluginPageTheme(probes: HTMLElement, language: string): Plug
     danger: samples.danger.backgroundColor,
     radius: card.borderRadius,
     'font-body': card.fontFamily,
-    'font-display': variable('--retro-font-heading', card.fontFamily),
+    'font-display': card.fontFamily,
     'font-mono': variable('--typography-font-family-code', 'ui-monospace, monospace'),
   }
   let css = `:root{${Object.entries(tokens)
@@ -113,7 +107,7 @@ export function readPluginPageTheme(probes: HTMLElement, language: string): Plug
     css += `${selector}{${APPEARANCE.map((property) => `${property}:${sampled.getPropertyValue(property)};`).join('')}}`
   }
   css += `
-  .maibot-page{margin:0;color:var(--maibot-foreground);background-color:var(--maibot-background);background-image:${texture};background-size:${variable('--retro-paper-texture-size', 'auto')};font-family:var(--maibot-font-body)}
+  .maibot-page{margin:0;color:var(--maibot-foreground);background-color:var(--maibot-background);font-family:var(--maibot-font-body)}
   .maibot-button{padding:8px 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
   .maibot-button:disabled{opacity:.5;cursor:not-allowed}
   .maibot-button:hover:not(:disabled){filter:brightness(.96)}
@@ -123,7 +117,6 @@ export function readPluginPageTheme(probes: HTMLElement, language: string): Plug
   .maibot-badge{display:inline-flex;padding:3px 8px;border:1px solid var(--maibot-border);border-radius:var(--maibot-radius);background:var(--maibot-soft);color:var(--maibot-foreground)}
   .maibot-table{width:100%;border-collapse:collapse;text-align:left}.maibot-table :is(th,td){padding:10px 12px;border-bottom:1px solid var(--maibot-border)}.maibot-table th{color:var(--maibot-muted)}
   .maibot-muted{color:var(--maibot-muted)}.maibot-number{font-family:var(--maibot-font-display);font-synthesis:none}
-  @font-face{font-family:MaiRetroText;src:local('Bahnschrift'),local('Microsoft YaHei UI');font-display:swap}
   `
   return {
     theme: root.classList.contains('dark') ? 'dark' : 'light',

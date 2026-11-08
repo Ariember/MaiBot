@@ -21,7 +21,6 @@ import { ListFieldEditor } from '@/components/ListFieldEditor'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CodeEditor } from '@/components/CodeEditor'
-import { useTheme } from '@/components/use-theme'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import {
   Select,
@@ -1603,7 +1602,6 @@ export function PluginConfigPage() {
 
 // 内部组件：实际内容
 function PluginConfigPageContent() {
-  const { themeConfig } = useTheme()
   const { triggerRestart, isRestarting } = useRestart()
   const adapterManagement = isAdapterManagementPath()
   const [editingMCP, setEditingMCP] = useState(false)
@@ -1632,7 +1630,6 @@ function PluginConfigPageContent() {
     isPluginDisabled,
     isPluginLoadFailed,
     isPluginVersionIncompatible,
-    getPluginStatusBarClassName,
     getPluginStatusLabel,
     getPluginStatusMeta,
     installedCount,
@@ -1645,7 +1642,6 @@ function PluginConfigPageContent() {
     loadSuccessCount,
     showsCircuitSummary,
     modernLoadSummaryLabel,
-    futureRetroPluginSummaryLabel,
   } = usePluginList()
 
   const { reviewPrompts, markReviewed } = usePluginReviewPrompts(plugins, marketPluginsById)
@@ -1676,8 +1672,6 @@ function PluginConfigPageContent() {
     setActingPluginId,
   })
 
-  const isModernDashboardStyle = themeConfig.dashboardStyle === 'modern'
-  const isFutureRetroDashboardStyle = themeConfig.dashboardStyle === 'future-retro'
   const [loadFailureDetailPlugin, setLoadFailureDetailPlugin] = useState<InstalledPlugin | null>(null)
   const extensionGroups = [
     ...visiblePluginGroups.filter((group) => group.key !== 'disabled'),
@@ -1809,83 +1803,44 @@ function PluginConfigPageContent() {
         ) : (
         <>
         {/* 统计信息 */}
-        {isModernDashboardStyle ? (
-          <Card>
-            <CardContent className="space-y-3 p-4!">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <Package className="text-muted-foreground h-4 w-4" />
-                  已安装 <strong>{installedCount}</strong> 个插件
-                </span>
+        <Card>
+          <CardContent className="space-y-3 p-4!">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <span className="flex items-center gap-2">
+                <Package className="text-muted-foreground h-4 w-4" />
+                已安装 <strong>{installedCount}</strong> 个插件
+              </span>
+              <span>
+                已启用 <strong className="text-emerald-600">{enabledCount}</strong> 个
+              </span>
+              <span>
+                已禁用 <strong className="text-muted-foreground">{disabledCount}</strong> 个
+              </span>
+              <span>
+                加载中 <strong className="text-sky-600">{loadingCount}</strong> 个
+              </span>
+              {showsCircuitSummary && (
                 <span>
-                  已启用 <strong className="text-emerald-600">{enabledCount}</strong> 个
+                  熔断中 <strong className="text-orange-600">{circuitOpenCount}</strong> 个
                 </span>
-                <span>
-                  已禁用 <strong className="text-muted-foreground">{disabledCount}</strong> 个
-                </span>
-                <span>
-                  加载中 <strong className="text-sky-600">{loadingCount}</strong> 个
-                </span>
-                {showsCircuitSummary && (
-                  <span>
-                    熔断中 <strong className="text-orange-600">{circuitOpenCount}</strong> 个
-                  </span>
-                )}
-              </div>
-              <div
-                className="flex items-center gap-3 border-t pt-3 text-sm"
-                aria-label={modernLoadSummaryLabel}
-              >
-                <span className="sr-only">{modernLoadSummaryLabel}</span>
-                <strong className="w-8 text-right text-emerald-600">{loadSuccessCount}</strong>
-                <SegmentedMeter label="插件加载状态" className="min-w-28 flex-1" segments={[
-                  {label: '加载成功', value: loadSuccessCount, className: 'bg-emerald-500'},
-                  {label: '加载中', value: loadingCount, className: 'bg-sky-500'},
-                  {label: '熔断中', value: circuitActiveCount, className: 'bg-orange-500'},
-                  {label: '加载失败', value: loadFailedCount, className: 'bg-red-500'},
-                ]} />
-                <strong className="w-8 text-red-600">{loadFailedCount}</strong>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            <PageFrame className="space-y-2 p-3" aria-label={futureRetroPluginSummaryLabel}>
-              <span className="sr-only">{futureRetroPluginSummaryLabel}</span>
-              <SegmentedMeter label="插件状态" separated segments={plugins.map((plugin) => ({
-                label: `${plugin.manifest.name}：${getPluginStatusLabel(plugin)}`,
-                value: 1, className: getPluginStatusBarClassName(plugin),
-              }))} />
-              <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                <span className="flex items-center gap-1.5">
-                  插件 <strong className="text-foreground">{installedCount}</strong>个
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  启用 <strong className="text-emerald-600">{enabledCount}</strong> 个
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="bg-muted-foreground/45 h-2 w-2 rounded-full" />
-                  禁用 <strong className="text-muted-foreground">{disabledCount}</strong> 个
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-sky-500" />
-                  加载中 <strong className="text-sky-600">{loadingCount}</strong> 个
-                </span>
-                {showsCircuitSummary && (
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-orange-500" />
-                    熔断中 <strong className="text-orange-600">{circuitOpenCount}</strong> 个
-                  </span>
-                )}
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-red-500" />
-                  启动失败 <strong className="text-red-600">{loadFailedCount}</strong> 个
-                </span>
-              </div>
-            </PageFrame>
-          </div>
-        )}
+              )}
+            </div>
+            <div
+              className="flex items-center gap-3 border-t pt-3 text-sm"
+              aria-label={modernLoadSummaryLabel}
+            >
+              <span className="sr-only">{modernLoadSummaryLabel}</span>
+              <strong className="w-8 text-right text-emerald-600">{loadSuccessCount}</strong>
+              <SegmentedMeter label="插件加载状态" className="min-w-28 flex-1" segments={[
+                {label: '加载成功', value: loadSuccessCount, className: 'bg-emerald-500'},
+                {label: '加载中', value: loadingCount, className: 'bg-sky-500'},
+                {label: '熔断中', value: circuitActiveCount, className: 'bg-orange-500'},
+                {label: '加载失败', value: loadFailedCount, className: 'bg-red-500'},
+              ]} />
+              <strong className="w-8 text-red-600">{loadFailedCount}</strong>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* 插件列表 */}
         {loading ? (
@@ -1963,9 +1918,7 @@ function PluginConfigPageContent() {
                 >
                   <div className="flex min-w-0 items-start gap-3 sm:items-center">
                     <span
-                      className={`mt-4 flex-shrink-0 sm:mt-0 ${
-                        isFutureRetroDashboardStyle ? 'h-12 w-2' : 'h-2.5 w-2.5 rounded-full'
-                      } ${statusMeta.dotClassName}`}
+                      className={`mt-4 h-2.5 w-2.5 flex-shrink-0 rounded-full sm:mt-0 ${statusMeta.dotClassName}`}
                       title={statusMeta.label}
                       aria-label={statusMeta.label}
                     />

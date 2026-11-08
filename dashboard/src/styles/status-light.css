@@ -21,6 +21,3 @@
     0 0 12px color-mix(in srgb, var(--light-color) 20%, transparent);
 }
 :root.dark [data-status-light='true'] { --light-glow-strength: 32%; }
-:root[data-dashboard-style='future-retro'] [data-status-light='true'] {
-  border-radius: 0;
-}

@@ -138,7 +138,7 @@ export function ExpressionClusterBrowser({ onOpenExpression }: ExpressionCluster
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 pr-3 pb-2 sm:pr-4">
-      <AccentPanel showRetroStripeDivider={false}>
+      <AccentPanel>
         <div className="grid gap-3 px-4 py-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="text-xs text-muted-foreground">表达数量</div>

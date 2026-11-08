@@ -341,20 +341,6 @@ export function usePluginList() {
   ]
     .filter(Boolean)
     .join('，')
-  const futureRetroPluginSummaryLabel = [
-    `已安装 ${installedCount} 个插件`,
-    `已启用 ${enabledCount} 个`,
-    `已禁用 ${disabledCount} 个`,
-    `加载中 ${loadingCount} 个`,
-    offlineCount > 0 ? `已离线 ${offlineCount} 个` : '',
-    showsCircuitSummary ? `熔断中 ${circuitOpenCount} 个` : '',
-    `启动失败 ${loadFailedCount} 个`,
-  ]
-    .filter(Boolean)
-    .join('，')
-
-  const getPluginStatusBarClassName = (plugin: InstalledPlugin) =>
-    getPluginStatusMeta(plugin).dotClassName
   const getPluginStatusLabel = (plugin: InstalledPlugin) =>
     isPluginLoadSuccess(plugin) ? '已启用' : isPluginLoadFailed(plugin) && !isPluginCircuitActive(plugin)
       ? '启动失败' : getPluginStatusMeta(plugin).label
@@ -559,7 +545,6 @@ export function usePluginList() {
     isPluginDisabled,
     isPluginLoadFailed,
     isPluginVersionIncompatible,
-    getPluginStatusBarClassName,
     getPluginStatusLabel,
     getPluginStatusMeta,
     // 统计计数
@@ -573,6 +558,5 @@ export function usePluginList() {
     loadSuccessCount,
     showsCircuitSummary,
     modernLoadSummaryLabel,
-    futureRetroPluginSummaryLabel,
   }
 }

@@ -20,7 +20,6 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { ThinkingIllustration } from '@/components/ui/thinking-illustration'
 import { DynamicConfigForm } from '@/components/dynamic-form'
-import { useTheme } from '@/components/use-theme'
 import { useConfigForm } from '@/hooks/useConfigForm'
 import { useToast } from '@/hooks/use-toast'
 import { getBotConfig, getBotConfigSchema, updateBotConfigSection } from '@/lib/config-api'
@@ -747,7 +746,6 @@ export function MCPExtensionList({
   searchQuery: string
   onEdit: () => void
 }) {
-  const { themeConfig } = useTheme()
   const config = useQuery({ queryKey: ['mcp-settings', 'config'], queryFn: getBotConfig })
   const status = useQuery({
     queryKey: ['mcp-status'],
@@ -829,7 +827,7 @@ export function MCPExtensionList({
               >
                 <div className="flex min-w-0 items-start gap-3 sm:items-center">
                   <span
-                    className={`mt-4 flex-shrink-0 sm:mt-0 ${themeConfig.dashboardStyle === 'future-retro' ? 'h-12 w-2' : 'h-2.5 w-2.5 rounded-full'} ${dotClassName}`}
+                    className={`mt-4 flex-shrink-0 sm:mt-0 h-2.5 w-2.5 rounded-full ${dotClassName}`}
                     title={statusLabel}
                     aria-label={statusLabel}
                   />

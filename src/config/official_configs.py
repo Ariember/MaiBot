@@ -5432,23 +5432,6 @@ class WebUIConfig(ConfigBase):
     )
     """WebUI 运行模式；普通使用保持 production。"""
 
-    webui_style: int = Field(
-        default=0,
-        ge=0,
-        le=2,
-        json_schema_extra={
-            "label": {
-                "zh_CN": "界面风格",
-                "en_US": "Interface style",
-                "ja_JP": "画面スタイル",
-            },
-            "x-widget": "number",
-            "x-layout": "inline-right",
-            "x-input-width": "8rem",
-        },
-    )
-    """界面风格编号；0 为原版，1 为未来复古；历史值 2 兼容显示为原版。"""
-
     anti_crawler_mode: Literal["false", "strict", "loose", "basic"] = Field(
         default="basic",
         json_schema_extra={

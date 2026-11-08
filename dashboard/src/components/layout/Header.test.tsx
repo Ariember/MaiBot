@@ -10,8 +10,6 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Header } from './Header'
-import { ThemeProviderContext } from '@/lib/theme-context'
-import { loadThemeConfig } from '@/lib/theme/storage'
 import type { WebUIExtension } from '@/lib/plugin-webui'
 
 const mocks = vi.hoisted(() => ({
@@ -230,18 +228,6 @@ vi.mock('@/lib/runtime', () => ({
   isElectron: () => mocks.electron,
 }))
 
-function FutureRetroTheme({ children }: { children: ReactNode }) {
-  return (
-    <ThemeProviderContext.Provider value={{
-      theme: 'light', resolvedTheme: 'light', setTheme: vi.fn(),
-      themeConfig: { ...loadThemeConfig(), dashboardStyle: 'future-retro' },
-      updateThemeConfig: vi.fn(), resetTheme: vi.fn(),
-    }}>
-      {children}
-    </ThemeProviderContext.Provider>
-  )
-}
-
 function makeProps(
   overrides: Partial<Parameters<typeof Header>[0]> = {}
 ): Parameters<typeof Header>[0] {
@@ -306,24 +292,20 @@ describe('Header', () => {
 
   it('触发顶栏主要操作、工作区切换和主题变更', async () => {
     const props = makeProps()
-    render(<Header {...props} />, { wrapper: FutureRetroTheme })
+    render(<Header {...props} />)
 
     expect(screen.getByTestId('background-header')).toBeInTheDocument()
     expect(document.querySelector('[data-dashboard-header="true"]')).toHaveClass('bg-background')
     expect(document.querySelector('[data-dashboard-header="true"]')).not.toHaveClass('bg-card/80')
 
-    const sidebarModeButton = screen.getByRole('button', {
-      name: 'header.switchSidebarToHover',
-    })
-    expect(sidebarModeButton.querySelector('svg')).toHaveClass('lucide-chevron-left', 'h-5', 'w-5')
-    fireEvent.click(sidebarModeButton)
+    expect(screen.queryByRole('button', { name: 'header.switchSidebarToHover' })).not.toBeInTheDocument()
     fireEvent.click(screen.getAllByRole('button', { name: 'header.collapseTopbar' })[0])
     fireEvent.click(screen.getByRole('button', { name: 'header.searchPlaceholder' }))
     fireEvent.click(screen.getByRole('button', { name: 'header.viewDocs' }))
     fireEvent.click(screen.getAllByRole('button', { name: 'header.switchToLight' })[0])
     fireEvent.click(screen.getByRole('tab', { name: 'workspace.logs' }))
 
-    expect(props.onSidebarToggle).toHaveBeenCalledOnce()
+    expect(props.onSidebarToggle).not.toHaveBeenCalled()
     expect(props.onTopbarToggle).toHaveBeenCalledOnce()
     expect(props.onSearchOpenChange).toHaveBeenCalledWith(true)
     expect(window.open).toHaveBeenCalledWith('https://docs.mai-mai.org', '_blank')
@@ -401,26 +383,23 @@ describe('Header', () => {
 
   it('日志工作区隐藏侧栏切换，日志槽位可见；手机导航交给底部标签栏，顶栏不再有菜单按钮', () => {
     const props = makeProps({ workspaceMode: 'logs', sidebarOpen: true })
-    render(<Header {...props} />, { wrapper: FutureRetroTheme })
+    render(<Header {...props} />)
 
     expect(screen.queryByRole('button', { name: 'a11y.closeMenu' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'header.switchSidebarToHover' })).toHaveClass(
-      'lg:hidden'
-    )
+    expect(screen.queryByRole('button', { name: 'header.switchSidebarToHover' })).not.toBeInTheDocument()
     expect(document.getElementById('log-viewer-topbar-tabs')).toHaveClass('sm:flex')
   })
 
-  it('折叠顶栏且侧栏固定时仍可切回悬浮，并保留顶栏背景层', () => {
+  it('折叠顶栏保留背景层和展开按钮', () => {
     const props = makeProps({ topbarCollapsed: true, sidebarOpen: true })
-    render(<Header {...props} />, { wrapper: FutureRetroTheme })
+    render(<Header {...props} />)
 
     expect(screen.getByTestId('background-header')).toBeInTheDocument()
     const strip = document.querySelector('[data-dashboard-header-strip="true"]')
     expect(strip).toBeInTheDocument()
-    fireEvent.click(
-      strip?.querySelector('[data-dashboard-sidebar-mode-switch="true"]') as HTMLButtonElement
-    )
-    expect(props.onSidebarToggle).toHaveBeenCalledOnce()
+    expect(strip?.querySelector('[data-dashboard-sidebar-mode-switch="true"]')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'header.expandTopbar' }))
+    expect(props.onTopbarToggle).toHaveBeenCalledOnce()
   })
 
   it('搜索已打开时再次提交保持打开、由搜索对话框关闭，Electron 无后端名时回退未连接文案', async () => {
@@ -533,9 +512,7 @@ describe('Header', () => {
     switcher.dataset.logViewerSwitcherCompact = 'true'
     document.body.appendChild(switcher)
 
-    const { rerender, unmount } = render(<Header {...makeProps({ workspaceMode: 'logs' })} />, {
-      wrapper: FutureRetroTheme,
-    })
+    const { rerender, unmount } = render(<Header {...makeProps({ workspaceMode: 'logs' })} />)
     const tabs = document.querySelector('[data-dashboard-workspace-tabs="true"]') as HTMLElement
     const measure = document.querySelector(
       '[data-dashboard-workspace-tabs-measure="true"]'
@@ -718,12 +695,12 @@ describe('Header', () => {
       workspaceMode: 'logs',
       actualTheme: 'dark',
     })
-    const { rerender } = render(<Header {...collapsedProps} />, { wrapper: FutureRetroTheme })
+    const { rerender } = render(<Header {...collapsedProps} />)
 
     const strip = document.querySelector('[data-dashboard-header-strip="true"]')
     expect(
       strip?.querySelector('[data-dashboard-sidebar-mode-switch="true"]')
-    ).toHaveClass('lg:hidden')
+    ).toBeNull()
 
     const expandedProps = makeProps({
       topbarCollapsed: false,

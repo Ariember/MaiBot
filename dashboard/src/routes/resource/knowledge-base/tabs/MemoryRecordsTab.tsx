@@ -250,7 +250,7 @@ function RecordButton({
       data-memory-record-button="true"
       onClick={() => onSelect(record)}
       className={cn(
-        // 不带 border 类：retro 主题会把所有 .border 强制描边，列表内每条都会多出一圈框线
+        // 通过背景区分列表项，避免逐条描边增加视觉负担。
         'hover:bg-muted/60 focus-visible:ring-ring flex w-full min-w-0 items-start gap-3 rounded-md px-3 py-2.5 text-left transition focus-visible:ring-2 focus-visible:outline-none',
         selected && 'bg-primary/5',
         compact && 'py-2'

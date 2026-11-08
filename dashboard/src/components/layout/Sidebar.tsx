@@ -1,11 +1,10 @@
-import { ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BackgroundLayer } from '@/components/background-layer'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useTheme } from '@/components/use-theme'
 import { useBackground } from '@/hooks/use-background'
 import { cn } from '@/lib/utils'
 import { promptCatalogQueryOptions } from '@/lib/prompt-query'
@@ -37,9 +36,7 @@ export function Sidebar({
   onSidebarToggle,
 }: SidebarProps) {
   const { t } = useTranslation()
-  const { themeConfig } = useTheme()
-  // 原版风格的侧栏模式开关都放在 Logo 行右侧，顶栏左端不再放折线按钮。
-  const isModernStyle = themeConfig.dashboardStyle === 'modern'
+  // 侧栏模式开关放在 Logo 行右侧。
   const { config: sidebarBg, inheritedFrom } = useBackground('sidebar')
   const inheritsPageBackground = inheritedFrom === 'page'
   const builtInMenuSections = useMenuSections()
@@ -160,14 +157,10 @@ export function Sidebar({
             }}
             className="text-muted-foreground/55 hover:text-primary focus-visible:ring-ring absolute right-4 bottom-3 z-20 hidden h-7 w-7 items-center justify-center border-0 bg-transparent p-0 shadow-none transition-colors focus-visible:ring-2 focus-visible:outline-none lg:flex"
           >
-            {isModernStyle ? (
-              <PanelLeftOpen aria-hidden="true" className="h-[1.125rem] w-[1.125rem]" />
-            ) : (
-              <ChevronRight aria-hidden="true" className="h-5 w-5" strokeWidth={2.25} />
-            )}
+            <PanelLeftOpen aria-hidden="true" className="h-[1.125rem] w-[1.125rem]" />
           </button>
         )}
-        {isModernStyle && sidebarOpen && onSidebarToggle && (
+        {sidebarOpen && onSidebarToggle && (
           <button
             type="button"
             data-dashboard-sidebar-mode-switch="true"

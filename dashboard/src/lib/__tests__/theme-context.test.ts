@@ -3,7 +3,7 @@ import { useContext } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import { ThemeProviderContext } from '../theme-context'
-import { DEFAULT_DASHBOARD_STYLE, DEFAULT_DASHBOARD_STYLE_CONFIG } from '../theme/tokens'
+import { DEFAULT_DASHBOARD_STYLE } from '../theme/tokens'
 
 describe('ThemeProviderContext', () => {
   it('无 Provider 时暴露默认初始值，空实现可调用且不抛错', () => {
@@ -18,7 +18,6 @@ describe('ThemeProviderContext', () => {
       styleCustomCSS: {},
       dashboardStyle: DEFAULT_DASHBOARD_STYLE,
       styleBackgroundConfig: {},
-      styleConfig: DEFAULT_DASHBOARD_STYLE_CONFIG,
     })
 
     expect(state.setTheme('dark')).toBeNull()

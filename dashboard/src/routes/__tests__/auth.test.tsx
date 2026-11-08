@@ -22,12 +22,11 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
 }))
 
-// 主题固定为 light（非 system），避免走 matchMedia 分支；dashboardStyle 非 future-retro 不渲染齿轮装饰
+// 主题固定为 light（非 system），避免走 matchMedia 分支。
 vi.mock('@/components/use-theme', () => ({
   useTheme: () => ({
     theme: 'light',
     setTheme: setThemeMock,
-    themeConfig: { dashboardStyle: 'default' },
   }),
 }))
 

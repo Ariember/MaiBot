@@ -38,48 +38,6 @@ import { APP_FULL_NAME } from '@/lib/version'
 import { readMarketInstall } from '@/lib/plugin-market-navigation'
 import { readPersonalityImport } from '@/lib/personality-import'
 
-function createGearPath(teeth: number, outerRadius: number, rootRadius: number) {
-  const toothAngle = (Math.PI * 2) / teeth
-  const points = Array.from({ length: teeth }, (_, index) => {
-    const centerAngle = index * toothAngle - Math.PI / 2
-    const rootHalfWidth = toothAngle * 0.5
-    const topHalfWidth = toothAngle * 0.22
-
-    return [
-      { angle: centerAngle - rootHalfWidth, radius: rootRadius },
-      { angle: centerAngle - topHalfWidth, radius: outerRadius },
-      { angle: centerAngle + topHalfWidth, radius: outerRadius },
-      { angle: centerAngle + rootHalfWidth, radius: rootRadius },
-    ]
-  }).flat().map(({ angle, radius }) => ({
-    x: 50 + Math.cos(angle) * radius,
-    y: 50 + Math.sin(angle) * radius,
-  }))
-
-  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ') + ' Z'
-}
-
-const AUTH_GEAR_PATH = createGearPath(28, 48, 38)
-
-function AuthRetroGears() {
-  return (
-    <div className="auth-retro-gears" aria-hidden="true">
-      <svg className="auth-retro-gear auth-retro-gear--primary" viewBox="0 0 100 100" focusable="false">
-        <path className="auth-retro-gear__body" d={AUTH_GEAR_PATH} />
-        <circle className="auth-retro-gear__ring" cx="50" cy="50" r="31" />
-        <circle className="auth-retro-gear__ring auth-retro-gear__ring--inner" cx="50" cy="50" r="13" />
-        <circle className="auth-retro-gear__cutout" cx="50" cy="50" r="8" />
-      </svg>
-      <svg className="auth-retro-gear auth-retro-gear--secondary" viewBox="0 0 100 100" focusable="false">
-        <path className="auth-retro-gear__body" d={AUTH_GEAR_PATH} />
-        <circle className="auth-retro-gear__ring" cx="50" cy="50" r="29" />
-        <circle className="auth-retro-gear__ring auth-retro-gear__ring--inner" cx="50" cy="50" r="12" />
-        <circle className="auth-retro-gear__cutout" cx="50" cy="50" r="7" />
-      </svg>
-    </div>
-  )
-}
-
 function resolvePostAuthTarget(): '/' | '/chat/embed' | '/plugins' | '/config/bot' {
   if (typeof window === 'undefined') return '/'
   if (readPersonalityImport() !== null) return '/config/bot'
@@ -96,8 +54,7 @@ export function AuthPage() {
   const [checkingAuth, setCheckingAuth] = useState(true)
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { theme, setTheme, themeConfig } = useTheme()
-  const showRetroGears = themeConfig.dashboardStyle === 'future-retro'
+  const { theme, setTheme } = useTheme()
   // 避免 React StrictMode 下重复触发 URL token 自动登录。
   const urlTokenHandledRef = useRef(false)
   const tokenAutofocusedRef = useRef(false)
@@ -269,7 +226,6 @@ export function AuthPage() {
   if (checkingAuth) {
     return (
       <div data-auth-page="true" className="relative isolate flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
-        {showRetroGears && <AuthRetroGears />}
         <div className="text-muted-foreground">{t('auth.checkingAuth')}</div>
       </div>
     )
@@ -277,7 +233,6 @@ export function AuthPage() {
 
   return (
     <div data-auth-page="true" className="relative isolate flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
-      {showRetroGears && <AuthRetroGears />}
 
       {/* 认证卡片 - 磨砂玻璃效果 */}
       <Card className="relative z-10 w-full max-w-md shadow-2xl backdrop-blur-xl bg-card/80 border-border/50">

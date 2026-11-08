@@ -355,13 +355,11 @@ export function UpdateNoticeDialog() {
               <DialogTitle className="flex flex-col items-start gap-2">
                 <span
                   className="text-2xl leading-tight font-bold tracking-wide"
-                  style={{ color: 'var(--retro-ink)' }}
                 >
                   {manualTarget === 'console' ? 'CONSOLE 版本' : 'MAIBOT 版本'}
                 </span>
                 <span
                   className="text-4xl leading-none font-black tracking-tight"
-                  style={{ color: 'var(--retro-rust)' }}
                 >
                   {activeManualVersion ?? currentManualVersion}
                 </span>

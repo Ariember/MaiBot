@@ -8,10 +8,6 @@ import { Sidebar } from './Sidebar'
 
 const SIDEBAR_HOVER_EXPAND_DELAY_MS = 180
 
-vi.mock('@/components/use-theme', () => ({
-  useTheme: () => ({ themeConfig: { dashboardStyle: 'future-retro' } }),
-}))
-
 const mocks = vi.hoisted(() => ({
   inheritedFrom: 'sidebar',
 }))
@@ -96,14 +92,14 @@ describe('LogoArea 与 Sidebar', () => {
   it('展开 Logo 时展示品牌标题和光谱彩条，折叠时展示光谱彩块', () => {
     const { rerender } = render(<LogoArea sidebarOpen />)
 
-    expect(screen.getByText('MAIBOT')).toBeInTheDocument()
+    expect(screen.getByText('MaiBot')).toBeInTheDocument()
     expect(document.querySelector('[data-dashboard-logo-spectrum="true"]')).toBeInTheDocument()
     expect(
       document.querySelector('[data-dashboard-logo-spectrum-block="true"]')
     ).not.toBeInTheDocument()
 
     rerender(<LogoArea sidebarOpen={false} />)
-    expect(screen.getByText('MAIBOT').parentElement).toHaveClass('lg:opacity-0')
+    expect(screen.getByText('MaiBot').parentElement).toHaveClass('lg:opacity-0')
     expect(
       document.querySelector('[data-dashboard-logo-spectrum-block="true"]')
     ).toBeInTheDocument()
@@ -159,7 +155,7 @@ describe('LogoArea 与 Sidebar', () => {
     expect(container.querySelector('.border-t')).toBeInTheDocument()
   })
 
-  it('悬浮模式展开后才显示右折线，并在固定交接期间保持展开', () => {
+  it('悬浮模式展开后才显示固定按钮，并在固定交接期间保持展开', () => {
     vi.useFakeTimers()
     const onSidebarFix = vi.fn()
     const { container, rerender } = render(
@@ -218,7 +214,7 @@ describe('LogoArea 与 Sidebar', () => {
       'text-muted-foreground/55',
       'shadow-none'
     )
-    expect(fixButton.querySelector('svg')).toHaveClass('lucide-chevron-right', 'h-5', 'w-5')
+    expect(fixButton.querySelector('svg')).toHaveClass('lucide-panel-left-open')
 
     fireEvent.click(fixButton)
     fireEvent.pointerLeave(aside as HTMLElement)

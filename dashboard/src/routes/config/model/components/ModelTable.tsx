@@ -53,7 +53,7 @@ interface ModelTableProps {
 
 // 操作列固定右缘；表格宽度跟随容器，不设置最小宽度，避免固定列覆盖溢出的价格列。
 // 状态、价格与操作列保留宽度，三个文本列平分剩余空间，长文本截断。
-// 固定列使用不透明背景，retro 主题的纸面实色见 index.css。
+// 固定列使用不透明背景，避免透出下方滚动的内容。
 const ACTION_CELL_CLASS = 'sticky right-0 z-10 w-28 bg-background text-right whitespace-nowrap'
 const ACTION_CELL_ATTR = { 'data-model-config-action-cell': 'true' } as const
 

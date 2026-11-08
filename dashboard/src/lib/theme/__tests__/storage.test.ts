@@ -13,7 +13,6 @@ import {
   saveThemeConfig,
   saveThemePartial,
 } from '../storage'
-import { DEFAULT_DASHBOARD_STYLE_CONFIG } from '../tokens'
 import type { UserThemeConfig } from '../tokens'
 
 /** 构造一份合法的完整主题配置，按需覆盖字段 */
@@ -22,8 +21,7 @@ const buildConfig = (overrides: Partial<UserThemeConfig> = {}): UserThemeConfig 
   styleTokenOverrides: {},
   styleCustomCSS: {},
   styleBackgroundConfig: {},
-  dashboardStyle: 'future-retro',
-  styleConfig: DEFAULT_DASHBOARD_STYLE_CONFIG,
+  dashboardStyle: 'modern',
   ...overrides,
 })
 
@@ -39,14 +37,6 @@ describe('loadThemeConfig', () => {
       styleCustomCSS: {},
       styleBackgroundConfig: {},
       dashboardStyle: 'modern',
-      styleConfig: {
-        futureRetro: {
-          paperWarmth: 89,
-          textureStyle: 'coarse',
-          textureIntensity: 64,
-          panelDepth: 100,
-        },
-      },
     })
   })
 
@@ -70,18 +60,6 @@ describe('loadThemeConfig', () => {
       THEME_STORAGE_KEYS.STYLE_BACKGROUND_CONFIG,
       JSON.stringify({ modern: { card: { type: 'none' } }, junk: 1 })
     )
-    // 旧版关闭纸面颗粒会迁移为无纹理，其余非法字段回退或限制在有效范围。
-    localStorage.setItem(
-      THEME_STORAGE_KEYS.STYLE_CONFIG,
-      JSON.stringify({
-        futureRetro: {
-          paperTexture: false,
-          paperWarmth: 180,
-          textureIntensity: -20,
-          panelDepth: 'deep',
-        },
-      })
-    )
 
     const config = loadThemeConfig()
 
@@ -90,31 +68,21 @@ describe('loadThemeConfig', () => {
     expect(config.styleTokenOverrides).toEqual({ modern: { color: { primary: '1 2% 3%' } } })
     expect(config.styleCustomCSS).toEqual({ modern: '.a { color: red; }' })
     expect(config.styleBackgroundConfig).toEqual({ modern: { card: { type: 'none' } } })
-    expect(config.styleConfig).toEqual({
-      futureRetro: {
-        paperWarmth: 100,
-        textureStyle: 'none',
-        textureIntensity: 0,
-        panelDepth: 100,
-      },
-    })
   })
 
   it('JSON 字段损坏时对应字段回退为默认值', () => {
     localStorage.setItem(THEME_STORAGE_KEYS.STYLE_OVERRIDES, '{broken')
     localStorage.setItem(THEME_STORAGE_KEYS.STYLE_CUSTOM_CSS, 'not-json')
     localStorage.setItem(THEME_STORAGE_KEYS.STYLE_BACKGROUND_CONFIG, '[')
-    localStorage.setItem(THEME_STORAGE_KEYS.STYLE_CONFIG, '{{')
 
     const config = loadThemeConfig()
 
     expect(config.styleTokenOverrides).toEqual({})
     expect(config.styleCustomCSS).toEqual({})
     expect(config.styleBackgroundConfig).toEqual({})
-    expect(config.styleConfig).toEqual(DEFAULT_DASHBOARD_STYLE_CONFIG)
   })
 
-  it.each(['neon', 'millennium'])('无效或已移除的风格 %s 回退默认值', (style) => {
+  it.each(['future-retro', 'neon', 'millennium'])('无效或已移除的风格 %s 回退默认值', (style) => {
     localStorage.setItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE, style)
 
     const config = loadThemeConfig()
@@ -123,22 +91,24 @@ describe('loadThemeConfig', () => {
   })
 
   it('已移除皮肤的缓存不会覆盖原版配置', () => {
-    localStorage.setItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE, 'millennium')
+    localStorage.setItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE, 'future-retro')
     localStorage.setItem(
       THEME_STORAGE_KEYS.STYLE_OVERRIDES,
-      JSON.stringify({ millennium: { color: { primary: '1 2% 3%' } } })
+      JSON.stringify({
+        modern: { color: { primary: '1 2% 3%' } },
+        'future-retro': { color: { primary: '9 9% 9%' } },
+      })
     )
     localStorage.setItem(
       THEME_STORAGE_KEYS.STYLE_BACKGROUND_CONFIG,
-      JSON.stringify({ millennium: { page: { type: 'image', source: 'old-background' } } })
+      JSON.stringify({ 'future-retro': { page: { type: 'image', source: 'old-background' } } })
     )
 
     const config = loadThemeConfig()
     expect(config.dashboardStyle).toBe('modern')
-    expect(config.styleTokenOverrides).toEqual({})
+    expect(config.styleTokenOverrides).toEqual({ modern: { color: { primary: '1 2% 3%' } } })
     expect(config.styleBackgroundConfig).toEqual({})
   })
-
 })
 
 describe('saveThemeConfig', () => {
@@ -146,31 +116,29 @@ describe('saveThemeConfig', () => {
     saveThemeConfig(
       buildConfig({
         selectedPreset: 'dark',
-        // future-retro 的自定义 CSS 不受支持，保存时会被丢弃
-        styleCustomCSS: { 'future-retro': '.x {}' },
+        styleCustomCSS: { modern: '.x {}' },
         dashboardStyle: 'modern',
       })
     )
 
     expect(localStorage.getItem(THEME_STORAGE_KEYS.PRESET)).toBe('dark')
     expect(localStorage.getItem(THEME_STORAGE_KEYS.DASHBOARD_STYLE)).toBe('modern')
-    expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEYS.STYLE_CUSTOM_CSS)!)).toEqual({})
+    expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEYS.STYLE_CUSTOM_CSS)!)).toEqual({
+      modern: '.x {}',
+    })
     expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEYS.STYLE_OVERRIDES)!)).toEqual({})
-    expect(JSON.parse(localStorage.getItem(THEME_STORAGE_KEYS.STYLE_CONFIG)!)).toEqual(
-      DEFAULT_DASHBOARD_STYLE_CONFIG
-    )
   })
 })
 
 describe('saveThemePartial', () => {
   it('只覆盖给定字段并保留其余已存配置', () => {
-    saveThemeConfig(buildConfig({ selectedPreset: 'dark', dashboardStyle: 'future-retro' }))
+    saveThemeConfig(buildConfig({ selectedPreset: 'dark', styleCustomCSS: { modern: '.x {}' } }))
 
-    saveThemePartial({ dashboardStyle: 'modern' })
+    saveThemePartial({ selectedPreset: 'ocean' })
 
     const config = loadThemeConfig()
-    expect(config.selectedPreset).toBe('dark')
-    expect(config.dashboardStyle).toBe('modern')
+    expect(config.selectedPreset).toBe('ocean')
+    expect(config.styleCustomCSS).toEqual({ modern: '.x {}' })
   })
 })
 

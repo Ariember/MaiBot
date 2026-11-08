@@ -17,7 +17,6 @@ import type { AnimationSettings } from '@/lib/animation-context'
 import type { ThemeProviderState } from '@/lib/theme-context'
 import { exportThemeJSON, importThemeJSON } from '@/lib/theme/storage'
 import {
-  DEFAULT_FUTURE_RETRO_STYLE_CONFIG,
   defaultBackgroundConfig,
   defaultBackgroundEffects,
   defaultLightTokens,
@@ -162,7 +161,6 @@ function makeThemeState(
       styleCustomCSS: {},
       styleBackgroundConfig: {},
       dashboardStyle: 'modern',
-      styleConfig: { futureRetro: { ...DEFAULT_FUTURE_RETRO_STYLE_CONFIG } },
       ...configPartial,
     },
     updateThemeConfig: vi.fn(),
@@ -192,7 +190,7 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe('AppearanceTab 主题模式与界面风格', () => {
+describe('AppearanceTab 主题模式', () => {
   it('渲染三种主题模式并高亮当前选项，点击其他模式调用 setTheme', async () => {
     const user = userEvent.setup()
     render(<AppearanceTab />)
@@ -204,55 +202,16 @@ describe('AppearanceTab 主题模式与界面风格', () => {
     expect(themeState.setTheme).toHaveBeenCalledWith('dark')
   })
 
-  it('界面风格卡片：点击未来复古调用 updateThemeConfig 切换 dashboardStyle', async () => {
-    const user = userEvent.setup()
-    render(<AppearanceTab />)
-
-    expect(screen.queryByRole('button', { name: /千禧/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /原版 Dashboard/ })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    )
-
-    await user.click(screen.getByRole('button', { name: /未来复古/ }))
-    expect(themeState.updateThemeConfig).toHaveBeenCalledWith({ dashboardStyle: 'future-retro' })
-  })
-
   it('modern 风格显示自定义 CSS 与导入导出区块', () => {
     render(<AppearanceTab />)
 
     expect(screen.queryByText('settings.appearance.accentColor')).not.toBeInTheDocument()
     expect(screen.getByText('settings.appearance.customCss')).toBeInTheDocument()
     expect(screen.getByText('settings.appearance.importExportTheme')).toBeInTheDocument()
-    // 未来复古专属配置不应出现
-    expect(screen.queryByText('settings.appearance.retroConfig')).not.toBeInTheDocument()
+    expect(screen.queryByText('界面风格')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /未来复古/ })).not.toBeInTheDocument()
     // 自定义 CSS 为空时清除按钮禁用
     expect(screen.getByRole('button', { name: /clearCss/ })).toBeDisabled()
-  })
-
-  it('未来复古风格隐藏 modern 区块并可切换纸面纹理', async () => {
-    const user = userEvent.setup()
-    themeState = makeThemeState({ dashboardStyle: 'future-retro' })
-    render(<AppearanceTab />)
-
-    expect(screen.getByText('settings.appearance.retroConfig')).toBeInTheDocument()
-    expect(screen.queryByText('settings.appearance.customCss')).not.toBeInTheDocument()
-    expect(screen.queryByText('settings.appearance.importExportTheme')).not.toBeInTheDocument()
-
-    expect(
-      screen.getByRole('button', { name: 'settings.appearance.retroTextureCoarse' })
-    ).toHaveAttribute('aria-pressed', 'true')
-    await user.click(
-      screen.getByRole('button', { name: 'settings.appearance.retroTextureDots' })
-    )
-    expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-      styleConfig: {
-        futureRetro: {
-          ...DEFAULT_FUTURE_RETRO_STYLE_CONFIG,
-          textureStyle: 'dot-grid',
-        },
-      },
-    })
   })
 })
 
@@ -508,15 +467,6 @@ describe('AppearanceTab 动效设置', () => {
 async function openStyleGroup(user: ReturnType<typeof userEvent.setup>, groupKey: string) {
   await user.click(screen.getByRole('button', { name: groupKey }))
   return screen.getByRole('region')
-}
-
-/** aria-label 打在 Slider 根节点上，role=slider 在内部 Thumb */
-function getLabeledSlider(label: string) {
-  const root = document.querySelector(`[aria-label="${label}"]`)
-  if (!root) {
-    throw new Error(`未找到 aria-label=${label} 的滑块`)
-  }
-  return within(root as HTMLElement).getByRole('slider')
 }
 
 describe('AppearanceTab 导入按钮', () => {
@@ -1020,92 +970,6 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     await user.click(within(screen.getByRole('region')).getByRole('button', { name: /resetDefault/ }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: { modern: {} },
-    })
-  })
-})
-
-describe('AppearanceTab 未来复古 token 与滑块', () => {
-  it('基准字号滑块写入缩放 rem，其它滑块回写 styleConfig', async () => {
-    themeState = makeThemeState({ dashboardStyle: 'future-retro' })
-    render(<AppearanceTab />)
-
-    fireEvent.keyDown(getLabeledSlider('settings.appearance.baseFontSize'), { key: 'ArrowRight' })
-    expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-      styleTokenOverrides: {
-        'future-retro': {
-          typography: {
-            'font-size-xs': '0.7969rem',
-            'font-size-sm': '0.9297rem',
-            'font-size-base': '1.0625rem',
-            'font-size-lg': '1.1953rem',
-            'font-size-xl': '1.3281rem',
-            'font-size-2xl': '1.5938rem',
-          },
-        },
-      },
-    })
-
-    fireEvent.keyDown(getLabeledSlider('settings.appearance.retroPaperWarmth'), {
-      key: 'ArrowLeft',
-    })
-    expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-      styleConfig: {
-        futureRetro: { ...DEFAULT_FUTURE_RETRO_STYLE_CONFIG, paperWarmth: 88 },
-      },
-    })
-
-    fireEvent.keyDown(getLabeledSlider('settings.appearance.retroTextureIntensity'), {
-      key: 'ArrowRight',
-    })
-    expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-      styleConfig: {
-        futureRetro: { ...DEFAULT_FUTURE_RETRO_STYLE_CONFIG, textureIntensity: 65 },
-      },
-    })
-
-    fireEvent.keyDown(getLabeledSlider('settings.appearance.retroPanelDepth'), { key: 'ArrowLeft' })
-    expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-      styleConfig: {
-        futureRetro: { ...DEFAULT_FUTURE_RETRO_STYLE_CONFIG, panelDepth: 99 },
-      },
-    })
-  })
-
-  it('纹理为 none 时禁用强度滑块；重置同时清排版覆盖并恢复默认风格', async () => {
-    const user = userEvent.setup()
-    themeState = makeThemeState({
-      dashboardStyle: 'future-retro',
-      styleTokenOverrides: {
-        'future-retro': { typography: { 'font-size-base': '1.125rem' } as ThemeTokens['typography'] },
-      },
-      styleConfig: {
-        futureRetro: { ...DEFAULT_FUTURE_RETRO_STYLE_CONFIG, textureStyle: 'none' },
-      },
-    })
-    themeState.resolvedTheme = 'dark'
-    render(<AppearanceTab />)
-
-    // Radix 禁用态写在 data-disabled 上，thumb 不是原生 disabled 控件
-    expect(getLabeledSlider('settings.appearance.retroTextureIntensity')).toHaveAttribute(
-      'data-disabled'
-    )
-
-    const noneOption = screen.getByRole('button', {
-      name: 'settings.appearance.retroTextureNone',
-    })
-    expect(noneOption).toHaveAttribute('aria-pressed', 'true')
-    const preview = noneOption.querySelector('[aria-hidden]') as HTMLElement
-    expect(preview.style.backgroundColor).toBe('rgb(17, 9, 6)')
-    expect(preview.style.backgroundImage).toBe('none')
-
-    await user.click(screen.getByRole('button', { name: /resetDefault/ }))
-    expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-      styleTokenOverrides: { 'future-retro': {} },
-    })
-    expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
-      styleConfig: {
-        futureRetro: { ...DEFAULT_FUTURE_RETRO_STYLE_CONFIG },
-      },
     })
   })
 })

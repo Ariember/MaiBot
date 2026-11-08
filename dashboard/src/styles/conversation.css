@@ -7,9 +7,6 @@
   --chat-bubble-shadow: none;
   --chat-bubble-radius: var(--visual-radius-lg);
 }
-:root[data-dashboard-style='future-retro'] {
-  --chat-bubble-radius: 0;
-}
 [data-chat-workspace='true'] {
   display: flex;
   height: 100%;

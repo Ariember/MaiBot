@@ -1,7 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import {
   BookOpen,
-  ChevronLeft,
   ChevronsUp,
   Database,
   FileText,
@@ -17,7 +16,6 @@ import {
   lazy,
   Suspense,
   type ComponentType,
-  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -39,7 +37,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toggleThemeWithTransition } from '@/components/use-theme'
 import { useBackground } from '@/hooks/use-background'
 import { isElectron } from '@/lib/runtime'
-import { ThemeProviderContext } from '@/lib/theme-context'
 import { cn } from '@/lib/utils'
 import { extensionIcons, extensionPath, extensionWorkspace } from '@/lib/plugin-webui'
 import type { WebUIExtension } from '@/lib/plugin-webui'
@@ -103,7 +100,6 @@ export function Header({
   sidebarOpen,
   searchOpen,
   actualTheme,
-  onSidebarToggle,
   onSearchOpenChange,
   onThemeChange,
   onTopbarToggle,
@@ -142,9 +138,6 @@ export function Header({
     ...visiblePluginTabs,
   ]
   const workspaceTabsKey = workspaceTabs.map((tab) => `${tab.value}:${tab.labelKey}`).join('|')
-  const { themeConfig } = useContext(ThemeProviderContext)
-  // 原版风格用顶栏里的按钮收起顶栏，不再显示顶栏下沿的滑条。
-  const isModernStyle = themeConfig.dashboardStyle === 'modern'
   const { config: headerBg, inheritedFrom } = useBackground('header')
   const inheritsPageBackground = inheritedFrom === 'page'
   const [searchQuery, setSearchQuery] = useState('')
@@ -269,7 +262,7 @@ export function Header({
       window.removeEventListener('resize', updateCompactState)
       resizeObserver.disconnect()
     }
-  }, [workspaceMode, workspaceTabsKey, themeConfig.dashboardStyle])
+  }, [workspaceMode, workspaceTabsKey])
 
   const highlightedHeaderAction = hoveredWorkspace === null ? hoveredHeaderAction : null
 
@@ -342,27 +335,7 @@ export function Header({
           )}
         >
           {!inheritsPageBackground && <BackgroundLayer config={headerBg} layerId="header" />}
-          {sidebarOpen && !isModernStyle && (
-            <button
-              type="button"
-              data-dashboard-sidebar-mode-switch="true"
-              onClick={onSidebarToggle}
-              aria-label={t('header.switchSidebarToHover')}
-              aria-expanded="true"
-              title={t('header.switchSidebarToHover')}
-              className={cn(
-                'group absolute top-1/2 left-0 z-20 hidden h-5 w-7 -translate-y-1/2 items-center justify-center focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none lg:flex',
-                workspaceMode === 'logs' && 'lg:hidden'
-              )}
-            >
-              <ChevronLeft
-                aria-hidden="true"
-                className="text-muted-foreground/55 group-hover:text-primary h-5 w-5 transition-colors"
-                strokeWidth={2.25}
-              />
-              <span className="sr-only">{t('header.switchSidebarToHover')}</span>
-            </button>
-          )}
+
           <button
             type="button"
             data-dashboard-topbar-toggle="true"
@@ -384,33 +357,6 @@ export function Header({
       )}
       <div className={cn(topbarCollapsed ? 'hidden' : 'contents')}>
         <div className="relative z-10 flex h-full min-h-0 items-center justify-between gap-2">
-          <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-4">
-
-            {/* 固定模式显示左折线；悬浮模式展开后由侧栏内的右折线切回固定模式。
-                原版风格的这枚开关放在侧栏 Logo 行右侧，这里不再渲染。 */}
-            {sidebarOpen && !isModernStyle && (
-              <button
-                type="button"
-                data-dashboard-sidebar-mode-switch="true"
-                onClick={onSidebarToggle}
-                aria-label={t('header.switchSidebarToHover')}
-                aria-expanded="true"
-                title={t('header.switchSidebarToHover')}
-                className={cn(
-                  'group absolute top-1/2 left-0 z-20 hidden h-14 w-7 -translate-y-1/2 items-center justify-center focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none lg:flex',
-                  workspaceMode === 'logs' && 'lg:hidden'
-                )}
-              >
-                <ChevronLeft
-                  aria-hidden="true"
-                  className="text-muted-foreground/55 group-hover:text-primary h-5 w-5 transition-colors"
-                  strokeWidth={2.25}
-                />
-                <span className="sr-only">{t('header.switchSidebarToHover')}</span>
-              </button>
-            )}
-          </div>
-
           <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 sm:gap-1">
             {/* 工作区切换：复用 Tabs 组件 + Motion 动画指示器 */}
             <LayoutGroup id="workspace-switcher">
@@ -741,30 +687,26 @@ export function Header({
               )}
             </Button>
 
-            {/* 原版风格用顶栏按钮收起顶栏。 */}
-            {isModernStyle && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onTopbarToggle}
-                title={t('header.collapseTopbar')}
-                aria-label={t('header.collapseTopbar')}
-                aria-expanded={!topbarCollapsed}
-                data-dashboard-header-action="true"
-                data-dashboard-topbar-collapse-key="true"
-                data-header-action-highlighted={
-                  isModernStyle && highlightedHeaderAction === 'collapse' ? 'true' : 'false'
-                }
-                onPointerEnter={
-                  isModernStyle ? () => handleHeaderActionEnter('collapse') : undefined
-                }
-                onPointerLeave={isModernStyle ? handleHeaderActionLeave : undefined}
-                className="relative isolate hidden border-0 bg-transparent shadow-none sm:inline-flex"
-              >
-                {isModernStyle && renderHeaderActionPill('collapse')}
-                <ChevronsUp className="h-5 w-5" />
-              </Button>
-            )}
+            {/* 顶栏按钮收起顶栏。 */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onTopbarToggle}
+              title={t('header.collapseTopbar')}
+              aria-label={t('header.collapseTopbar')}
+              aria-expanded={!topbarCollapsed}
+              data-dashboard-header-action="true"
+              data-dashboard-topbar-collapse-key="true"
+              data-header-action-highlighted={
+                highlightedHeaderAction === 'collapse' ? 'true' : 'false'
+              }
+              onPointerEnter={() => handleHeaderActionEnter('collapse')}
+              onPointerLeave={handleHeaderActionLeave}
+              className="relative isolate hidden border-0 bg-transparent shadow-none sm:inline-flex"
+            >
+              {renderHeaderActionPill('collapse')}
+              <ChevronsUp className="h-5 w-5" />
+            </Button>
 
             </LayoutGroup>
 
@@ -806,24 +748,7 @@ export function Header({
           </div>
         </div>
 
-        {/* 顶栏收起拉片只服务桌面布局，手机上不显示；原版风格改用顶栏里的收起按钮 */}
-        {!isModernStyle && (
-          <div className="absolute right-5 bottom-[-7px] z-10 flex h-0 shrink-0 items-center justify-end max-lg:hidden sm:right-15.5">
-            <button
-              type="button"
-              data-dashboard-topbar-toggle="true"
-              onClick={onTopbarToggle}
-              aria-label={topbarCollapsed ? t('header.expandTopbar') : t('header.collapseTopbar')}
-              aria-expanded={!topbarCollapsed}
-              title={topbarCollapsed ? t('header.expandTopbar') : t('header.collapseTopbar')}
-              className="bg-foreground/70 flex h-3 w-24 shrink-0 items-center justify-center transition-shadow"
-            >
-              <span className="sr-only">
-                {topbarCollapsed ? t('header.expandTopbar') : t('header.collapseTopbar')}
-              </span>
-            </button>
-          </div>
-        )}
+
       </div>
     </motion.header>
   )

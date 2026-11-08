@@ -27,7 +27,7 @@ const NATURAL_LANGUAGE_TEXT_STYLE: CSSProperties = {
 }
 
 const ITEM_JSON_PANEL_STYLE: CSSProperties = {
-  backgroundColor: 'var(--retro-paper, hsl(var(--color-background)))',
+  backgroundColor: 'hsl(var(--color-background))',
 }
 
 const STAGE_LABELS: Record<string, string> = {

@@ -347,14 +347,9 @@ class PluginManagementPlugin(MaiBotPlugin):
             await self.ctx.send.text(format_command_text(groups), stream_id)
             return True
 
-        webui_style = await self.ctx.config.get("webui.webui_style")
-        if type(webui_style) is not int or webui_style not in (0, 1, 2):
-            await self.ctx.send.text(f"无法读取有效的 WebUI 界面风格: {webui_style}", stream_id)
-            return False
-
         # 优先生成单张长图；多页全部渲染成功后打包发送，避免散发图片或只发送部分目录。
         images: List[str] = []
-        for page in build_command_pages(groups, webui_style):
+        for page in build_command_pages(groups):
             result = await self.ctx.render.html2png(
                 page,
                 viewport={"width": 1000, "height": 600},

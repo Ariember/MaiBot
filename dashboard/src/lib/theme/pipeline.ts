@@ -2,14 +2,7 @@ import type { ThemeTokens, UserThemeConfig } from './tokens'
 
 import { getPresetById } from './presets'
 import { sanitizeCSS } from './sanitizer'
-import {
-  DEFAULT_DASHBOARD_STYLE,
-  defaultDarkTokens,
-  defaultLightTokens,
-  futureRetroDarkTokens,
-  futureRetroLightTokens,
-  tokenToCSSVarName,
-} from './tokens'
+import { defaultDarkTokens, defaultLightTokens, tokenToCSSVarName } from './tokens'
 
 const CUSTOM_CSS_ID = 'maibot-custom-css'
 const COMPONENT_CSS_ID_PREFIX = 'maibot-bg-css-'
@@ -55,16 +48,7 @@ const buildTokens = (config: UserThemeConfig, isDark: boolean): ThemeTokens => {
     }
   }
 
-  const dashboardStyle = config.dashboardStyle ?? DEFAULT_DASHBOARD_STYLE
-
-  if (dashboardStyle === 'future-retro') {
-    mergedTokens = mergeTokens(
-      mergedTokens,
-      isDark ? futureRetroDarkTokens : futureRetroLightTokens
-    )
-  }
-
-  const styleTokenOverrides = config.styleTokenOverrides?.[dashboardStyle]
+  const styleTokenOverrides = config.styleTokenOverrides?.modern
 
   if (styleTokenOverrides) {
     mergedTokens = mergeTokens(mergedTokens, styleTokenOverrides)
@@ -176,10 +160,8 @@ export function removeAllComponentCSS(): void {
 export function applyThemePipeline(config: UserThemeConfig, isDark: boolean): void {
   const root = document.documentElement
   const tokens = buildTokens(config, isDark)
-  const dashboardStyle = config.dashboardStyle ?? DEFAULT_DASHBOARD_STYLE
-  // 仅原版风格开放自定义 CSS；未来复古的外观由样式表完整接管。
-  const customCSS = dashboardStyle === 'modern' ? config.styleCustomCSS?.[dashboardStyle] : undefined
-  const backgroundConfig = config.styleBackgroundConfig?.[dashboardStyle]
+  const customCSS = config.styleCustomCSS?.modern
+  const backgroundConfig = config.styleBackgroundConfig?.modern
 
   injectTokensAsCSS(tokens, root)
 

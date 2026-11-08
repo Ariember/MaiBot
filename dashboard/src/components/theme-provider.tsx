@@ -1,11 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { ThemeProviderContext } from '@/lib/theme-context'
-import { getBotConfig, updateBotConfigSection } from '@/lib/config-api'
-import { buildFutureRetroTexture } from '@/lib/theme/future-retro'
-import { DEFAULT_DASHBOARD_STYLE, DEFAULT_FUTURE_RETRO_STYLE_CONFIG } from '@/lib/theme/tokens'
-import type { DashboardStyle, UserThemeConfig } from '@/lib/theme/tokens'
+import type { UserThemeConfig } from '@/lib/theme/tokens'
 import {
   THEME_STORAGE_KEYS,
   loadThemeConfig,
@@ -22,27 +19,6 @@ type ThemeProviderProps = {
   storageKey?: string
 }
 
-type WebUIStyleConfigValue = 0 | 1
-
-// bot_config 的 webui.webui_style 用整数保存界面风格：0 原版、1 未来复古。
-const DASHBOARD_STYLE_CONFIG_VALUES: Record<DashboardStyle, WebUIStyleConfigValue> = {
-  modern: 0,
-  'future-retro': 1,
-}
-
-function dashboardStyleToConfigValue(style: DashboardStyle): WebUIStyleConfigValue {
-  return DASHBOARD_STYLE_CONFIG_VALUES[style]
-}
-
-function configValueToDashboardStyle(value: unknown): DashboardStyle {
-  const configValue = Number(value)
-  return configValue === 1 ? 'future-retro' : 'modern'
-}
-
-function shouldSyncRemoteWebUIStyle(): boolean {
-  return !window.location.pathname.startsWith('/auth')
-}
-
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
@@ -53,7 +29,6 @@ export function ThemeProvider({
   })
   const [themeConfig, setThemeConfig] = useState<UserThemeConfig>(() => loadThemeConfig())
   const [systemThemeTick, setSystemThemeTick] = useState(0)
-  const pendingWebUIStyleRef = useRef<WebUIStyleConfigValue | null>(null)
 
   const resolvedTheme = useMemo<'dark' | 'light'>(() => {
     void systemThemeTick
@@ -78,129 +53,25 @@ export function ThemeProvider({
     root.classList.add(resolvedTheme)
 
     const isDark = resolvedTheme === 'dark'
-    const dashboardStyle = themeConfig.dashboardStyle ?? DEFAULT_DASHBOARD_STYLE
-    const futureRetroConfig = {
-      ...DEFAULT_FUTURE_RETRO_STYLE_CONFIG,
-      ...themeConfig.styleConfig?.futureRetro,
-    }
-
-    root.dataset.dashboardStyle = dashboardStyle
-    root.dataset.retroTextureStyle = futureRetroConfig.textureStyle
-    root.style.setProperty('--retro-paper-warmth', `${futureRetroConfig.paperWarmth}%`)
-    root.style.setProperty('--retro-panel-depth', String(futureRetroConfig.panelDepth / 100))
-    root.style.setProperty(
-      '--retro-configured-paper-texture',
-      buildFutureRetroTexture(
-        futureRetroConfig.textureStyle,
-        futureRetroConfig.textureIntensity,
-        isDark
-      )
-    )
-    const textureSize = {
-      fine: '220px 220px',
-      coarse: '260px 260px',
-      'dot-grid': '24px 24px',
-      ruled: '40px 28px',
-      none: 'auto',
-    }[futureRetroConfig.textureStyle]
-    root.style.setProperty('--retro-paper-texture-size', textureSize)
-
+    root.dataset.dashboardStyle = 'modern'
     applyThemePipeline(themeConfig, isDark)
   }, [resolvedTheme, themeConfig])
-
-  const applyRemoteWebUIStyle = useCallback((styleValue: unknown) => {
-    const nextDashboardStyle = configValueToDashboardStyle(styleValue)
-
-    setThemeConfig((prev) => {
-      if (prev.dashboardStyle === nextDashboardStyle) {
-        return prev
-      }
-
-      saveThemePartial({ dashboardStyle: nextDashboardStyle })
-      return { ...prev, dashboardStyle: nextDashboardStyle }
-    })
-  }, [])
-
-  const loadRemoteWebUIStyle = useCallback(async () => {
-    if (!shouldSyncRemoteWebUIStyle() || pendingWebUIStyleRef.current !== null) {
-      return
-    }
-
-    try {
-      const result = await getBotConfig()
-      const webuiConfig = result.webui as Record<string, unknown> | undefined
-      if (!webuiConfig || !('webui_style' in webuiConfig)) {
-        return
-      }
-
-      applyRemoteWebUIStyle(webuiConfig.webui_style)
-    } catch (error) {
-      console.debug('同步 WebUI 风格配置失败:', error)
-    }
-  }, [applyRemoteWebUIStyle])
-
-  const persistRemoteWebUIStyle = useCallback(async (style: DashboardStyle) => {
-    if (!shouldSyncRemoteWebUIStyle()) {
-      return
-    }
-
-    const webuiStyle = dashboardStyleToConfigValue(style)
-    pendingWebUIStyleRef.current = webuiStyle
-
-    try {
-      await updateBotConfigSection('webui', { webui_style: webuiStyle })
-    } catch (error) {
-      console.warn('保存 WebUI 风格配置失败:', error)
-    } finally {
-      pendingWebUIStyleRef.current = null
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadRemoteWebUIStyle()
-
-    const handleFocus = () => {
-      void loadRemoteWebUIStyle()
-    }
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        void loadRemoteWebUIStyle()
-      }
-    }
-
-    window.addEventListener('focus', handleFocus)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    return () => {
-      window.removeEventListener('focus', handleFocus)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [loadRemoteWebUIStyle])
 
   const setTheme = useCallback((mode: Theme) => {
     localStorage.setItem(THEME_STORAGE_KEYS.MODE, mode)
     setThemeMode(mode)
   }, [])
 
-  const updateThemeConfig = useCallback(
-    (partial: Partial<UserThemeConfig>) => {
-      saveThemePartial(partial)
-      setThemeConfig((prev) => ({ ...prev, ...partial }))
-
-      if (partial.dashboardStyle) {
-        void persistRemoteWebUIStyle(partial.dashboardStyle)
-      }
-    },
-    [persistRemoteWebUIStyle]
-  )
+  const updateThemeConfig = useCallback((partial: Partial<UserThemeConfig>) => {
+    saveThemePartial(partial)
+    setThemeConfig((prev) => ({ ...prev, ...partial }))
+  }, [])
 
   const resetTheme = useCallback(() => {
     resetThemeToDefault()
     removeCustomCSS()
-    const defaultThemeConfig = loadThemeConfig()
-    setThemeConfig(defaultThemeConfig)
-    void persistRemoteWebUIStyle(defaultThemeConfig.dashboardStyle)
-  }, [persistRemoteWebUIStyle])
+    setThemeConfig(loadThemeConfig())
+  }, [])
 
   const value = useMemo(
     () => ({

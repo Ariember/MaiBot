@@ -29,7 +29,6 @@ import { ThinkingIllustration } from '@/components/ui/thinking-illustration'
 import { MobilePageHeader } from '@/components/layout/MobilePageHeader'
 import type { NewsItem } from '@/lib/news-api'
 import { RestartProvider, useRestart } from '@/lib/restart-context'
-import { ThemeProviderContext } from '@/lib/theme-context'
 import { openUpdateNotice } from '@/lib/update-notice-events'
 import { cn } from '@/lib/utils'
 import { APP_VERSION } from '@/lib/version'
@@ -363,7 +362,6 @@ function formatStorageBytes(bytes: number): string {
 
 const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVersion: string | undefined }) {
   const { i18n, t } = useTranslation()
-  const { themeConfig } = useContext(ThemeProviderContext)
   const { triggerRestart, isRestarting } = useRestart()
 
   // 各数据源领域 hook（页面逻辑下沉，主文件退化为薄渲染层）
@@ -880,31 +878,14 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
       render: () => (
         <div
           data-home-hitokoto="true"
-          className={cn(
-            'bg-muted/20 flex h-full w-full items-center gap-3 rounded-lg px-4',
-            themeConfig.dashboardStyle !== 'future-retro' &&
-              'border-muted-foreground/30 border border-dashed'
-          )}
+          className="bg-muted/20 border-muted-foreground/30 flex h-full w-full items-center gap-3 rounded-lg border border-dashed px-4"
         >
           <div className="min-w-0 flex-1">
             {hitokotoLoading ? (
               <Skeleton className="h-5 w-full" />
             ) : hitokoto ? (
               <p
-                className={cn(
-                  'text-muted-foreground truncate',
-                  themeConfig.dashboardStyle === 'future-retro'
-                    ? 'text-[1.05rem] font-medium tracking-wide'
-                    : 'text-sm italic'
-                )}
-                style={
-                  themeConfig.dashboardStyle === 'future-retro'
-                    ? {
-                        fontFamily: '"MaiRetroQuote", "Noto Serif SC", "SimSun", serif',
-                        textShadow: '0 0.035em 0 hsl(var(--background))',
-                      }
-                    : undefined
-                }
+                className="text-muted-foreground truncate text-sm italic"
               >
                 "{hitokoto.hitokoto}"{hitokoto.from ? ` —— ${hitokoto.from}` : ''}
               </p>

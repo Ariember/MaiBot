@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react'
 import { Icon } from '@iconify/react'
 
-import { useTheme } from '@/components/use-theme'
 import { cn } from '@/lib/utils'
 import { getStreamlineIcon } from './streamline-icons'
 import type { StreamlineCollection } from './streamline-icons'
@@ -30,12 +29,11 @@ export function StreamlineIcon({
   size = 16,
   ...rest
 }: StreamlineIconProps & Record<string, unknown>) {
-  const { themeConfig } = useTheme()
-  const icon = getStreamlineIcon(collection, name)
-
-  if ((themeConfig.dashboardStyle !== 'future-retro' || !icon) && Fallback) {
+  if (Fallback) {
     return <Fallback className={className} color={color} size={size} {...rest} />
   }
+
+  const icon = getStreamlineIcon(collection, name)
 
   return (
     <Icon

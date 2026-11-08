@@ -633,14 +633,6 @@ describe('usePluginList', () => {
     ])
     const { result } = await renderPluginList()
 
-    expect(result.current.getPluginStatusBarClassName(disabled)).toBe('bg-muted-foreground/45')
-    expect(result.current.getPluginStatusBarClassName(flaggedDisabled)).toBe('bg-muted-foreground/45')
-    expect(result.current.getPluginStatusBarClassName(circuitOpen)).toBe('bg-orange-500')
-    expect(result.current.getPluginStatusBarClassName(halfOpen)).toBe('bg-yellow-500')
-    expect(result.current.getPluginStatusBarClassName(loadingPlugin)).toBe('bg-sky-500')
-    expect(result.current.getPluginStatusBarClassName(offlinePlugin)).toBe('bg-slate-500')
-    expect(result.current.getPluginStatusBarClassName(failed)).toBe('bg-red-500')
-    expect(result.current.getPluginStatusBarClassName(success)).toBe('bg-emerald-500')
 
     expect(result.current.getPluginStatusLabel(disabled)).toBe('已禁用')
     expect(result.current.getPluginStatusLabel(circuitOpen)).toBe('熔断中 4s')
@@ -709,7 +701,6 @@ describe('usePluginList', () => {
     expect(result.current.circuitOpenCount).toBe(2)
     expect(result.current.modernLoadSummaryLabel).toContain('熔断中 2 个')
     expect(result.current.modernLoadSummaryLabel).toContain('已离线 1 个')
-    expect(result.current.futureRetroPluginSummaryLabel).toContain('已安装 10 个插件')
     expect(result.current.loadSuccessCount).toBe(1)
     expect(result.current.disabledCount).toBe(2)
   })
