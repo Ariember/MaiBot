@@ -95,7 +95,11 @@ CONTEXT_SELECTION_CACHE_STABILITY_RATIO = 2.0
 FOCUS_PLANNER_FINAL_USER_REMINDER_TEMPLATE = (
     "你需要输出对{bot_name}发言的分析，视情况输出文本内容的分析，思考是否进行工具调用"
 )
-PLANNER_FINAL_USER_REMINDER = "请你进行分析，是不调用工具，进行思考和等待\n还是使用工具搜集处理信息或使用reply回复"
+PLANNER_FINAL_USER_REMINDERS = {
+    "zh-CN": "请分析后决定下一步：用工具收集或处理信息，用 reply 回复，用 wait 稍后再判断，或用 stop 静默结束本轮。",
+    "en-US": "Decide the next step: use tools to gather or process information, reply to speak, wait to reconsider later, or stop to end the turn silently.",
+    "ja-JP": "次の行動を判断してください。情報の収集や処理にはツール、発言には reply、後で再判断するには wait、発言せずにターンを終えるには stop を使ってください。",
+}
 PASSIVE_PLANNER_FINAL_USER_REMINDERS = {
     "zh-CN": "需要信息或操作时调用工具；决定发言时直接输出指导正文，不附带工具调用；不发言用 stop，需要稍后判断用 wait。",
     "en-US": "Use tools for information or actions. To speak, output guidance without tool calls. Use stop to stay silent, or wait to reconsider later.",
@@ -785,7 +789,7 @@ class MaisakaChatLoopService:
         if prompt_name == "maisaka_chat_passive":
             return PASSIVE_PLANNER_FINAL_USER_REMINDERS.get(get_locale(), PASSIVE_PLANNER_FINAL_USER_REMINDERS["zh-CN"])
         if prompt_name == "maisaka_chat":
-            return PLANNER_FINAL_USER_REMINDER
+            return PLANNER_FINAL_USER_REMINDERS.get(get_locale(), PLANNER_FINAL_USER_REMINDERS["zh-CN"])
         return FOCUS_PLANNER_FINAL_USER_REMINDER_TEMPLATE.format(bot_name=global_config.bot.nickname.strip())
 
     def _get_chat_prompt_name(self) -> str:

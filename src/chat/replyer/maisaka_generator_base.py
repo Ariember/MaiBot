@@ -617,17 +617,28 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         """根据 reply 工具参数构建本次回复的篇幅要求。"""
 
         style_messages = {
-            "简短表达": "请简短的回复，允许句子残缺，奇怪表达，倒装，省略，符合口语习惯，符合省力随意回复习惯",
-            "正常回复": "",
-            "长回复": "可以针对问题做出较为详细的评论和说明",
+            "zh-CN": {
+                "简短表达": "用一到两句口语短句回复，像平时接话一样自然。",
+                "正常回复": "篇幅与当前话题相称，保持简洁。",
+                "长回复": "本次篇幅以说清问题为准，可以展开解释关键细节。",
+            },
+            "en-US": {
+                "简短表达": "Reply in one or two short sentences, as you would in a casual conversation.",
+                "正常回复": "Keep the reply concise and give the topic as much space as it needs.",
+                "长回复": "Use as much space as needed to make the point clear, and expand on key details.",
+            },
+            "ja-JP": {
+                "简短表达": "普段の会話のように、短い一文か二文で自然に返信してください。",
+                "正常回复": "話題に合った長さで、簡潔に返信してください。",
+                "长回复": "要点が伝わる長さを目安に、重要な点は掘り下げて説明してください。",
+            },
         }
-        normalized_reply_style = reply_style.strip()
-        if not normalized_reply_style:
-            return ""
-        if normalized_reply_style not in style_messages:
+        localized_messages = style_messages.get(get_locale(), style_messages["zh-CN"])
+        normalized_reply_style = reply_style.strip() or "正常回复"
+        if normalized_reply_style not in localized_messages:
             logger.warning(f"reply 工具返回了未知的回复风格 {normalized_reply_style!r}，按默认「正常回复」处理")
-            return style_messages["正常回复"]
-        return style_messages[normalized_reply_style]
+            return localized_messages["正常回复"]
+        return localized_messages[normalized_reply_style]
 
     def _build_history_messages(
         self,

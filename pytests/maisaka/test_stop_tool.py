@@ -21,6 +21,9 @@ def test_stop_prompt_is_always_available(monkeypatch: pytest.MonkeyPatch, locale
     monkeypatch.setattr(service, "_get_chat_prompt_name", lambda: prompt_name)
     with use_locale(locale):
         prompt = service._build_chat_system_prompt()
+        if prompt_name == "maisaka_chat":
+            reminder = service._build_planner_final_user_reminder()
+            assert all(name in reminder for name in ("reply", "wait", "stop"))
 
     stop_lines = [line for line in prompt.splitlines() if line.startswith("- stop()")]
     assert len(stop_lines) == 1
@@ -78,6 +81,7 @@ async def test_stop_ends_thinking_like_no_tools() -> None:
 async def test_empty_no_tool_response_ends_without_retry(content: str | None) -> None:
     runtime = SimpleNamespace(
         _chat_history=[],
+        _has_pending_messages=lambda: False,
         _end_planner_continuation=Mock(),
         _reset_consecutive_wait_count=Mock(),
         _enter_stop_state=Mock(),
@@ -100,3 +104,71 @@ async def test_empty_no_tool_response_ends_without_retry(content: str | None) ->
     assert runtime._chat_history == []
     runtime._end_planner_continuation.assert_called_once_with()
     runtime._enter_stop_state.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("passive_replyer", [False, True])
+async def test_explicit_stop_discards_output_and_other_tools(passive_replyer: bool) -> None:
+    runtime = SimpleNamespace(
+        _chat_history=[],
+        _has_pending_messages=lambda: False,
+        _end_planner_continuation=Mock(),
+        _reset_consecutive_wait_count=Mock(),
+        _enter_stop_state=Mock(),
+    )
+    engine = MaisakaReasoningEngine(runtime)
+    engine._turn_passive_replyer = passive_replyer
+    engine._emit_planner_progress = AsyncMock()
+    engine._handle_tool_calls = AsyncMock()
+    state = CycleRuntimeState()
+    response = SimpleNamespace(
+        raw_messages=["不应保存的正文与工具调用"],
+        tool_calls=[
+            ToolCall("reply", "reply", {}),
+            ToolCall("stop", "stop", {"reason": "无需发言"}),
+        ],
+    )
+
+    assert await engine._handle_planner_response_actions(
+        response=response,
+        cycle_detail=SimpleNamespace(),
+        state=state,
+        planner_extra_lines=state.planner_extra_lines,
+    )
+
+    engine._handle_tool_calls.assert_not_awaited()
+    runtime._enter_stop_state.assert_called_once_with()
+    assert state.cycle_end == engine._cycle_end_for_pause_tool("stop")
+    assert runtime._chat_history == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("tool", [None, "wait", "stop"])
+async def test_pending_messages_replace_stale_wait_decision(tool: str | None) -> None:
+    runtime = SimpleNamespace(
+        _chat_history=[],
+        _has_pending_messages=lambda: True,
+        _wait_for_message_quiet_period=AsyncMock(),
+        _enter_stop_state=Mock(),
+    )
+    engine = MaisakaReasoningEngine(runtime)
+    engine._turn_passive_replyer = False
+    engine._handle_tool_calls = AsyncMock()
+    state = CycleRuntimeState()
+    response = SimpleNamespace(
+        raw_messages=["过时的等待决定"],
+        tool_calls=[ToolCall("pause", tool, {})] if tool else [],
+    )
+
+    assert not await engine._handle_planner_response_actions(
+        response=response,
+        cycle_detail=SimpleNamespace(),
+        state=state,
+        planner_extra_lines=state.planner_extra_lines,
+    )
+
+    runtime._wait_for_message_quiet_period.assert_awaited_once_with()
+    runtime._enter_stop_state.assert_not_called()
+    engine._handle_tool_calls.assert_not_awaited()
+    assert state.cycle_end.reason == "tool_continue"
+    assert runtime._chat_history == []

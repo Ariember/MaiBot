@@ -1,6 +1,7 @@
 """Focus 共享思考的跨会话路由、等待、并发输入和恢复边界。"""
 
 from base64 import b64decode
+from dataclasses import replace
 from datetime import datetime
 from io import BytesIO
 from types import SimpleNamespace
@@ -27,6 +28,7 @@ from src.llm_models.payload_content.context_item import (
     ReasoningRepresentation,
     RoleType,
 )
+from src.maisaka.builtin_tool.wait import get_tool_spec as get_wait_tool_spec
 from src.maisaka.chat_loop_service import ChatResponse
 from src.maisaka.context.messages import (
     InternalContextMessage,
@@ -152,17 +154,7 @@ class RecordingProvider:
                 parameters_schema={"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]},
                 metadata={"visibility": "visible"},
             ),
-            ToolSpec(
-                name="wait",
-                provider_name="maisaka_builtin",
-                provider_type="builtin",
-                parameters_schema={
-                    "type": "object",
-                    "properties": {"seconds": {"type": "integer"}},
-                    "required": ["seconds"],
-                },
-                metadata={"builtin_stage": "both", "visibility": "visible"},
-            ),
+            replace(get_wait_tool_spec(), metadata={"builtin_stage": "both", "visibility": "visible"}),
             ToolSpec(
                 name="stop",
                 provider_name="maisaka_builtin",
@@ -341,6 +333,27 @@ async def test_wait_closes_tool_batch_and_cancels_later_calls(setup_group):
     assert not results[2].success
     assert group._wait_session_id == "B"
     assert group._wait_until is not None
+
+
+@pytest.mark.asyncio
+async def test_absolute_wait_routes_to_the_entire_group(setup_group):
+    group, _, trace = setup_group
+    await group.tools.refresh()
+    invocation, result, runtime, _ = await group.tools.invoke(
+        "wait",
+        {"session_id": "B", "until": "2099-01-01T20:30:00+08:00"},
+        "wait-until",
+        "",
+    )
+
+    assert result.success
+    assert result.metadata["pause_execution"]
+    assert invocation.arguments == {"until": "2099-01-01T20:30:00+08:00"}
+    assert runtime.session_id == "B"
+    assert group._wait_session_id == "B"
+    assert group._wait_until is not None
+    assert group._consecutive_waits == 1
+    assert trace == []
 
 
 @pytest.mark.asyncio

@@ -17,7 +17,7 @@
 {query_memory_rule}{subagent_rule}
 - tool_search：填写目标 session_id，在 deferred tools 中查找该聊天可用的工具，发现后再调用。
 - 原工具自己已有 session_id 业务参数时，其原始业务参数放在 tool_arguments 中；最外层 session_id 仍指定聊天。
-- wait：填写发起聊天的 session_id 和 seconds，暂停整个共享组；期间普通消息和后台结果先缓存，@ 可以提前结束等待。
+- wait：填写发起聊天的 session_id，并指定 seconds 秒数或 until ISO 8601 绝对时间（二选一），暂停整个共享组；期间普通消息和后台结果先缓存，@ 可以提前结束等待。
 - stop()：填写发起聊天的 session_id，结束整个组的本轮思考，不发送消息，也不设置定时等待。请在其他操作完成后单独调用。
 - wait 或 stop 会终止本批工具，后续调用不会执行；不要把其他动作放在它们后面。
 - 没有需要执行的动作时，可以只输出最新分析结束本轮思考。不要重复已经完成的动作，不要编造工具结果。

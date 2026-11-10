@@ -20,6 +20,7 @@ from src.config.config import global_config
 from src.core.tooling import ToolExecutionResult, ToolInvocation, ToolSpec
 from src.llm_models.payload_content.context_item import FunctionCallItem
 from src.llm_models.payload_content.tool_option import ToolCall
+from src.maisaka.builtin_tool.wait import resolve_wait_seconds
 from src.maisaka.chat_loop_service import ChatResponse, MaisakaChatLoopService
 from src.maisaka.context.messages import (
     ContentContextMessage,
@@ -416,9 +417,10 @@ class FocusGroupRuntime:
 
     def execute_control(self, name: str, arguments: Dict[str, Any], session_id: str) -> ToolExecutionResult:
         if name == "wait":
-            seconds = arguments.get("seconds")
-            if type(seconds) is not int or seconds < 0:
-                return ToolExecutionResult(tool_name=name, success=False, error_message="seconds 必须是非负整数。")
+            try:
+                seconds = resolve_wait_seconds(arguments)
+            except ValueError as exc:
+                return ToolExecutionResult(tool_name=name, success=False, error_message=str(exc))
             self._consecutive_waits += 1
             self._wait_until = time.time() + seconds
             self._wait_session_id = session_id

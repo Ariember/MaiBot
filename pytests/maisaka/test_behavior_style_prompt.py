@@ -7,6 +7,24 @@ from src.config.config import global_config
 from src.maisaka.chat_loop_service import MaisakaChatLoopService
 
 
+@pytest.mark.parametrize(
+    ("locale", "short_marker", "normal_marker", "long_marker"),
+    [
+        ("zh-CN", "一到两句", "简洁", "关键细节"),
+        ("en-US", "one or two short sentences", "concise", "key details"),
+        ("ja-JP", "一文か二文", "簡潔", "掘り下げ"),
+    ],
+)
+def test_reply_length_instructions_follow_locale(locale, short_marker, normal_marker, long_marker) -> None:
+    build_style = BaseMaisakaReplyGenerator._build_requested_reply_style_message
+    with use_locale(locale):
+        assert short_marker in build_style("简短表达")
+        assert normal_marker in build_style("正常回复")
+        assert long_marker in build_style("长回复")
+        assert build_style("") == build_style("正常回复")
+        assert build_style("未声明的篇幅") == build_style("正常回复")
+
+
 def test_planner_context_includes_personality_and_behavior_style(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(global_config.personality, "personality", "测试核心人格。")
     monkeypatch.setattr(global_config.personality, "behavior_style", "这段行为风格只应提供给 Planner。")

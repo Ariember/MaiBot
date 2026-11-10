@@ -17,7 +17,7 @@ Each sharing group has one continuous reasoning agent. New messages from every m
 {query_memory_rule}{subagent_rule}
 - tool_search: provide the target session_id to discover deferred tools available for that chat before calling them.
 - If a tool already has a business parameter named session_id, put its original business arguments inside tool_arguments. The outer session_id still selects the chat.
-- wait: provide the initiating session_id and seconds to pause the entire group. Ordinary messages and background results remain queued; an @ can end the wait early.
+- wait: provide the initiating session_id and either seconds or an absolute ISO 8601 until timestamp to pause the entire group. Ordinary messages and background results remain queued; an @ can end the wait early.
 - stop(): provide the initiating session_id to end this group's current thought without sending a message or scheduling a timer. Call it separately after other actions are complete.
 - wait or stop ends the current tool batch; later calls are not executed. Do not place other actions after them.
 - If no action is needed, output your latest analysis and finish. Do not repeat completed actions or fabricate tool results.
