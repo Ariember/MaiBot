@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from PIL import Image
+from PIL import GifImagePlugin, Image
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, create_engine, select
 
@@ -18,6 +18,7 @@ from src.webui.dependencies import require_auth
 from src.webui.routers import emoji
 from src.webui.routers.emoji import library as routes
 from src.webui.routers.emoji import routes as emoji_routes
+from src.webui.routers.emoji import support
 
 
 @pytest.fixture
@@ -126,6 +127,34 @@ def test_gallery_scan_and_upload_validation(setup):
     )
     client.app.dependency_overrides.clear()
     assert client.get("/api/webui/emoji/library").status_code == 401
+
+
+@pytest.mark.parametrize("original", [False, True])
+def test_gallery_content_can_be_cached_privately(setup, original):
+    client, library, _ = setup
+    item, _ = library.add_bytes(make_gif(), "test.gif")
+    response = client.get(f"/api/webui/emoji/library/{item['id']}/content", params={"original": original})
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "private, max-age=31536000, immutable"
+    assert response.content == make_gif()
+
+
+@pytest.mark.parametrize("image_format", ["GIF", "PNG", "WEBP"])
+def test_thumbnail_uses_first_frame_without_counting_gif_frames(tmp_path, monkeypatch, image_format):
+    monkeypatch.setattr(support, "THUMBNAIL_CACHE_DIR", tmp_path / "thumbnails")
+    frames = [Image.new("RGB", (240, 240), color) for color in ("red", "green")]
+    source = tmp_path / f"animation.{image_format.lower()}"
+    frames[0].save(source, image_format, save_all=True, append_images=frames[1:], duration=100, loop=0)
+
+    def count_frames(_image):
+        pytest.fail("生成首帧缩略图不应统计动图全部帧")
+
+    monkeypatch.setattr(GifImagePlugin.GifImageFile, "n_frames", property(count_frames))
+    thumbnail = support.generate_thumbnail(str(source), f"test-{image_format}")
+    with Image.open(thumbnail) as preview:
+        assert preview.size == (200, 200)
+        red, green, blue = preview.convert("RGB").getpixel((100, 100))
+        assert red > 240 and green < 15 and blue < 15
 
 
 def test_rejected_adoption_keeps_only_gallery_file(setup, monkeypatch):

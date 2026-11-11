@@ -88,9 +88,10 @@ def image_content(image_id: str, original: bool = False):
     path = library.root / item["rel_path"]
     if not path.is_file():
         raise HTTPException(status_code=404, detail="图片文件不存在，请重新扫描图库")
+    headers = {"Cache-Control": "private, max-age=31536000, immutable"}
     if not original:
-        return FileResponse(generate_thumbnail(str(path), image_id), media_type="image/webp")
-    return FileResponse(path, media_type=mimetypes.guess_type(str(path))[0] or "application/octet-stream")
+        return FileResponse(generate_thumbnail(str(path), image_id), media_type="image/webp", headers=headers)
+    return FileResponse(path, media_type=mimetypes.guess_type(str(path))[0] or "application/octet-stream", headers=headers)
 
 
 @router.patch("/{image_id}")

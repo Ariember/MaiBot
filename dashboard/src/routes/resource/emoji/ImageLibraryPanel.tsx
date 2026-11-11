@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2, Plus, RefreshCw } from 'lucide-react'
 
-import { EmojiThumbnail } from '@/components/emoji-thumbnail'
 import { ImageGalleryProvider, useImageGallery } from '@/components/image-gallery'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { DataPagination } from '@/components/ui/data-pagination'
 import { Input } from '@/components/ui/input'
 import {
@@ -29,12 +29,17 @@ import {
   type LibraryImage,
 } from '@/lib/emoji-api'
 
-function PreviewButton({ item }: { item: LibraryImage }) {
+function PreviewButton({
+  item,
+  src,
+  hasError,
+}: {
+  item: LibraryImage
+  src?: string
+  hasError: boolean
+}) {
   const gallery = useImageGallery()
-  const thumbnail = useQuery({
-    queryKey: ['gallery-thumbnail-url', item.id],
-    queryFn: () => resolveApiPath(getLibraryImageUrl(item.id)),
-  })
+  const [failedSrc, setFailedSrc] = useState<string>()
   return (
     <button
       type="button"
@@ -48,14 +53,17 @@ function PreviewButton({ item }: { item: LibraryImage }) {
         })
       }
     >
-      {thumbnail.data ? (
-        <EmojiThumbnail
-          src={thumbnail.data}
-          alt={item.filename}
-          className="h-full w-full object-contain"
-        />
-      ) : thumbnail.isError ? (
+      {hasError || (src !== undefined && failedSrc === src) ? (
         '图片加载失败'
+      ) : src !== undefined ? (
+        <img
+          src={src}
+          alt={item.filename}
+          loading="lazy"
+          decoding="async"
+          className="bg-muted h-full w-full object-contain"
+          onError={() => setFailedSrc(src)}
+        />
       ) : (
         <Loader2 className="mx-auto animate-spin" />
       )}
@@ -74,24 +82,33 @@ export function ImageLibraryPanel({
 }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(compact ? 12 : 24)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [editing, setEditing] = useState<LibraryImage | null>(null)
-  const [deleting, setDeleting] = useState<LibraryImage | null>(null)
+  const [deleting, setDeleting] = useState<LibraryImage[] | null>(null)
   const [tags, setTags] = useState('')
   const [scanErrors, setScanErrors] = useState<{ file: string; error: string }[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const client = useQueryClient()
   const { toast } = useToast()
-  const pageSize = compact ? 12 : 24
+  const previewBase = useQuery({
+    queryKey: ['gallery-preview-base-url'],
+    queryFn: () => resolveApiPath(''),
+  })
   const query = useQuery({
     queryKey: ['image-gallery', page, search, pageSize],
     queryFn: () => getLibraryImages(page, search, pageSize),
     refetchInterval: 10_000,
   })
   const data = query.data
+  const selectedItems = data?.items.filter((item) => selectedIds.has(item.id)) || []
+  const allSelected = !!data?.items.length && selectedItems.length === data.items.length
+  const managing = !compact && !onChoose
   useEffect(() => {
     if (data && page > Math.max(1, Math.ceil(data.total / pageSize))) {
       setPage(Math.max(1, Math.ceil(data.total / pageSize)))
+      setSelectedIds(new Set())
     }
   }, [data, page, pageSize])
 
@@ -99,8 +116,6 @@ export function ImageLibraryPanel({
     setBusy(true)
     try {
       await action()
-      await client.invalidateQueries({ queryKey: ['image-gallery'] })
-      await client.invalidateQueries({ queryKey: ['emoji'] })
       toast({ title: message })
     } catch (error) {
       toast({
@@ -109,9 +124,38 @@ export function ImageLibraryPanel({
         variant: 'destructive',
       })
     } finally {
+      await client.invalidateQueries({ queryKey: ['image-gallery'] })
+      await client.invalidateQueries({ queryKey: ['emoji'] })
       setBusy(false)
     }
   }
+
+  const performBatch = (items: LibraryImage[], action: 'adopt' | 'delete') =>
+    perform(
+      async () => {
+        const completed: string[] = []
+        const errors: string[] = []
+        for (const item of items) {
+          try {
+            if (action === 'adopt') await adoptLibraryImage(item.id)
+            else await deleteLibraryImage(item.id)
+            completed.push(item.id)
+          } catch (error) {
+            errors.push(
+              `${item.filename}：${error instanceof Error ? error.message : String(error)}`
+            )
+          }
+        }
+        setSelectedIds((current) => new Set([...current].filter((id) => !completed.includes(id))))
+        if (action === 'delete') setDeleting(null)
+        if (errors.length) {
+          throw new Error(
+            `成功 ${completed.length} 张，失败 ${errors.length} 张\n${errors.join('\n')}`
+          )
+        }
+      },
+      action === 'adopt' ? `已将 ${items.length} 张图片加入可发送表情包` : '图库图片已删除'
+    )
 
   return (
     <div className={`flex min-h-0 flex-col gap-3 ${compact ? '' : 'h-full p-3 sm:p-4'}`}>
@@ -131,9 +175,11 @@ export function ImageLibraryPanel({
       <div className="flex flex-wrap items-center gap-2">
         <Input
           value={search}
+          disabled={busy}
           onChange={(event) => {
             setSearch(event.target.value)
             setPage(1)
+            setSelectedIds(new Set())
           }}
           placeholder="搜索图库标签或文件名"
           aria-label="搜索图库"
@@ -190,6 +236,48 @@ export function ImageLibraryPanel({
           </>
         )}
       </div>
+      {managing && (
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-xs">
+            <Checkbox
+              aria-label="全选本页"
+              checked={allSelected ? true : selectedItems.length > 0 ? 'indeterminate' : false}
+              disabled={busy || !data?.items.length}
+              onCheckedChange={(checked) =>
+                setSelectedIds(new Set(checked === true ? data?.items.map((item) => item.id) : []))
+              }
+            />
+            全选本页
+          </label>
+          <span className="text-muted-foreground mr-auto text-xs" aria-live="polite">
+            已选择 {selectedItems.length} 张
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy || !selectedItems.length}
+            onClick={() => setSelectedIds(new Set())}
+          >
+            取消选择
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy || !selectedItems.length}
+            onClick={() => void performBatch(selectedItems, 'adopt')}
+          >
+            批量据为己用
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={busy || !selectedItems.length}
+            onClick={() => setDeleting(selectedItems)}
+          >
+            批量删除
+          </Button>
+        </div>
+      )}
       {scanErrors.length > 0 && (
         <div role="alert" className="text-destructive max-h-24 overflow-auto text-xs">
           {scanErrors.map((error) => (
@@ -221,8 +309,36 @@ export function ImageLibraryPanel({
               className={`grid gap-3 ${compact ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 xl:grid-cols-6'}`}
             >
               {data?.items.map((item) => (
-                <div key={item.id} className="bg-card min-w-0 rounded-lg border p-2">
-                  <PreviewButton item={item} />
+                <div
+                  key={item.id}
+                  className="bg-card relative min-w-0 rounded-lg border p-2"
+                  data-list-selected={selectedIds.has(item.id) ? 'true' : undefined}
+                >
+                  {managing && (
+                    <Checkbox
+                      aria-label={`选择 ${item.filename}`}
+                      checked={selectedIds.has(item.id)}
+                      disabled={busy}
+                      className="bg-background absolute top-3 right-3 z-10"
+                      onCheckedChange={(checked) =>
+                        setSelectedIds((current) => {
+                          const next = new Set(current)
+                          if (checked === true) next.add(item.id)
+                          else next.delete(item.id)
+                          return next
+                        })
+                      }
+                    />
+                  )}
+                  <PreviewButton
+                    item={item}
+                    src={
+                      previewBase.data === undefined
+                        ? undefined
+                        : `${previewBase.data}${getLibraryImageUrl(item.id)}`
+                    }
+                    hasError={previewBase.isError}
+                  />
                   <p className="truncate text-xs" title={item.filename}>
                     {item.filename}
                   </p>
@@ -277,7 +393,7 @@ export function ImageLibraryPanel({
                           size="xs"
                           variant="ghost"
                           disabled={busy}
-                          onClick={() => setDeleting(item)}
+                          onClick={() => setDeleting([item])}
                         >
                           删除
                         </Button>
@@ -299,7 +415,16 @@ export function ImageLibraryPanel({
         total={data?.total || 0}
         page={page}
         pageSize={pageSize}
-        onPageChange={setPage}
+        onPageChange={(nextPage) => {
+          setPage(nextPage)
+          setSelectedIds(new Set())
+        }}
+        onPageSizeChange={(size) => {
+          setPageSize(size)
+          setPage(1)
+          setSelectedIds(new Set())
+        }}
+        pageSizeOptions={[12, 24, 48, 100]}
         disabled={busy}
       />
       <Dialog
@@ -339,30 +464,27 @@ export function ImageLibraryPanel({
       <Dialog
         open={deleting !== null}
         onOpenChange={(open) => {
-          if (!open) setDeleting(null)
+          if (!open && !busy) setDeleting(null)
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>删除图库图片</DialogTitle>
+            <DialogTitle>
+              {deleting && deleting.length > 1 ? '批量删除图库图片' : '删除图库图片'}
+            </DialogTitle>
             <DialogDescription>
-              将删除图库中的文件和标签；已据为己用的表情包副本会保留。
+              将删除 {deleting?.length}{' '}
+              张图库图片的文件和标签，操作不可撤销；已据为己用的表情包副本会保留。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleting(null)}>
+            <Button variant="outline" disabled={busy} onClick={() => setDeleting(null)}>
               取消
             </Button>
             <Button
               variant="destructive"
               disabled={busy}
-              onClick={() =>
-                deleting &&
-                void perform(async () => {
-                  await deleteLibraryImage(deleting.id)
-                  setDeleting(null)
-                }, '图库图片已删除')
-              }
+              onClick={() => deleting && void performBatch(deleting, 'delete')}
             >
               删除
             </Button>

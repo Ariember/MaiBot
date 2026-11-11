@@ -83,9 +83,6 @@ def _generate_thumbnail(source_path: str, file_hash: str) -> Path:
 
         try:
             with Image.open(source_path) as img:
-                if getattr(img, "n_frames", 1) > 1:
-                    img.seek(0)
-
                 if img.mode in ("P", "PA"):
                     img = img.convert("RGBA")
                 elif img.mode == "LA":
