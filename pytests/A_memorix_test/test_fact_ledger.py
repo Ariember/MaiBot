@@ -410,7 +410,7 @@ def test_stale_evidence_snapshot_does_not_overwrite_newer_supersession(tmp_path:
         )
 
         assert replacement["status"] == "active"
-        assert store.get_fact_claim(old["claim_id"])["status"] == "superseded"
+        assert store.get_fact_claim(old["claim_id"])["status"] == "retracted"
         assert restored == {"restored_claim_ids": [], "restored_evidence_count": 1}
         assert duplicate == {"restored_claim_ids": [], "restored_evidence_count": 0}
         assert len(store.get_fact_evidence(old["claim_id"])) == 1

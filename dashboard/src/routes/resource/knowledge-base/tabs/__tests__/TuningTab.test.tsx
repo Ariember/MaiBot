@@ -69,7 +69,7 @@ function makeRecommendedTask(overrides: MemoryTaskPayload = {}): MemoryTaskPaylo
       deltas: {
         score: 0.08,
         precision_at_1: 0.1,
-        recall_at_k: 0.12,
+        hit_at_k: 0.12,
         empty_rate: -0.02,
         avg_elapsed_ms: 14,
       },
@@ -78,7 +78,7 @@ function makeRecommendedTask(overrides: MemoryTaskPayload = {}): MemoryTaskPaylo
           score: 0.5,
           metrics: {
             precision_at_1: 0.6,
-            recall_at_k: 0.5,
+            hit_at_k: 0.5,
             empty_rate: 0.08,
             avg_elapsed_ms: 80,
           },
@@ -87,7 +87,7 @@ function makeRecommendedTask(overrides: MemoryTaskPayload = {}): MemoryTaskPaylo
           score: 0.58,
           metrics: {
             precision_at_1: 0.7,
-            recall_at_k: 0.62,
+            hit_at_k: 0.62,
             empty_rate: 0.06,
             avg_elapsed_ms: 94,
           },
@@ -341,7 +341,7 @@ describe('TuningTab', () => {
     expect(screen.getByText('0.500 → 0.580 · Δ +0.080')).toBeInTheDocument()
     expect(screen.getByText('通过，6 个样本')).toBeInTheDocument()
     expect(screen.getByText('首条命中率')).toBeInTheDocument()
-    expect(screen.getByText('目标找回率')).toBeInTheDocument()
+    expect(screen.getByText('前 K 条命中率')).toBeInTheDocument()
     expect(screen.getByText('无结果比例')).toBeInTheDocument()
     expect(screen.getByText('平均响应时间')).toBeInTheDocument()
     expect(screen.getByText('首条命中率').closest('.grid')).toHaveTextContent('60.0%')
@@ -416,7 +416,7 @@ describe('TuningTab', () => {
             deltas: {
               score: -0.01,
               precision_at_1: -0.02,
-              recall_at_k: -0.01,
+              hit_at_k: -0.01,
               empty_rate: 0.06,
               avg_elapsed_ms: 120,
             },
@@ -425,7 +425,7 @@ describe('TuningTab', () => {
                 score: 0.5,
                 metrics: {
                   precision_at_1: 0.6,
-                  recall_at_k: 0.5,
+                  hit_at_k: 0.5,
                   empty_rate: 0.08,
                   avg_elapsed_ms: 80,
                 },
@@ -434,7 +434,7 @@ describe('TuningTab', () => {
                 score: 0.49,
                 metrics: {
                   precision_at_1: 0.58,
-                  recall_at_k: 0.49,
+                  hit_at_k: 0.49,
                   empty_rate: 0.14,
                   avg_elapsed_ms: 200,
                 },

@@ -1292,7 +1292,7 @@
         },
         "metrics": {
           "precisionAt1": "P@1",
-          "recallAtK": "Recall@K",
+          "hitAtK": "Hit@K",
           "emptyRate": "空結果率",
           "avgElapsedMs": "平均所要時間"
         }

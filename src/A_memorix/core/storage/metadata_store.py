@@ -805,8 +805,9 @@ class MetadataStore(
         effective_start = "COALESCE(p.event_time_start, p.event_time, p.event_time_end"
         effective_end = "COALESCE(p.event_time_end, p.event_time, p.event_time_start"
         if allow_created_fallback:
-            effective_start += ", p.created_at)"
-            effective_end += ", p.created_at)"
+            fallback = "CASE WHEN json_extract(p.metadata, '$.event_time_unknown') IS NOT 1 THEN p.created_at END"
+            effective_start += f", {fallback})"
+            effective_end += f", {fallback})"
         else:
             effective_start += ")"
             effective_end += ")"
@@ -838,15 +839,20 @@ class MetadataStore(
             )
             params.append(f"%{str(person).strip().lower()}%")
 
-        if start_ts is not None and end_ts is not None:
-            conditions.append(f"({effective_end} >= ? AND {effective_start} <= ?)")
-            params.extend([start_ts, end_ts])
-        elif start_ts is not None:
-            conditions.append(f"({effective_end} >= ?)")
-            params.append(start_ts)
-        elif end_ts is not None:
-            conditions.append(f"({effective_start} <= ?)")
-            params.append(end_ts)
+        if start_ts is not None or end_ts is not None:
+            # 状态按有效期命中，事件按发生时间命中，不能用写入日期代替状态区间。
+            conditions.append(f"""(
+                ((? IS NULL OR {effective_end} >= ?) AND (? IS NULL OR {effective_start} <= ?))
+                OR EXISTS (
+                    SELECT 1 FROM fact_claims c JOIN fact_evidence e ON e.claim_id=c.claim_id
+                    WHERE e.evidence_type='paragraph' AND e.evidence_id=p.hash AND e.stance='support'
+                      AND c.cardinality='single' AND (c.valid_from IS NOT NULL OR c.valid_to IS NOT NULL)
+                      AND (c.status='active' OR (c.status='superseded' AND c.valid_to IS NOT NULL))
+                      AND (? IS NULL OR c.valid_to IS NULL OR c.valid_to>?)
+                      AND (? IS NULL OR c.valid_from IS NULL OR c.valid_from<=?)
+                )
+            )""")
+            params.extend([start_ts, start_ts, end_ts, end_ts, start_ts, start_ts, end_ts, end_ts])
 
         where_sql = " AND ".join(conditions)
         sql = f"""

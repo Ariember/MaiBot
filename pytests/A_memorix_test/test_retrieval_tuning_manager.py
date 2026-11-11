@@ -1,6 +1,11 @@
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
 
+from src.A_memorix.core.utils import retrieval_tuning_manager as tuning_module
 from src.A_memorix.core.utils.retrieval_tuning_manager import (
+    RetrievalQueryCase,
     RetrievalTuningManager,
     RetrievalTuningTaskRecord,
 )
@@ -101,3 +106,94 @@ async def test_apply_profile_uses_runtime_hot_rebuild_hook():
     assert result["validation_passed"] is True
     assert plugin.applied_validate is False
     assert plugin.applied_profile["retrieval"]["top_k_final"] == 12
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("expected_hashes", "returned_hashes", "top_k", "p1", "hit3", "hitk", "mrr", "empty_rate"),
+    [
+        (["relation", "paragraph"], ["paragraph"], 5, 1, 1, 1, 1, 0),
+        (["relation", "paragraph"], ["relation", "relation", "paragraph"], 5, 1, 1, 1, 1, 0),
+        (["paragraph"], ["noise", "noise", "noise", "paragraph"], 4, 0, 0, 1, 0.25, 0),
+        (["paragraph"], ["noise", "noise", "noise", "paragraph"], 3, 0, 0, 0, 0, 0),
+        (["paragraph"], [], 5, 0, 0, 0, 0, 1),
+        ([], [], 5, 0, 0, 0, 0, 1),
+        ([], ["unlabelled"], 5, 0, 0, 0, 0, 0),
+    ],
+)
+async def test_evaluation_counts_alternative_targets_as_hits(
+    monkeypatch, tmp_path, expected_hashes, returned_hashes, top_k, p1, hit3, hitk, mrr, empty_rate
+):
+    monkeypatch.setattr(tuning_module, "artifacts_root", lambda: tmp_path)
+    runtime = SimpleNamespace(ready=True, retriever=object(), threshold_filter=None)
+    monkeypatch.setattr(tuning_module, "build_search_runtime", lambda **kwargs: runtime)
+    execution = SimpleNamespace(
+        success=True,
+        results=[SimpleNamespace(hash_value=value) for value in returned_hashes],
+        elapsed_ms=1.0,
+    )
+    monkeypatch.setattr(tuning_module.SearchExecutionService, "execute", AsyncMock(return_value=execution))
+    manager = RetrievalTuningManager(_FakePlugin())
+
+    result = await manager._evaluate_profile(
+        profile=manager.get_profile_snapshot(),
+        cases=[RetrievalQueryCase("case-1", "query_nl", "现居哪里", expected_hashes)],
+        objective="balanced",
+        top_k_eval=top_k,
+        query_timeout_s=1.0,
+    )
+
+    metrics = result["metrics"]
+    assert metrics["precision_at_1"] == p1
+    assert metrics["hit_at_3"] == hit3
+    assert metrics["hit_at_k"] == hitk
+    assert metrics["mrr"] == mrr
+    assert metrics["empty_rate"] == empty_rate
+    assert "precision_at_3" not in metrics
+    assert "recall_at_k" not in metrics
+
+
+@pytest.mark.parametrize("objective", ["precision_priority", "balanced", "recall_priority"])
+def test_score_preserves_hit_weights_and_zero_empty_rate(monkeypatch, tmp_path, objective):
+    monkeypatch.setattr(tuning_module, "artifacts_root", lambda: tmp_path)
+    manager = RetrievalTuningManager(_FakePlugin())
+    metrics = {
+        "precision_at_1": 1.0,
+        "hit_at_3": 1.0,
+        "hit_at_k": 1.0,
+        "mrr": 1.0,
+        "spo_relation_hit_rate": 1.0,
+        "empty_rate": 0.0,
+    }
+
+    assert manager._score_metrics(metrics, objective=objective) == pytest.approx(1.0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("baseline_empty,best_empty,recommended", [(0.0, 0.1, False), (0.1, 0.0, True)])
+async def test_validation_compares_zero_empty_rate(monkeypatch, tmp_path, baseline_empty, best_empty, recommended):
+    monkeypatch.setattr(tuning_module, "artifacts_root", lambda: tmp_path)
+    manager = RetrievalTuningManager(_FakePlugin())
+    baseline = {
+        "score": 0.7,
+        "metrics": {"precision_at_1": 1.0, "hit_at_k": 1.0, "empty_rate": baseline_empty, "avg_elapsed_ms": 1.0},
+    }
+    best = {
+        "score": 0.8,
+        "metrics": {"precision_at_1": 1.0, "hit_at_k": 1.0, "empty_rate": best_empty, "avg_elapsed_ms": 1.0},
+    }
+    monkeypatch.setattr(manager, "_evaluate_profile", AsyncMock(side_effect=[baseline, best, baseline, best]))
+
+    result = await manager._validate_best_profile(
+        baseline_profile={},
+        candidate_profile={},
+        holdout_cases=[RetrievalQueryCase("case-1", "query_nl", "现居哪里", ["paragraph"])],
+        objective="balanced",
+        top_k_eval=5,
+        query_timeout_s=1.0,
+    )
+
+    assert result["recommended"] is recommended
+    assert result["checks"]["empty_rate_ok"] is recommended
+    assert result["checks"]["hit_at_k_drop_ok"] is True
+    assert result["deltas"]["empty_rate"] == pytest.approx(best_empty - baseline_empty)

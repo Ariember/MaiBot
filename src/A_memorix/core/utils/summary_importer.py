@@ -43,6 +43,7 @@ from .relation_write_service import RelationWriteService
 from .runtime_payloads import optional_float
 from .summary_identity import SummaryIdentityContext
 from .runtime_self_check import ensure_runtime_self_check, run_embedding_runtime_self_check
+from .time_parser import normalize_time_meta
 
 logger = get_logger("A_Memorix.SummaryImporter")
 
@@ -130,8 +131,24 @@ def _normalize_summary_facts(raw_facts: Any) -> List[Dict[str, Any]]:
             if message_id and component_path:
                 evidence.append({"message_id": message_id, "component_path": component_path})
         seen_ids.add(fact_id)
-        facts.append({"fact_id": fact_id, "text": text, "image_evidence": evidence})
+        time_meta = item.get("time_meta")
+        if time_meta is not None and not isinstance(time_meta, dict):
+            raise ValueError(f"事实 {fact_id} 的 time_meta 必须是对象或 null")
+        facts.append({"fact_id": fact_id, "text": text, "image_evidence": evidence,
+                      "time_meta": normalize_time_meta(time_meta)})
     return facts
+
+
+def _summary_event_time(facts: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """段落时间只覆盖已知事件日期，逐条日期另随事实保存。"""
+    times = [fact.get("time_meta") or {} for fact in facts]
+    starts = [value for meta in times
+              if (value := meta.get("event_time_start", meta.get("event_time", meta.get("event_time_end")))) is not None]
+    ends = [value for meta in times
+            if (value := meta.get("event_time_end", meta.get("event_time", meta.get("event_time_start")))) is not None]
+    if not starts:
+        return {}
+    return {"event_time_start": min(starts), "event_time_end": max(ends)}
 
 
 def _message_timestamp(message: Any) -> Optional[float]:
@@ -690,9 +707,12 @@ class SummaryImporter:
             entities = [name for name in payload["entities"] if name in text]
             relations = [relation for index, relation in enumerate(payload["relations"])
                          if kept_ids.intersection(plan["relation_support"].get(str(index), []))]
+            time_meta = _summary_event_time(kept)
             paragraph_hash = await self._execute_import(
-                text, entities, relations, stream_id, time_meta=payload["time_meta"],
+                text, entities, relations, stream_id, time_meta=time_meta,
                 metadata={**metadata, "dedup_managed": True, "dedup_phase": "pending",
+                          "event_time_unknown": not bool(time_meta),
+                          "fact_event_times": {row["text"]: row.get("time_meta") or {} for row in kept},
                           "dedup_fact_texts": [row["text"] for row in kept]},
             )
             await asyncio.to_thread(
@@ -903,14 +923,10 @@ class SummaryImporter:
                       "text": identity_context.restore_text(fact["text"])} for fact in facts]
             metadata = {**(metadata or {}), **identity_metadata}
             msg_times = [timestamp for msg in messages if (timestamp := _message_timestamp(msg)) is not None]
-            time_meta = {}
+            time_meta = _summary_event_time(facts)
+            metadata["event_time_unknown"] = not bool(time_meta)
             if msg_times:
-                time_meta = {
-                    "event_time_start": min(msg_times),
-                    "event_time_end": max(msg_times),
-                    "time_granularity": "minute",
-                    "time_confidence": 0.95,
-                }
+                metadata.update(observed_time_start=min(msg_times), observed_time_end=max(msg_times))
 
             # 6. 执行导入
             # 先验证完整证据集合，避免模型输出错误时留下已提交的段落或部分图片关联。
@@ -924,7 +940,8 @@ class SummaryImporter:
                     "platform": str(messages[0].platform), "chat_id": stream_id,
                     "message_ids": [str(message.message_id) for message in messages],
                     "observed_at": max(msg_times) if msg_times else None,
-                    **time_meta,
+                    "observed_time_start": min(msg_times) if msg_times else None,
+                    "observed_time_end": max(msg_times) if msg_times else None,
                 }
                 source["observation_id"] = observation_id(
                     platform=source["platform"], chat_id=stream_id, message_ids=source["message_ids"],

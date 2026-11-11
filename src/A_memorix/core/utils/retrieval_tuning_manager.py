@@ -43,7 +43,7 @@ INTENSITIES = {"quick": 8, "standard": 20, "deep": 32}
 CATEGORIES = {"query_nl", "query_kw", "spo_relation", "spo_search"}
 MIN_VALIDATION_SCORE_DELTA = 0.02
 MAX_PRECISION_DROP = 0.01
-MAX_RECALL_DROP = 0.01
+MAX_HIT_AT_K_DROP = 0.01
 MAX_EMPTY_RATE_INCREASE = 0.05
 MAX_LATENCY_INCREASE_MS = 100.0
 MAX_LATENCY_INCREASE_RATIO = 0.50
@@ -167,6 +167,7 @@ class RetrievalQueryCase:
     case_id: str
     category: str
     query: str
+    # 同一事实的可替代命中（关系或其来源段落），命中任意一项即成功。
     expected_hashes: List[str] = field(default_factory=list)
     expected_spo: Dict[str, str] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -1892,12 +1893,8 @@ class RetrievalTuningManager:
         p1_delta = float(best_metrics.get("precision_at_1", 0.0) or 0.0) - float(
             base_metrics.get("precision_at_1", 0.0) or 0.0
         )
-        recall_delta = float(best_metrics.get("recall_at_k", 0.0) or 0.0) - float(
-            base_metrics.get("recall_at_k", 0.0) or 0.0
-        )
-        empty_delta = float(best_metrics.get("empty_rate", 1.0) or 1.0) - float(
-            base_metrics.get("empty_rate", 1.0) or 1.0
-        )
+        hit_k_delta = float(best_metrics.get("hit_at_k", 0.0) or 0.0) - float(base_metrics.get("hit_at_k", 0.0) or 0.0)
+        empty_delta = float(best_metrics.get("empty_rate", 1.0)) - float(base_metrics.get("empty_rate", 1.0))
         latency_delta = float(best_metrics.get("avg_elapsed_ms", 0.0) or 0.0) - float(
             base_metrics.get("avg_elapsed_ms", 0.0) or 0.0
         )
@@ -1908,7 +1905,7 @@ class RetrievalTuningManager:
         checks = {
             "score_delta_ok": score_delta >= MIN_VALIDATION_SCORE_DELTA,
             "precision_drop_ok": p1_delta >= -MAX_PRECISION_DROP,
-            "recall_drop_ok": recall_delta >= -MAX_RECALL_DROP,
+            "hit_at_k_drop_ok": hit_k_delta >= -MAX_HIT_AT_K_DROP,
             "empty_rate_ok": empty_delta <= MAX_EMPTY_RATE_INCREASE,
             "latency_ok": latency_delta <= latency_limit,
         }
@@ -1920,7 +1917,7 @@ class RetrievalTuningManager:
             "thresholds": {
                 "min_score_delta": MIN_VALIDATION_SCORE_DELTA,
                 "max_precision_drop": MAX_PRECISION_DROP,
-                "max_recall_drop": MAX_RECALL_DROP,
+                "max_hit_at_k_drop": MAX_HIT_AT_K_DROP,
                 "max_empty_rate_increase": MAX_EMPTY_RATE_INCREASE,
                 "max_latency_increase_ms": MAX_LATENCY_INCREASE_MS,
                 "max_latency_increase_ratio": MAX_LATENCY_INCREASE_RATIO,
@@ -1928,7 +1925,7 @@ class RetrievalTuningManager:
             "deltas": {
                 "score": round(score_delta, 6),
                 "precision_at_1": round(p1_delta, 6),
-                "recall_at_k": round(recall_delta, 6),
+                "hit_at_k": round(hit_k_delta, 6),
                 "empty_rate": round(empty_delta, 6),
                 "avg_elapsed_ms": round(latency_delta, 3),
             },
@@ -2003,9 +2000,9 @@ class RetrievalTuningManager:
             metrics = {
                 "total_text_cases": 0,
                 "precision_at_1": 0.0,
-                "precision_at_3": 0.0,
+                "hit_at_3": 0.0,
                 "mrr": 0.0,
-                "recall_at_k": 0.0,
+                "hit_at_k": 0.0,
                 "spo_relation_hit_rate": 0.0,
                 "empty_rate": 1.0,
                 "avg_elapsed_ms": 0.0,
@@ -2124,7 +2121,10 @@ class RetrievalTuningManager:
                 failed_predicates.update([str(case.metadata.get("predicate") or "__unknown__")])
                 continue
 
-            hashes = [str(getattr(x, "hash_value", "") or "") for x in (getattr(execution, "results", None) or [])]
+            hashes = [
+                str(getattr(x, "hash_value", "") or "")
+                for x in (getattr(execution, "results", None) or [])[:request_top_k]
+            ]
             if not hashes:
                 empty_count += 1
                 category_stats[cat]["empty"] += 1
@@ -2151,8 +2151,8 @@ class RetrievalTuningManager:
                 failed_predicates.update([str(case.metadata.get("predicate") or "__unknown__")])
 
         p1 = (hit1 / text_total) if text_total else 0.0
-        p3 = (hit3 / text_total) if text_total else 0.0
-        recall = (hitk / text_total) if text_total else 0.0
+        hit_rate3 = (hit3 / text_total) if text_total else 0.0
+        hit_ratek = (hitk / text_total) if text_total else 0.0
         mrr = (mrr_sum / text_total) if text_total else 0.0
         spo_rate = (spo_hit / spo_total) if spo_total else 0.0
         empty_rate = (empty_count / text_total) if text_total else 1.0
@@ -2161,9 +2161,9 @@ class RetrievalTuningManager:
         metrics = {
             "total_text_cases": int(text_total),
             "precision_at_1": float(round(p1, 6)),
-            "precision_at_3": float(round(p3, 6)),
+            "hit_at_3": float(round(hit_rate3, 6)),
             "mrr": float(round(mrr, 6)),
-            "recall_at_k": float(round(recall, 6)),
+            "hit_at_k": float(round(hit_ratek, 6)),
             "spo_relation_hit_rate": float(round(spo_rate, 6)),
             "empty_rate": float(round(empty_rate, 6)),
             "timeout_count": int(timeout_count),
@@ -2197,24 +2197,24 @@ class RetrievalTuningManager:
 
     def _score_metrics(self, metrics: Dict[str, Any], *, objective: str) -> float:
         p1 = float(metrics.get("precision_at_1", 0.0) or 0.0)
-        p3 = float(metrics.get("precision_at_3", 0.0) or 0.0)
+        hit3 = float(metrics.get("hit_at_3", 0.0) or 0.0)
         mrr = float(metrics.get("mrr", 0.0) or 0.0)
-        recall = float(metrics.get("recall_at_k", 0.0) or 0.0)
+        hitk = float(metrics.get("hit_at_k", 0.0) or 0.0)
         spo = float(metrics.get("spo_relation_hit_rate", 0.0) or 0.0)
-        empty_rate = float(metrics.get("empty_rate", 1.0) or 1.0)
+        empty_rate = float(metrics.get("empty_rate", 1.0))
         category_penalty = metrics.get("category_floor_penalty", None)
         if category_penalty is None:
             category_penalty = self._category_floor_penalty(metrics, objective=objective)
         category_penalty = float(max(0.0, category_penalty))
 
         if objective == "recall_priority":
-            raw = 0.15 * p1 + 0.15 * p3 + 0.15 * mrr + 0.40 * recall + 0.15 * spo
+            raw = 0.15 * p1 + 0.15 * hit3 + 0.15 * mrr + 0.40 * hitk + 0.15 * spo
             penalty = 0.05 * empty_rate
         elif objective == "balanced":
-            raw = 0.25 * p1 + 0.20 * p3 + 0.15 * mrr + 0.25 * recall + 0.15 * spo
+            raw = 0.25 * p1 + 0.20 * hit3 + 0.15 * mrr + 0.25 * hitk + 0.15 * spo
             penalty = 0.10 * empty_rate
         else:
-            raw = 0.40 * p1 + 0.20 * p3 + 0.15 * mrr + 0.15 * recall + 0.10 * spo
+            raw = 0.40 * p1 + 0.20 * hit3 + 0.15 * mrr + 0.15 * hitk + 0.10 * spo
             penalty = 0.15 * empty_rate
         return float(raw - penalty - category_penalty)
 
@@ -2296,9 +2296,9 @@ class RetrievalTuningManager:
             "best_metrics": best,
             "deltas": {
                 "precision_at_1": delta("precision_at_1"),
-                "precision_at_3": delta("precision_at_3"),
+                "hit_at_3": delta("hit_at_3"),
                 "mrr": delta("mrr"),
-                "recall_at_k": delta("recall_at_k"),
+                "hit_at_k": delta("hit_at_k"),
                 "spo_relation_hit_rate": delta("spo_relation_hit_rate"),
                 "empty_rate": delta("empty_rate"),
                 "timeout_count": delta("timeout_count"),
@@ -2333,9 +2333,9 @@ class RetrievalTuningManager:
             f"- baseline score: {payload.get('baseline_score', 0.0):.6f}",
             f"- best score: {task.best_score:.6f}",
             f"- P@1: {baseline.get('precision_at_1', 0.0):.4f} -> {best.get('precision_at_1', 0.0):.4f} (Δ {d.get('precision_at_1', 0.0):+.4f})",
-            f"- P@3: {baseline.get('precision_at_3', 0.0):.4f} -> {best.get('precision_at_3', 0.0):.4f} (Δ {d.get('precision_at_3', 0.0):+.4f})",
+            f"- Hit@3: {baseline.get('hit_at_3', 0.0):.4f} -> {best.get('hit_at_3', 0.0):.4f} (Δ {d.get('hit_at_3', 0.0):+.4f})",
             f"- MRR: {baseline.get('mrr', 0.0):.4f} -> {best.get('mrr', 0.0):.4f} (Δ {d.get('mrr', 0.0):+.4f})",
-            f"- Recall@K: {baseline.get('recall_at_k', 0.0):.4f} -> {best.get('recall_at_k', 0.0):.4f} (Δ {d.get('recall_at_k', 0.0):+.4f})",
+            f"- Hit@K: {baseline.get('hit_at_k', 0.0):.4f} -> {best.get('hit_at_k', 0.0):.4f} (Δ {d.get('hit_at_k', 0.0):+.4f})",
             f"- SPO relation hit: {baseline.get('spo_relation_hit_rate', 0.0):.4f} -> {best.get('spo_relation_hit_rate', 0.0):.4f} (Δ {d.get('spo_relation_hit_rate', 0.0):+.4f})",
             f"- 空结果率: {baseline.get('empty_rate', 0.0):.4f} -> {best.get('empty_rate', 0.0):.4f} (Δ {d.get('empty_rate', 0.0):+.4f})",
             f"- 超时数: {int(baseline.get('timeout_count', 0) or 0)} -> {int(best.get('timeout_count', 0) or 0)} (Δ {int(d.get('timeout_count', 0) or 0):+d})",

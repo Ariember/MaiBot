@@ -184,16 +184,18 @@ class MetadataFactMixin:
         fact_key: str,
         value_normalized: str,
         polarity: str,
+        occurrence_start: Optional[float] = None,
     ) -> str:
-        return _stable_hash(
-            {
+        payload = {
                 "scope_type": scope_type,
                 "scope_id": scope_id,
                 "fact_key": fact_key,
                 "value": value_normalized,
                 "polarity": polarity,
             }
-        )
+        if occurrence_start is not None:
+            payload["occurrence_start"] = occurrence_start
+        return _stable_hash(payload)
 
     @staticmethod
     def _conflict_group(
@@ -359,8 +361,44 @@ class MetadataFactMixin:
         superseded: List[str] = []
         with self.transaction(immediate=True) as connection:
             cursor = connection.cursor()
-            cursor.execute("SELECT * FROM fact_claims WHERE claim_id = ?", (claim_id,))
-            existing = self._fact_claim_row(cursor.fetchone())
+            cursor.execute(
+                "SELECT * FROM fact_claims WHERE scope_type=? AND scope_id=? AND fact_key=? "
+                "AND value_normalized=? AND polarity=? ORDER BY COALESCE(valid_from, first_observed_at) DESC, created_at DESC",
+                (normalized_scope_type, normalized_scope_id, normalized_fact_key, value_normalized, normalized_polarity),
+            )
+            same_value = [self._fact_claim_row(row) for row in cursor.fetchall()]
+            point = normalized_valid_from if normalized_valid_from is not None else now
+            existing = next((row for row in same_value if
+                             row["status"] != "retracted"
+                             and
+                             (row["valid_from"] is None or row["valid_from"] <= point)
+                             and (row["valid_to"] is None or row["valid_to"] > point)), None)
+            if normalized_evidence_type:
+                cursor.execute(
+                    "SELECT c.* FROM fact_claims c JOIN fact_evidence e ON e.claim_id=c.claim_id "
+                    "WHERE c.scope_type=? AND c.scope_id=? AND c.fact_key=? AND c.value_normalized=? "
+                    "AND c.polarity=? AND e.evidence_type=? AND e.evidence_id=? AND e.stance=? "
+                    "AND (e.evidence_type!='paragraph' OR e.observed_at=? OR "
+                    "(c.status!='retracted' AND (c.valid_from IS NULL OR c.valid_from<=?) "
+                    "AND (c.valid_to IS NULL OR c.valid_to>?)))",
+                    (normalized_scope_type, normalized_scope_id, normalized_fact_key, value_normalized,
+                     normalized_polarity, normalized_evidence_type, normalized_evidence_id, normalized_evidence_stance,
+                     now, point, point),
+                )
+                repeated = self._fact_claim_row(cursor.fetchone())
+                if repeated is not None:
+                    existing = repeated
+            if existing is None and same_value:
+                # 同一个值再次出现是新的有效期，保留此前已经结束的状态。
+                normalized_valid_from = point
+                claim_id = self._claim_identity(
+                    scope_type=normalized_scope_type, scope_id=normalized_scope_id, fact_key=normalized_fact_key,
+                    value_normalized=value_normalized, polarity=normalized_polarity, occurrence_start=point,
+                )
+                cursor.execute("SELECT * FROM fact_claims WHERE claim_id=?", (claim_id,))
+                existing = self._fact_claim_row(cursor.fetchone())
+            elif existing is not None:
+                claim_id = existing["claim_id"]
             if existing is not None and str(existing.get("cardinality", "")) != normalized_cardinality:
                 raise ValueError("同一 claim 不能改变 cardinality；请创建新 claim 并显式取代旧 claim")
 
@@ -384,7 +422,7 @@ class MetadataFactMixin:
                 placeholders = ",".join("?" for _ in requested_supersedes)
                 cursor.execute(
                     f"""
-                    SELECT claim_id, scope_type, scope_id, conflict_group, status
+                    SELECT claim_id, scope_type, scope_id, conflict_group, status, valid_from, valid_to
                     FROM fact_claims
                     WHERE claim_id IN ({placeholders})
                     """,
@@ -404,10 +442,14 @@ class MetadataFactMixin:
                 ]
                 if invalid:
                     raise ValueError(f"待取代 claim 不属于同一冲突组: {invalid}")
+                replacement_at = normalized_valid_from if normalized_valid_from is not None else now
+                if any(row["valid_from"] is not None and row["valid_from"] > replacement_at for row in found.values()):
+                    raise ValueError("新事实生效时间不能早于待取代事实的生效时间")
                 superseded = [
                     item
                     for item, row in found.items()
                     if str(row.get("status", "")) != "superseded"
+                    or row["valid_to"] is None or row["valid_to"] > replacement_at
                 ]
 
             if existing is not None and existing_evidence is not None and not requested_supersedes:
@@ -428,13 +470,19 @@ class MetadataFactMixin:
                 FROM fact_claims
                 WHERE scope_type = ? AND scope_id = ? AND conflict_group = ?
                   AND status = 'active' AND claim_id != ?
+                  AND (valid_to IS NULL OR ? IS NULL OR valid_to > ?)
+                  AND (? IS NULL OR valid_from IS NULL OR valid_from < ?)
                 ORDER BY claim_id ASC
                 """,
-                (normalized_scope_type, normalized_scope_id, conflict_group, claim_id),
+                (normalized_scope_type, normalized_scope_id, conflict_group, claim_id,
+                 normalized_valid_from, normalized_valid_from, normalized_valid_to, normalized_valid_to),
             )
             active_conflicts = [str(row[0]) for row in cursor.fetchall()]
             unsuperseded_conflicts = [item for item in active_conflicts if item not in superseded]
             target_status = "conflicted" if unsuperseded_conflicts else "active"
+            if existing is not None and existing["status"] == "superseded" and not requested_supersedes:
+                target_status = "superseded"
+                normalized_valid_to = existing["valid_to"]
 
             if existing is None:
                 cursor.execute(
@@ -526,10 +574,12 @@ class MetadataFactMixin:
                 cursor.execute(
                     """
                     UPDATE fact_claims
-                    SET status = 'superseded', valid_to = COALESCE(valid_to, ?), updated_at = ?
+                    SET status = CASE WHEN status='retracted' THEN status ELSE 'superseded' END,
+                        valid_to = MIN(COALESCE(valid_to, ?), ?), updated_at = ?
                     WHERE claim_id = ?
                     """,
-                    (now, now, old_claim_id),
+                    (normalized_valid_from if normalized_valid_from is not None else now,
+                     normalized_valid_from if normalized_valid_from is not None else now, now, old_claim_id),
                 )
                 self._append_fact_transition(
                     cursor,
@@ -893,7 +943,8 @@ class MetadataFactMixin:
             """
             SELECT *
             FROM fact_claims
-            WHERE scope_type = 'person' AND scope_id = ? AND status = 'active'
+            WHERE scope_type = 'person' AND scope_id = ?
+              AND (status = 'active' OR (status = 'superseded' AND valid_to IS NOT NULL))
               AND stability = 'stable'
               AND NOT EXISTS (
                   SELECT 1 FROM fact_evidence e JOIN paragraphs p ON p.hash=e.evidence_id
@@ -941,7 +992,8 @@ class MetadataFactMixin:
             """
             SELECT *
             FROM fact_claims
-            WHERE scope_type = 'person' AND scope_id = ? AND status = 'active'
+            WHERE scope_type = 'person' AND scope_id = ?
+              AND (status = 'active' OR (status = 'superseded' AND valid_to IS NOT NULL))
               AND (valid_from IS NULL OR valid_from <= ?)
               AND (valid_to IS NULL OR valid_to > ?)
               AND NOT EXISTS (
@@ -991,7 +1043,8 @@ class MetadataFactMixin:
         rows = self.query(
             """
             SELECT COUNT(*) AS total FROM fact_claims
-            WHERE scope_type = 'person' AND scope_id = ? AND status = 'active'
+            WHERE scope_type = 'person' AND scope_id = ?
+              AND (status = 'active' OR (status = 'superseded' AND valid_to IS NOT NULL))
               AND stability = 'uncertain' AND authority = 'summary_derived'
               AND profile_section = 'uncertain_notes'
               AND (valid_from IS NULL OR valid_from <= ?)
@@ -1008,7 +1061,8 @@ class MetadataFactMixin:
         point = datetime.now().timestamp()
         sql = """
             SELECT * FROM fact_claims
-            WHERE scope_type = 'person' AND scope_id = ? AND status = 'active'
+            WHERE scope_type = 'person' AND scope_id = ?
+              AND (status = 'active' OR (status = 'superseded' AND valid_to IS NOT NULL))
               AND stability = 'uncertain' AND authority = 'summary_derived'
               AND profile_section = 'uncertain_notes'
               AND (valid_from IS NULL OR valid_from <= ?)
@@ -1125,29 +1179,60 @@ class MetadataFactMixin:
         )
         return [self._fact_evidence_row(row) or {} for row in cursor.fetchall()]
 
-    def project_fact_paragraph(self, paragraph: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def project_fact_paragraph(
+        self, paragraph: Dict[str, Any], *, time_from: Optional[float] = None, time_to: Optional[float] = None,
+    ) -> Optional[Dict[str, Any]]:
         """仅对去重管理的新段落投影有效事实，旧混合段落保留原文。"""
         metadata = paragraph.get("metadata") or {}
-        if metadata.get("dedup_phase") == "pending":
+        if paragraph.get("is_deleted") or metadata.get("dedup_phase") == "pending":
             return None
         if not metadata.get("dedup_managed"):
             return paragraph
-        now = datetime.now().timestamp()
+        historical = time_from is not None or time_to is not None
+        if not historical:
+            time_from = time_to = datetime.now().timestamp()
         rows = self.query(
-            "SELECT c.claim_id, c.value_text FROM fact_claims c JOIN fact_evidence e ON e.claim_id=c.claim_id "
-            "WHERE e.evidence_type='paragraph' AND e.evidence_id=? AND c.status='active' "
-            "AND (c.valid_from IS NULL OR c.valid_from<=?) AND (c.valid_to IS NULL OR c.valid_to>?)",
-            (paragraph["hash"], now, now),
+            "SELECT c.claim_id, c.value_text, c.cardinality, c.valid_from, c.valid_to "
+            "FROM fact_claims c JOIN fact_evidence e ON e.claim_id=c.claim_id "
+            "WHERE e.evidence_type='paragraph' AND e.evidence_id=? AND e.stance='support' "
+            "AND (c.status='active' OR (c.status='superseded' AND c.valid_to IS NOT NULL)) "
+            "AND (? IS NULL OR c.valid_from IS NULL OR c.valid_from<=?) "
+            "AND (? IS NULL OR c.valid_to IS NULL OR c.valid_to>?)",
+            (paragraph["hash"], time_to, time_to, time_from, time_from),
         )
+        matched_time = False
+        if historical:
+            event_times = metadata.get("fact_event_times")
+            selected = []
+            for row in rows:
+                if row["cardinality"] == "single" and (row["valid_from"] is not None or row["valid_to"] is not None):
+                    selected.append(row)
+                    matched_time = True
+                    continue
+                if isinstance(event_times, dict):
+                    event = event_times.get(row["value_text"]) or {}
+                    start = event.get("event_time_start", event.get("event_time", event.get("event_time_end")))
+                    end = event.get("event_time_end", event.get("event_time", event.get("event_time_start")))
+                    if start is None or end is None:
+                        continue
+                    if (time_from is not None and end < time_from) or (time_to is not None and start > time_to):
+                        continue
+                    matched_time = True
+                selected.append(row)
+            rows = selected
         active = {_normalized_token(row["value_text"]) for row in rows}
         texts = metadata.get("dedup_fact_texts", [paragraph["content"]])
         kept = [text for text in texts if _normalized_token(text) in active]
         if not kept:
             return None
-        return {**paragraph, "content": "\n".join(kept), "active_fact_claim_ids": [row["claim_id"] for row in rows]}
+        return {**paragraph, "content": "\n".join(kept), "active_fact_claim_ids": [row["claim_id"] for row in rows],
+                "fact_temporal_match": matched_time}
 
-    def fact_relation_has_support(self, relation_hash: str, paragraph: Dict[str, Any]) -> bool:
-        projected = self.project_fact_paragraph(paragraph)
+    def fact_relation_has_support(
+        self, relation_hash: str, paragraph: Dict[str, Any], *,
+        time_from: Optional[float] = None, time_to: Optional[float] = None,
+    ) -> bool:
+        projected = self.project_fact_paragraph(paragraph, time_from=time_from, time_to=time_to)
         if projected is None:
             return False
         metadata = paragraph.get("metadata") or {}

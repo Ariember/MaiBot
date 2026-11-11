@@ -227,3 +227,8 @@ description = "External planner recovery。"
 display_name = "External planner continuation"
 advanced = true
 description = "External planner continuation。"
+
+[a_memorix_person_fact]
+display_name = "Person fact extraction"
+advanced = true
+description = "Extract person facts with source evidence, validity periods, and state changes from user statements."

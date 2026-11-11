@@ -621,7 +621,7 @@ describe('KnowledgeBasePage import workflow', () => {
           deltas: {
             score: 0.08,
             precision_at_1: 0.1,
-            recall_at_k: 0.12,
+            hit_at_k: 0.12,
             empty_rate: -0.02,
             avg_elapsed_ms: 14,
           },
@@ -630,7 +630,7 @@ describe('KnowledgeBasePage import workflow', () => {
               score: 0.5,
               metrics: {
                 precision_at_1: 0.6,
-                recall_at_k: 0.5,
+                hit_at_k: 0.5,
                 empty_rate: 0.08,
                 avg_elapsed_ms: 80,
               },
@@ -639,7 +639,7 @@ describe('KnowledgeBasePage import workflow', () => {
               score: 0.58,
               metrics: {
                 precision_at_1: 0.7,
-                recall_at_k: 0.62,
+                hit_at_k: 0.62,
                 empty_rate: 0.06,
                 avg_elapsed_ms: 94,
               },
@@ -1799,7 +1799,7 @@ describe('KnowledgeBasePage import workflow', () => {
           deltas: {
             score: -0.01,
             precision_at_1: -0.02,
-            recall_at_k: -0.01,
+            hit_at_k: -0.01,
             empty_rate: 0.06,
             avg_elapsed_ms: 120,
           },
@@ -1808,7 +1808,7 @@ describe('KnowledgeBasePage import workflow', () => {
               score: 0.5,
               metrics: {
                 precision_at_1: 0.6,
-                recall_at_k: 0.5,
+                hit_at_k: 0.5,
                 empty_rate: 0.08,
                 avg_elapsed_ms: 80,
               },
@@ -1817,7 +1817,7 @@ describe('KnowledgeBasePage import workflow', () => {
               score: 0.49,
               metrics: {
                 precision_at_1: 0.58,
-                recall_at_k: 0.49,
+                hit_at_k: 0.49,
                 empty_rate: 0.14,
                 avg_elapsed_ms: 200,
               },

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, Optional, Sequence
 
+from src.common.async_work import run_sync_work
+
 from ..utils.memory_lifecycle_policy import RelationLifecycleEvent
 
 if TYPE_CHECKING:
@@ -37,7 +39,8 @@ class KernelRuntimeFacade:
         if not hashes:
             return
         service = self._kernel._maintenance_service
-        type(service).apply_relation_lifecycle_event(
+        await run_sync_work(
+            type(service).apply_relation_lifecycle_event,
             service,
             hashes,
             event=RelationLifecycleEvent.ACCESS,

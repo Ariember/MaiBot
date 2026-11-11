@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Sequence
 
+from src.common.async_work import run_sync_work
 from src.A_memorix.core.retrieval import RetrievalScope
 from src.A_memorix.core.utils.search_execution_service import (
     SearchExecutionRequest,
@@ -41,8 +42,8 @@ class MemorySearchService(KernelServiceBase):
         limit = max(1, int(request.limit or 5))
         shared_chat_ids = tuple(str(item or "").strip() for item in request.shared_chat_ids if str(item or "").strip())
         hit_service = self._kernel._get_search_hit_service()
-        scope = type(hit_service)._resolve_retrieval_scope(
-            hit_service, request.chat_id, shared_chat_ids
+        scope = await run_sync_work(
+            type(hit_service)._resolve_retrieval_scope, hit_service, request.chat_id, shared_chat_ids,
         )
         supported_modes = {"search", "time", "hybrid", "episode", "aggregate"}
         if mode not in supported_modes:
@@ -66,15 +67,9 @@ class MemorySearchService(KernelServiceBase):
                 person=request.person_id or None,
                 scope=scope,
             )
-            hits = self._filter_episode_hits([self._episode_hit(row) for row in rows])
-            hits = self._filter_hits_by_retrieval_scope(hits, scope)
-            if request.respect_filter:
-                hits = self._filter_hits_by_retrieval_type_scope(
-                    hits,
-                    current_stream_id=request.chat_id,
-                    current_group_id=request.group_id,
-                    current_user_id=request.user_id,
-                )
+            hits = await run_sync_work(
+                self._filter_search_hits, [self._episode_hit(row) for row in rows], request, scope, time_window,
+            )
             hits = hits[:limit]
             return await self._finalize_search_response(hits)
 
@@ -93,16 +88,7 @@ class MemorySearchService(KernelServiceBase):
             hits = [dict(item) for item in payload.get("mixed_results", []) if isinstance(item, dict)]
             for item in hits:
                 item.setdefault("metadata", {})
-            filtered = self._filter_hits(hits, request.person_id)
-            filtered = self._filter_user_visible_hits(filtered)
-            filtered = self._filter_hits_by_retrieval_scope(filtered, scope)
-            if request.respect_filter:
-                filtered = self._filter_hits_by_retrieval_type_scope(
-                    filtered,
-                    current_stream_id=request.chat_id,
-                    current_group_id=request.group_id,
-                    current_user_id=request.user_id,
-                )
+            filtered = await run_sync_work(self._filter_search_hits, hits, request, scope, time_window)
             filtered = filtered[:limit]
             return await self._finalize_search_response(filtered)
 
@@ -126,8 +112,20 @@ class MemorySearchService(KernelServiceBase):
             return {"summary": "", "hits": [], "filtered": True, **self._search_status_fields()}
 
         hits = [self._retrieval_result_hit(item) for item in result.results]
+        filtered = await run_sync_work(self._filter_search_hits, hits, request, scope, time_window)
+        filtered = filtered[:limit]
+        return await self._finalize_search_response(filtered)
+
+    def _filter_search_hits(
+        self, hits: List[Dict[str, Any]], request: KernelSearchRequest,
+        scope: Optional[RetrievalScope], time_window: _NormalizedSearchTimeWindow,
+    ) -> List[Dict[str, Any]]:
+        """在同一工作线程完成需要回表的可见性过滤。"""
         filtered = self._filter_hits(hits, request.person_id)
-        filtered = self._filter_user_visible_hits(filtered)
+        time_options = {}
+        if time_window.numeric_start is not None or time_window.numeric_end is not None:
+            time_options = {"time_from": time_window.numeric_start, "time_to": time_window.numeric_end}
+        filtered = self._filter_user_visible_hits(filtered, **time_options)
         filtered = self._filter_hits_by_retrieval_scope(filtered, scope)
         if request.respect_filter:
             filtered = self._filter_hits_by_retrieval_type_scope(
@@ -136,8 +134,7 @@ class MemorySearchService(KernelServiceBase):
                 current_group_id=request.group_id,
                 current_user_id=request.user_id,
             )
-        filtered = filtered[:limit]
-        return await self._finalize_search_response(filtered)
+        return filtered
 
     async def _finalize_search_response(self, hits: List[Dict[str, Any]]) -> Dict[str, Any]:
         """只为最终返回且实际采用的关系命中提交一次 ACCESS。"""
@@ -246,7 +243,7 @@ class MemorySearchService(KernelServiceBase):
             person=request.person_id or None,
             scope=scope,
         )
-        hits = self._filter_episode_hits([self._episode_hit(row) for row in rows])
+        hits = await run_sync_work(self._filter_episode_hits, [self._episode_hit(row) for row in rows])
         hits = self._filter_hits_by_retrieval_scope(hits, scope)
         return {"success": True, "results": hits, "count": len(hits), "query_type": "episode"}
 
@@ -310,8 +307,8 @@ class MemorySearchService(KernelServiceBase):
     ) -> SearchExecutionResult:
         if scope is None:
             service = self._kernel._get_search_hit_service()
-            scope = type(service)._resolve_retrieval_scope(
-                service, request.chat_id, request.shared_chat_ids
+            scope = await run_sync_work(
+                type(service)._resolve_retrieval_scope, service, request.chat_id, request.shared_chat_ids,
             )
         return await self._search_execution_once(
             caller=caller,
@@ -342,8 +339,8 @@ class MemorySearchService(KernelServiceBase):
         assert self.episode_retriever is not None
         if scope is None:
             service = self._kernel._get_search_hit_service()
-            scope = type(service)._resolve_retrieval_scope(
-                service, chat_id, shared_chat_ids
+            scope = await run_sync_work(
+                type(service)._resolve_retrieval_scope, service, chat_id, shared_chat_ids,
             )
         return await self.episode_retriever.query(
             query=query,

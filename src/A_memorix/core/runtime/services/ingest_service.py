@@ -6,6 +6,7 @@ import asyncio
 import time
 
 from src.common.logger import get_logger
+from src.common.async_work import run_sync_work
 
 from ...storage import VectorStore
 from ...utils import profile_policy
@@ -345,8 +346,12 @@ class MemoryIngestService(KernelServiceBase):
             plan = saved["dedup_plan"]
             paragraph_hash = receipt["paragraph_hash"]
         else:
-            plan = await dedup.plan(scope_type="person", scope_id=person_id,
-                                    facts=[{"fact_id": "f1", "text": content}], source=source)
+            plan = await dedup.plan(
+                scope_type="person",
+                scope_id=person_id,
+                facts=[{"fact_id": "f1", "text": content, "fact_claim": metadata.get("fact_claim", {})}],
+                source=source,
+            )
             decision = plan["decisions"][0]
             if decision["action"] == "reuse":
                 paragraph_hash = decision["target"]["paragraph_hash"]
@@ -366,7 +371,7 @@ class MemoryIngestService(KernelServiceBase):
                 "metadata": {**metadata, "dedup_managed": True, "dedup_phase": "pending",
                              "dedup_fact_texts": [content],
                              "dedup_receipt": saved}})
-        claim_ids = await asyncio.to_thread(dedup.commit, plan, paragraph_hash, metadata.get("fact_claim"))
+        claim_ids = await run_sync_work(dedup.commit, plan, paragraph_hash, metadata.get("fact_claim"))
         if not reused:
             await asyncio.to_thread(self.metadata_store.update_paragraph_metadata, paragraph_hash,
                                    {"fact_claim_ids": claim_ids, "dedup_phase": "complete"}, merge=True)

@@ -2994,7 +2994,7 @@ class DualPathRetriever:
             allow_fallback = temporal.allow_created_fallback
 
         created_at = paragraph.get("created_at")
-        if allow_fallback and created_at is not None:
+        if allow_fallback and created_at is not None and not coerce_metadata_dict(paragraph.get("metadata")).get("event_time_unknown"):
             return created_at, created_at, "created_at_fallback"
 
         return None, None, None
@@ -3047,6 +3047,16 @@ class DualPathRetriever:
 
         if not self._matches_person_filter(paragraph.get("hash", ""), temporal.person):
             return False
+
+        metadata = coerce_metadata_dict(paragraph.get("metadata"))
+        if metadata.get("dedup_managed") and (temporal.time_from is not None or temporal.time_to is not None):
+            projected = self.metadata_store.project_fact_paragraph(
+                paragraph, time_from=temporal.time_from, time_to=temporal.time_to,
+            )
+            if projected is None:
+                return False
+            if projected.get("fact_temporal_match"):
+                return True
 
         effective_start, effective_end, _ = self._extract_effective_time(paragraph, temporal=temporal)
         if effective_start is None or effective_end is None:

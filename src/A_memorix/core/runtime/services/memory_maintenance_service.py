@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 import asyncio
 import time
 
+from src.common.async_work import run_sync_work
 from src.common.logger import get_logger
 
 from ...utils.memory_lifecycle_policy import (
@@ -41,7 +42,7 @@ class MemoryMaintenanceService(KernelServiceBase):
         await self._process_freeze_and_prune()
         await self._orphan_gc_phase()
         self._last_maintenance_at = time.time()
-        self._persist()
+        await run_sync_work(self._persist)
 
     def _relation_lifecycle_policy(self) -> RelationLifecyclePolicy:
         freeze_threshold = float(self._cfg("memory.prune_threshold", 0.1))
@@ -313,7 +314,8 @@ class MemoryMaintenanceService(KernelServiceBase):
         if batch_size <= 0:
             raise ValueError("memory.lifecycle_batch_size 必须大于0")
         while True:
-            evaluated = self.metadata_store.evaluate_due_relation_lifecycles(
+            evaluated = await run_sync_work(
+                self.metadata_store.evaluate_due_relation_lifecycles,
                 policy=policy,
                 now=now,
                 limit=batch_size,
@@ -323,10 +325,11 @@ class MemoryMaintenanceService(KernelServiceBase):
             if len(current_frozen) + len(current_scheduled) < batch_size:
                 break
 
-        self._reconcile_relation_graph_projection_jobs(batch_size=batch_size)
+        await run_sync_work(self._reconcile_relation_graph_projection_jobs, batch_size=batch_size)
 
         cutoff = now - freeze_duration
-        expired_rows = self.metadata_store.get_decay_prune_candidate_rows(
+        expired_rows = await run_sync_work(
+            self.metadata_store.get_decay_prune_candidate_rows,
             cutoff_time=cutoff,
             now=now,
             policy=policy,
@@ -374,9 +377,11 @@ class MemoryMaintenanceService(KernelServiceBase):
         entity_retention = max(0.0, float(orphan_cfg.get("entity_retention_days", 7.0))) * 86400.0
         grace_hours = max(0.0, float(orphan_cfg.get("sweep_grace_hours", 24.0)))
 
-        isolated = self.graph_store.get_isolated_nodes(include_inactive=True)
+        isolated = await run_sync_work(self.graph_store.get_isolated_nodes, include_inactive=True)
         if isolated:
-            entity_hashes = self.metadata_store.get_entity_gc_candidates(isolated, retention_seconds=entity_retention)
+            entity_hashes = await run_sync_work(
+                self.metadata_store.get_entity_gc_candidates, isolated, retention_seconds=entity_retention
+            )
             if entity_hashes:
                 result = await self._delete_admin_service._execute_delete_action(
                     mode="entity",
@@ -387,7 +392,7 @@ class MemoryMaintenanceService(KernelServiceBase):
                 if not result.get("success", False):
                     raise RuntimeError(str(result.get("error", "实体回收失败") or "实体回收失败"))
 
-        paragraph_hashes = self.metadata_store.get_expired_paragraph_hashes(limit=1000)
+        paragraph_hashes = await run_sync_work(self.metadata_store.get_expired_paragraph_hashes, limit=1000)
         if paragraph_hashes:
             result = await self._delete_admin_service._execute_delete_action(
                 mode="paragraph",

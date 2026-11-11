@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from time import time
 from typing import Sequence
+import asyncio
 
 from src.chat.message_receive.chat_manager import BotChatSession, chat_manager
 from src.chat.message_receive.message import SessionMessage
@@ -72,7 +73,7 @@ class HeuristicMemoryInjector:
             return ""
 
         window_size = config.heuristic_memory_recall_window_size
-        total_message_count = count_messages(session_id=session.session_id)
+        total_message_count = await asyncio.to_thread(count_messages, session_id=session.session_id)
         if total_message_count < window_size:
             self.clear_session_reference(session.session_id)
             return ""
@@ -93,7 +94,8 @@ class HeuristicMemoryInjector:
             self.clear_session_reference(session.session_id)
             return ""
 
-        recent_messages = find_messages(
+        recent_messages = await asyncio.to_thread(
+            find_messages,
             session_id=session.session_id,
             limit=window_size,
             limit_mode="latest",

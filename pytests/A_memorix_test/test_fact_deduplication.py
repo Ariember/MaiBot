@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 
 import asyncio
 import json
+import time
 
 import numpy as np
 import pytest
@@ -78,6 +79,125 @@ def model(monkeypatch, decide, supports=None):
 
 def coordinator(store):
     return FactDeduplicator(store, SimpleNamespace(encode=AsyncMock(return_value=np.ones(4))), Vectors())
+
+
+def register_state(store, text, observed_at, *, change="assert", cardinality="single", valid_from=None):
+    paragraph = store.add_paragraph(content=text, source="person_fact:qq:1")
+    plan = {
+        "scope_type": "person",
+        "scope_id": "qq:1",
+        "facts": [{"fact_id": "f1", "text": text}],
+        "source": {**source(observed_at), "observed_at": observed_at},
+        "decisions": [{"fact_id": "f1", "action": "keep"}],
+    }
+    spec = {
+        "fact_key": "residence_city" if cardinality == "single" else "interests",
+        "cardinality": cardinality,
+        "polarity": "positive",
+        "change": change,
+        "valid_from": observed_at if valid_from is None else valid_from,
+    }
+    claim_id = FactDeduplicator(store).commit(plan, paragraph, spec)[0]
+    return store.get_fact_claim(claim_id)
+
+
+def test_person_state_change_preserves_previous_validity_and_supports_return(store):
+    first = register_state(store, "甲现居北京。", 100)
+    second = register_state(store, "甲现居上海。", 250, change="replace", valid_from=200)
+    last = register_state(store, "甲现居北京。", 350, change="replace", valid_from=300)
+
+    assert last["claim_id"] != first["claim_id"]
+    assert store.get_fact_claim(first["claim_id"])["valid_to"] == 200
+    assert store.get_fact_claim(second["claim_id"])["valid_to"] == 300
+    assert store.get_fact_claim(first["claim_id"])["status"] == "superseded"
+    assert store.get_fact_claim(second["claim_id"])["status"] == "superseded"
+    assert last["status"] == "active"
+    assert last["valid_from"] == 300
+
+
+def test_person_unexplained_conflict_and_multi_value_facts_do_not_replace(store):
+    first = register_state(store, "甲现居北京。", 100)
+    conflict = register_state(store, "甲现居上海。", 200)
+    tea = register_state(store, "甲喜欢茶。", 300, cardinality="set")
+    coffee = register_state(store, "甲喜欢咖啡。", 400, cardinality="set")
+
+    assert store.get_fact_claim(first["claim_id"])["status"] == "active"
+    assert conflict["status"] == "conflicted"
+    assert tea["status"] == coffee["status"] == "active"
+
+
+def test_past_change_does_not_supersede_later_state(store):
+    current = register_state(store, "甲现居上海。", 300)
+    register_state(store, "甲现居北京。", 400, change="replace", valid_from=100)
+    assert store.get_fact_claim(current["claim_id"])["status"] == "active"
+
+
+def test_structured_retracted_claim_stays_retracted_after_a_new_observation(store):
+    first = register_state(store, "甲现居北京。", 100)
+    store.retract_fact_claim(first["claim_id"], reason="manual")
+    new = register_state(store, "甲现居北京。", 200)
+    assert new["claim_id"] != first["claim_id"]
+    assert store.get_fact_claim(first["claim_id"])["status"] == "retracted"
+
+
+@pytest.mark.asyncio
+async def test_repeat_before_scheduled_change_keeps_current_claim(store, monkeypatch):
+    now = time.time()
+    first = register_state(store, "甲常住北京。", now - 100)
+    register_state(store, "甲常住上海。", now, change="replace", valid_from=now + 100)
+    monkeypatch.setattr(llm_service, "generate", AsyncMock(side_effect=AssertionError("重复事实不需要模型")))
+    spec = {"fact_key": "residence_city", "cardinality": "single", "polarity": "positive"}
+    dedup = FactDeduplicator(store)
+    plan = await dedup.plan(
+        scope_type="person",
+        scope_id="qq:1",
+        source=source(now + 1),
+        facts=[{"fact_id": "f1", "text": "甲常住北京。", "fact_claim": spec}],
+    )
+    assert dedup.commit(plan, classification=spec) == [first["claim_id"]]
+    assert store.get_fact_claim(first["claim_id"])["valid_to"] == now + 100
+
+
+@pytest.mark.asyncio
+async def test_structured_repeat_reuses_claim_and_only_adds_source_evidence(store, monkeypatch):
+    claim = register_state(store, "甲常住北京。", 100)
+    monkeypatch.setattr(llm_service, "generate", AsyncMock(side_effect=AssertionError("重复事实不需要模型")))
+    dedup = FactDeduplicator(store)
+    spec = {"fact_key": "residence_city", "cardinality": "single", "polarity": "positive"}
+    plan = await dedup.plan(
+        scope_type="person",
+        scope_id="qq:1",
+        facts=[{"fact_id": "f1", "text": "甲常住北京。", "fact_claim": spec}],
+        source=source(200),
+    )
+    assert plan["decisions"][0]["action"] == "reuse"
+    assert dedup.commit(plan, classification=spec) == [claim["claim_id"]]
+    assert len(store.query("SELECT claim_id FROM fact_claims")) == 1
+    assert len([row for row in store.get_fact_evidence(claim["claim_id"]) if row["evidence_type"] == "source"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_structured_fact_never_reuses_another_slot_or_polarity(store, monkeypatch):
+    register_state(store, "甲常住北京。", 100)
+    monkeypatch.setattr(llm_service, "generate", AsyncMock(side_effect=AssertionError("不应比较其他槽位")))
+    for key, polarity in (("birth_city", "positive"), ("residence_city", "negative")):
+        plan = await FactDeduplicator(store).plan(
+            scope_type="person",
+            scope_id="qq:1",
+            source=source(200),
+            facts=[
+                {
+                    "fact_id": "f1",
+                    "text": "甲常住北京。",
+                    "fact_claim": {
+                        "fact_key": key,
+                        "cardinality": "single",
+                        "polarity": polarity,
+                    },
+                }
+            ],
+        )
+        assert plan["decisions"][0]["action"] == "keep"
 
 
 @pytest.mark.asyncio
@@ -246,6 +366,7 @@ async def test_public_hits_omit_internal_decisions_and_possible_duplicates(store
             "dedup_phase": "complete",
             "dedup_candidate_ids": ["candidate"],
             "fact_dedup_decisions": [{"action": "keep"}],
+            "fact_event_times": {"甲曾经住在上海。": {"event_time_start": 100.0}},
         },
         merge=True,
     )
@@ -259,6 +380,7 @@ async def test_public_hits_omit_internal_decisions_and_possible_duplicates(store
     result = reader._filter_user_visible_hits([{"type": "paragraph", "hash": paragraph, "content": "ignored"}])
     assert result[0]["content"] == "甲喜欢绿茶。"
     assert not any(key.startswith("dedup_") or key == "fact_dedup_decisions" for key in result[0]["metadata"])
+    assert "fact_event_times" not in result[0]["metadata"]
 
 
 @pytest.mark.asyncio

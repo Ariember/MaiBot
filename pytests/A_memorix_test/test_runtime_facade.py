@@ -1,4 +1,5 @@
 from pathlib import Path
+from threading import get_ident
 
 import pytest
 
@@ -10,6 +11,7 @@ from src.A_memorix.core.utils.memory_lifecycle_policy import RelationLifecycleEv
 async def test_runtime_facade_reinforce_access_filters_empty_hashes(
 ) -> None:
     reinforced: list[tuple[list[str], RelationLifecycleEvent]] = []
+    loop_thread = get_ident()
     kernel = SDKMemoryKernel(plugin_root=Path.cwd(), config={})
     facade = kernel._runtime_facade
 
@@ -20,6 +22,7 @@ async def test_runtime_facade_reinforce_access_filters_empty_hashes(
             *,
             event: RelationLifecycleEvent,
         ) -> None:
+            assert get_ident() != loop_thread
             reinforced.append((hashes, event))
 
     kernel.metadata_store = object()  # type: ignore[assignment]

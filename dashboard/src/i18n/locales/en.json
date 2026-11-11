@@ -1359,7 +1359,7 @@
         },
         "metrics": {
           "precisionAt1": "P@1",
-          "recallAtK": "Recall@K",
+          "hitAtK": "Hit@K",
           "emptyRate": "Empty result rate",
           "avgElapsedMs": "Average latency"
         }

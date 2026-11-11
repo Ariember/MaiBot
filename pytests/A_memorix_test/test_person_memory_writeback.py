@@ -70,6 +70,8 @@ async def test_store_person_memory_from_answer_prefers_explicit_person_id(monkey
         "Alice 长期使用青轴键盘",
         "session-1",
         person_id="person-target",
+        fact_claim={"fact_key": "keyboard_switch", "cardinality": "set", "polarity": "positive"},
+        observed_at=123.0,
     )
 
     assert len(calls) == 1
@@ -77,6 +79,8 @@ async def test_store_person_memory_from_answer_prefers_explicit_person_id(monkey
     assert payload["external_id"].startswith("person_fact:person-target:")
     assert payload["person_ids"] == ["person-target"]
     assert payload["metadata"]["person_id"] == "person-target"
+    assert payload["metadata"]["fact_claim"]["fact_key"] == "keyboard_switch"
+    assert payload["timestamp"] == 123.0
 
 
 @pytest.mark.asyncio

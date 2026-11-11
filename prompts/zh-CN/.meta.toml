@@ -222,3 +222,8 @@ description = "外接 Planner 中断恢复。"
 display_name = "外接 Planner 继续执行"
 advanced = true
 description = "外接 Planner 继续执行。"
+
+[a_memorix_person_fact]
+display_name = "人物事实提取"
+advanced = true
+description = "从用户原始发言提取带来源、有效期和状态变更的人物事实。"

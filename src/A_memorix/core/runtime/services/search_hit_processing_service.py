@@ -97,13 +97,20 @@ class MemorySearchHitProcessingService(KernelServiceBase):
             filtered.append(item)
         return filtered
 
-    def _filter_user_visible_hits(self, hits: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        hits = self._filter_fact_paragraph_hits(hits)
-        hits = self._filter_current_effective_hits(self._filter_active_relation_hits(self._filter_episode_hits(hits)))
+    def _filter_user_visible_hits(
+        self, hits: List[Dict[str, Any]], *, time_from: Optional[float] = None, time_to: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
+        time_options = {"time_from": time_from, "time_to": time_to} if time_from is not None or time_to is not None else {}
+        hits = self._filter_fact_paragraph_hits(hits, **time_options)
+        hits = self._filter_current_effective_hits(
+            self._filter_active_relation_hits(self._filter_episode_hits(hits)), **time_options,
+        )
         return [{**hit, "metadata": visible_fact_metadata(coerce_metadata_dict(hit["metadata"]))}
                 if "metadata" in hit else hit for hit in hits]
 
-    def _filter_fact_paragraph_hits(self, hits: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _filter_fact_paragraph_hits(
+        self, hits: List[Dict[str, Any]], *, time_from: Optional[float] = None, time_to: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
         """写入未完成和证据撤销后的事实不能通过段落或关系旁路回到提示词。"""
         if self.metadata_store is None:
             return hits
@@ -112,16 +119,17 @@ class MemorySearchHitProcessingService(KernelServiceBase):
         paragraphs = self.metadata_store.get_paragraphs_by_hashes(paragraph_ids) if paragraph_ids else {}
         relation_paragraphs = self.metadata_store.get_paragraphs_by_relation_hashes(relation_ids) if relation_ids else {}
         result = []
+        time_options = {"time_from": time_from, "time_to": time_to} if time_from is not None or time_to is not None else {}
         for hit in hits:
             if hit.get("type") == "paragraph" and hit.get("hash") in paragraphs:
-                paragraph = self.metadata_store.project_fact_paragraph(paragraphs[hit["hash"]])
+                paragraph = self.metadata_store.project_fact_paragraph(paragraphs[hit["hash"]], **time_options)
                 if paragraph is None:
                     continue
                 hit = {**hit, "content": paragraph["content"], "metadata": paragraph["metadata"]}
             elif hit.get("type") == "relation" and relation_paragraphs.get(hit.get("hash")):
                 supported = False
                 for row in relation_paragraphs[hit["hash"]]:
-                    if self.metadata_store.fact_relation_has_support(hit["hash"], row):
+                    if self.metadata_store.fact_relation_has_support(hit["hash"], row, **time_options):
                         supported = True
                         break
                 if not supported:
@@ -129,14 +137,17 @@ class MemorySearchHitProcessingService(KernelServiceBase):
             result.append(hit)
         return result
 
-    def _filter_current_effective_hits(self, hits: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _filter_current_effective_hits(
+        self, hits: List[Dict[str, Any]], *, time_from: Optional[float] = None, time_to: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
         if self.metadata_store is None:
-            return self._filter_hits_by_memory_change_metadata(hits)
+            return self._filter_hits_by_memory_change_metadata(hits, time_from=time_from, time_to=time_to)
 
         if not self._current_effective_filter_store_check_needed(hits):
-            return self._filter_hits_by_memory_change_metadata(hits)
+            return self._filter_hits_by_memory_change_metadata(hits, time_from=time_from, time_to=time_to)
 
-        now = time.time()
+        if time_from is None and time_to is None:
+            time_from = time_to = time.time()
         paragraph_hashes: List[str] = []
         relation_hashes: List[str] = []
         for item in hits:
@@ -166,7 +177,10 @@ class MemorySearchHitProcessingService(KernelServiceBase):
             if metadata.get("dedup_phase") == "pending":
                 continue
             valid_to = optional_float(memory_change.get("valid_to"))
-            if valid_to is not None and valid_to <= now:
+            valid_from = optional_float(memory_change.get("valid_from"))
+            if valid_to is not None and time_from is not None and valid_to <= time_from:
+                continue
+            if valid_from is not None and time_to is not None and valid_from > time_to:
                 continue
             next_item = dict(item)
             next_item["metadata"] = metadata
@@ -195,8 +209,11 @@ class MemorySearchHitProcessingService(KernelServiceBase):
         cache["needed"] = needed
         return needed
 
-    def _filter_hits_by_memory_change_metadata(self, hits: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        now = time.time()
+    def _filter_hits_by_memory_change_metadata(
+        self, hits: List[Dict[str, Any]], *, time_from: Optional[float] = None, time_to: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
+        if time_from is None and time_to is None:
+            time_from = time_to = time.time()
         filtered: List[Dict[str, Any]] = []
         for item in hits:
             metadata = coerce_metadata_dict(item.get("metadata"))
@@ -204,7 +221,10 @@ class MemorySearchHitProcessingService(KernelServiceBase):
             if metadata.get("dedup_phase") == "pending":
                 continue
             valid_to = optional_float(memory_change.get("valid_to"))
-            if valid_to is not None and valid_to <= now:
+            valid_from = optional_float(memory_change.get("valid_from"))
+            if valid_to is not None and time_from is not None and valid_to <= time_from:
+                continue
+            if valid_from is not None and time_to is not None and valid_from > time_to:
                 continue
             next_item = dict(item)
             next_item["metadata"] = metadata
@@ -292,7 +312,7 @@ class MemorySearchHitProcessingService(KernelServiceBase):
                 FROM paragraphs
                 WHERE is_deleted IS NULL OR is_deleted = 0
             )
-            SELECT hash, source, metadata
+            SELECT hash, source, metadata_json AS metadata
             FROM paragraph_candidates p
             WHERE LOWER(COALESCE(json_extract(p.metadata_json, '$.scope_type'), '')) = 'global'
                OR p.source LIKE 'web_import:%'
@@ -313,6 +333,8 @@ class MemorySearchHitProcessingService(KernelServiceBase):
             (allowed_chat_ids_json,),
         )
         for paragraph in paragraph_rows:
+            if isinstance(paragraph.get("metadata"), str):
+                paragraph = {**paragraph, "metadata": json.loads(paragraph["metadata"])}
             scope_kind, paragraph_chat_ids = self._paragraph_scope_identity(paragraph)
             if scope_kind == "global" or (scope_kind == "chat" and paragraph_chat_ids & allowed_chat_ids):
                 paragraph_hash = str(paragraph.get("hash", "") or "").strip()

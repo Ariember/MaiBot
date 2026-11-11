@@ -1266,8 +1266,9 @@ class MetadataEpisodeMixin:
         source: Optional[str] = None,
     ) -> Tuple[str, str, str, List[str], List[Any]]:
         source_expr = "TRIM(COALESCE(e.source, ''))"
-        effective_start = "COALESCE(e.event_time_start, e.event_time_end, e.updated_at)"
-        effective_end = "COALESCE(e.event_time_end, e.event_time_start, e.updated_at)"
+        observed_fallback = "CASE WHEN e.time_confidence > 0 THEN e.updated_at END"
+        effective_start = f"COALESCE(e.event_time_start, e.event_time_end, {observed_fallback})"
+        effective_end = f"COALESCE(e.event_time_end, e.event_time_start, {observed_fallback})"
         conditions: List[str] = []
         params: List[Any] = []
 

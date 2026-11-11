@@ -23,6 +23,89 @@ def test_person_fact_parse_fact_list_deduplicates_and_filters_short_items():
     assert result == ["他喜欢猫", "他会弹吉他"]
 
 
+@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
+def test_person_fact_prompt_carries_structured_claim_contract(locale):
+    from src.common.prompt_i18n import list_prompt_templates
+
+    rendered = memory_flow_module.load_prompt(
+        "a_memorix_person_fact",
+        locale=locale,
+        person_name="Alice",
+        user_evidence_text="[2026-01-10] I moved to Shanghai yesterday.",
+        reply_text="Understood.",
+    )
+    assert "Alice" in rendered
+    assert "2026-01-10" in rendered
+    assert all(key in rendered for key in ("fact_key", "cardinality", "polarity", "valid_from", "valid_to", "replace"))
+    metadata = list_prompt_templates(locale=locale)["a_memorix_person_fact"].metadata
+    assert metadata.display_name and metadata.description
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("quote", ["昨天搬到上海了", "并非用户原话"])
+async def test_person_fact_change_requires_source_and_keeps_effective_time(monkeypatch, quote):
+    from unittest.mock import AsyncMock
+    import threading
+
+    loop_thread = threading.get_ident()
+    user_message = SimpleNamespace(
+        message_id="user-move",
+        timestamp=200.0,
+        processed_plain_text="我昨天搬到上海了。",
+    )
+    person = SimpleNamespace(person_id="p1", person_name="Alice", is_known=True)
+    service = memory_flow_module.PersonFactWritebackService()
+
+    def resolve(message):
+        assert threading.get_ident() != loop_thread
+        return person
+
+    def collect(message, target):
+        assert threading.get_ident() != loop_thread
+        return memory_flow_module.PersonFactEvidence([user_message], [])
+
+    service._resolve_target_person = resolve
+    service._collect_user_evidence = collect
+    service._extract_facts = AsyncMock(
+        return_value=[
+            {
+                "fact": "Alice现居上海。",
+                "evidence_message_id": "user-move",
+                "evidence_quote": quote,
+                "fact_claim": {
+                    "fact_key": "residence_city",
+                    "cardinality": "single",
+                    "polarity": "positive",
+                    "change": "replace",
+                    "valid_from": 100.0,
+                    "valid_to": None,
+                },
+            }
+        ]
+    )
+    write = AsyncMock()
+    monkeypatch.setattr(memory_flow_module, "store_person_memory_from_answer", write)
+    trigger = SimpleNamespace(processed_plain_text="我记住了你的新住址。", session_id="chat-1")
+    if quote == "并非用户原话":
+        with pytest.raises(ValueError, match="原始发言证据"):
+            await service._handle_message(trigger)
+        write.assert_not_called()
+    else:
+        await service._handle_message(trigger)
+        payload = write.call_args.kwargs
+        assert payload["observed_at"] == 200.0
+        assert payload["fact_claim"]["valid_from"] == 100.0
+        assert payload["fact_claim"]["change"] == "replace"
+
+
+def test_person_fact_claim_rejects_ambiguous_replacement_and_invalid_range():
+    normalize = memory_flow_module.PersonFactWritebackService._normalize_fact_claim
+    with pytest.raises(ValueError, match="单值槽位"):
+        normalize({"fact_key": "interests", "cardinality": "set", "change": "replace"})
+    with pytest.raises(ValueError, match="不能早于"):
+        normalize({"fact_key": "residence_city", "valid_from": 200, "valid_to": 100})
+
+
 def test_person_fact_looks_ephemeral_detects_short_chitchat():
     assert memory_flow_module.PersonFactWritebackService._looks_ephemeral("哈哈")
     assert memory_flow_module.PersonFactWritebackService._looks_ephemeral("好的？")

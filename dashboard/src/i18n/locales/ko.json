@@ -1275,7 +1275,7 @@
         },
         "metrics": {
           "precisionAt1": "P@1",
-          "recallAtK": "Recall@K",
+          "hitAtK": "Hit@K",
           "emptyRate": "빈 결과율",
           "avgElapsedMs": "평균 소요 시간"
         }

@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from sqlmodel import col, select
 
+import asyncio
 import hashlib
 import json
 import time
@@ -516,6 +517,7 @@ async def store_person_memory_from_answer(
     evidence_source: str = "user_supported",
     evidence_message_ids: Optional[List[str]] = None,
     fact_claim: Optional[Dict[str, Any]] = None,
+    observed_at: Optional[float] = None,
 ) -> None:
     """将人物事实写入长期记忆系统。
 
@@ -547,7 +549,8 @@ async def store_person_memory_from_answer(
         session_user_id = str(getattr(session, "user_id", "") or "").strip()
         session_group_id = str(getattr(session, "group_id", "") or "").strip()
 
-        person_id = clean_person_id or resolve_person_id_for_memory(
+        person_id = clean_person_id or await asyncio.to_thread(
+            resolve_person_id_for_memory,
             person_name=clean_person_name,
             platform=session_platform,
             user_id=session_user_id,
@@ -556,7 +559,7 @@ async def store_person_memory_from_answer(
             logger.warning(f"无法确定person_id for person_name: {clean_person_name}, chat_id: {clean_chat_id}")
             return
 
-        person = Person(person_id=person_id)
+        person = await asyncio.to_thread(Person, person_id=person_id)
         if not person.is_known:
             logger.warning(f"用户 {clean_person_name or person_id} (person_id: {person_id}) 尚未认识，跳过写回")
             return
@@ -574,6 +577,7 @@ async def store_person_memory_from_answer(
             person_ids=[person_id],
             participants=[participant_name] if participant_name else [],
             tags=["person_fact"],
+            timestamp=observed_at,
             metadata={
                 "platform": session_platform,
                 "person_id": person_id,

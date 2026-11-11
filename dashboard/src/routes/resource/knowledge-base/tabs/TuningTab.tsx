@@ -95,7 +95,7 @@ const PARAMETER_ORDER = [
 
 const RESULT_METRICS = [
   { key: 'precision_at_1', labelKey: 'memory.tuning.result.metrics.precisionAt1', format: 'percent' },
-  { key: 'recall_at_k', labelKey: 'memory.tuning.result.metrics.recallAtK', format: 'percent' },
+  { key: 'hit_at_k', labelKey: 'memory.tuning.result.metrics.hitAtK', format: 'percent' },
   { key: 'empty_rate', labelKey: 'memory.tuning.result.metrics.emptyRate', format: 'percent' },
   { key: 'avg_elapsed_ms', labelKey: 'memory.tuning.result.metrics.avgElapsedMs', format: 'ms' },
 ] as const

@@ -1358,7 +1358,7 @@
         },
         "metrics": {
           "precisionAt1": "首条命中率",
-          "recallAtK": "目标找回率",
+          "hitAtK": "前 K 条命中率",
           "emptyRate": "无结果比例",
           "avgElapsedMs": "平均响应时间"
         }

@@ -46,7 +46,9 @@ def normalized_fact(text: str) -> str:
 def visible_fact_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
     """写入决定和疑似重复关系仅供内部恢复，不进入检索或画像的模型输入。"""
     return {
-        key: value for key, value in metadata.items() if not key.startswith("dedup_") and key != "fact_dedup_decisions"
+        key: value
+        for key, value in metadata.items()
+        if not key.startswith("dedup_") and key not in {"fact_dedup_decisions", "fact_event_times"}
     }
 
 
@@ -79,6 +81,22 @@ class FactDeduplicator:
     def _compatible_candidates(
         scope_type: str, fact: Dict[str, Any], rows: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
+        claim_spec = fact.get("fact_claim") or {}
+        if scope_type == "person" and claim_spec.get("fact_key"):
+            rows = [
+                row
+                for row in rows
+                if row.get("fact_key") == normalized_fact(claim_spec["fact_key"])
+                and row.get("polarity") == claim_spec.get("polarity", "positive")
+                and row.get("cardinality") == claim_spec.get("cardinality", "set")
+            ]
+            if claim_spec.get("valid_to") is not None:
+                rows = [
+                    row
+                    for row in rows
+                    if row.get("valid_from") == claim_spec.get("valid_from")
+                    and row.get("valid_to") == claim_spec["valid_to"]
+                ]
         if scope_type != "chat" or not fact.get("person_ids"):
             return rows
         people = set(fact["person_ids"])
@@ -109,7 +127,8 @@ class FactDeduplicator:
         """先按账本精确命中，再做有上限的关键词召回；不向模型发送整段历史。"""
         now = time.time()
         rows = self.store.query(
-            "SELECT * FROM fact_claims WHERE scope_type=? AND scope_id=? AND status='active' AND stability<>'uncertain' "
+            "SELECT * FROM fact_claims WHERE scope_type=? AND scope_id=? "
+            "AND (status='active' OR (status='superseded' AND valid_to IS NOT NULL)) AND stability<>'uncertain' "
             "AND (valid_from IS NULL OR valid_from<=?) AND (valid_to IS NULL OR valid_to>?) "
             "AND value_normalized=? LIMIT 8",
             (scope_type, scope_id, now, now, normalized_fact(text)),
@@ -120,7 +139,8 @@ class FactDeduplicator:
             if terms:
                 conditions = " OR ".join("value_text LIKE ?" for _ in terms)
                 rows += self.store.query(
-                    "SELECT * FROM fact_claims WHERE scope_type=? AND scope_id=? AND status='active' AND stability<>'uncertain' "
+                    "SELECT * FROM fact_claims WHERE scope_type=? AND scope_id=? "
+                    "AND (status='active' OR (status='superseded' AND valid_to IS NOT NULL)) AND stability<>'uncertain' "
                     f"AND (valid_from IS NULL OR valid_from<=?) AND (valid_to IS NULL OR valid_to>?) "
                     f"AND ({conditions}) ORDER BY updated_at DESC LIMIT 8",
                     (scope_type, scope_id, now, now, *[f"%{term}%" for term in terms]),
@@ -142,6 +162,9 @@ class FactDeduplicator:
                     "text": row["value_text"],
                     "paragraph_hash": paragraph,
                     "claim_id": row["claim_id"],
+                    "fact_key": row["fact_key"],
+                    "cardinality": row["cardinality"],
+                    "polarity": row["polarity"],
                     "valid_from": row["valid_from"],
                     "valid_to": row["valid_to"],
                     "person_ids": self._claim_people(evidence, paragraph),
@@ -164,7 +187,10 @@ class FactDeduplicator:
             if claims:
                 for claim in claims:
                     if (
-                        claim["status"] == "active"
+                        (
+                            claim["status"] == "active"
+                            or (claim["status"] == "superseded" and claim["valid_to"] is not None)
+                        )
                         and claim["stability"] != "uncertain"
                         and (claim["valid_to"] is None or claim["valid_to"] > time.time())
                         and (claim["valid_from"] is None or claim["valid_from"] <= time.time())
@@ -174,6 +200,9 @@ class FactDeduplicator:
                                 "id": claim["claim_id"],
                                 "text": claim["value_text"],
                                 "claim_id": claim["claim_id"],
+                                "fact_key": claim["fact_key"],
+                                "cardinality": claim["cardinality"],
+                                "polarity": claim["polarity"],
                                 "paragraph_hash": paragraph_id,
                                 "valid_from": claim["valid_from"],
                                 "valid_to": claim["valid_to"],
@@ -222,6 +251,11 @@ class FactDeduplicator:
             candidates: Dict[str, List[Dict[str, Any]]] = {}
             fixed: Dict[str, Dict[str, Any]] = {}
             for fact in batch:
+                # 明确变更必须进入账本状态机，不能被文本等价去重吞掉。
+                if (fact.get("fact_claim") or {}).get("change") == "replace":
+                    candidates[fact["fact_id"]] = []
+                    fixed[fact["fact_id"]] = {"fact_id": fact["fact_id"], "action": "keep"}
+                    continue
                 found = await asyncio.to_thread(self._candidates, scope_type, scope_id, fact["text"], paragraph_ids)
                 found = self._compatible_candidates(scope_type, fact, found)
                 exact = next(
@@ -256,6 +290,10 @@ class FactDeduplicator:
                         "text": row["text"],
                         "input_fact_id": row["fact_id"],
                         "person_ids": row.get("person_ids", []),
+                        **{
+                            key: (row.get("fact_claim") or {}).get(key)
+                            for key in ("fact_key", "cardinality", "polarity", "valid_from", "valid_to")
+                        },
                     }
                     for row in earlier[-8:]
                 ]
@@ -418,7 +456,10 @@ class FactDeduplicator:
                 claim = self.store.get_fact_claim(claim_id)
                 if (
                     claim is None
-                    or claim["status"] != "active"
+                    or not (
+                        claim["status"] == "active"
+                        or (claim["status"] == "superseded" and claim["valid_to"] is not None)
+                    )
                     or claim["stability"] == "uncertain"
                     or claim["scope_type"] != plan["scope_type"]
                     or claim["scope_id"] != plan["scope_id"]
@@ -429,11 +470,44 @@ class FactDeduplicator:
             else:
                 # 存量混合段落只登记这次已确认匹配的具体事实，不能把整段视为人物事实。
                 origin = target_paragraph if decision["action"] == "reuse" else plan["source"]["observation_id"]
+                spec = classification if plan["scope_type"] == "person" else {}
+                fact_key = spec.get("fact_key") or f"statement:{origin}:{compute_hash(normalized_fact(fact['text']))}"
+                supersedes = spec.get("supersedes_claim_ids", [])
+                if spec.get("change") == "replace":
+                    if (
+                        spec.get("cardinality") != "single"
+                        or not spec.get("fact_key")
+                        or spec.get("valid_from") is None
+                    ):
+                        raise ValueError("人物事实变更需要单值槽位和生效时间")
+                    supersedes = [
+                        row["claim_id"]
+                        for row in self.store.query(
+                            "SELECT claim_id FROM fact_claims WHERE scope_type='person' AND scope_id=? "
+                            "AND fact_key=? AND cardinality='single' "
+                            "AND (status IN ('active','conflicted') OR (status='superseded' AND valid_to IS NOT NULL)) "
+                            "AND (value_normalized<>? OR polarity<>?) "
+                            "AND COALESCE(valid_from,first_observed_at)<=? AND (valid_to IS NULL OR valid_to>?)",
+                            (
+                                plan["scope_id"],
+                                normalized_fact(fact_key),
+                                normalized_fact(fact["text"]),
+                                spec.get("polarity", "positive"),
+                                spec["valid_from"],
+                                spec["valid_from"],
+                            ),
+                        )
+                    ]
                 claim = self.store.upsert_fact_claim(
                     scope_type=plan["scope_type"],
                     scope_id=plan["scope_id"],
-                    fact_key=f"statement:{origin}:{compute_hash(normalized_fact(fact['text']))}",
+                    fact_key=fact_key,
                     value_text=fact["text"],
+                    cardinality=spec.get("cardinality", "set"),
+                    polarity=spec.get("polarity", "positive"),
+                    valid_from=spec.get("valid_from"),
+                    valid_to=spec.get("valid_to"),
+                    supersedes_claim_ids=supersedes,
                     evidence_type="paragraph",
                     evidence_id=target_paragraph,
                     authority="summary_derived"

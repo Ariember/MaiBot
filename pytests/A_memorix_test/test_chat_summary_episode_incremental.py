@@ -66,6 +66,40 @@ class _FakeSegmentationService:
 
 
 @pytest.mark.asyncio
+async def test_episode_preserves_unknown_event_time(tmp_path, monkeypatch) -> None:
+    store = MetadataStore(data_dir=tmp_path)
+    store.connect()
+    segmenter = _FakeSegmentationService()
+    segment = segmenter.segment
+
+    async def segment_with_inferred_date(**kwargs):
+        result = await segment(**kwargs)
+        result["episodes"][0].update(event_time_start=500.0, event_time_end=500.0)
+        return result
+
+    monkeypatch.setattr(segmenter, "segment", segment_with_inferred_date)
+    service = EpisodeService(metadata_store=store, segmentation_service=segmenter)
+    source = "chat_summary:unknown-event-date"
+    try:
+        paragraph_hash = store.add_paragraph(
+            "曾经去过杭州，未说明日期。", source=source, metadata={"event_time_unknown": True}
+        )
+        unknown = store.get_paragraph(paragraph_hash)
+        start, end, _, _ = service._compute_time_meta([unknown, {"event_time": 200.0}])
+        assert start == end == 200.0
+
+        await service.rebuild_source(source)
+        episode = store.query_episodes(source=source)[0]
+        assert episode["event_time_start"] is None
+        assert episode["event_time_end"] is None
+        assert episode["time_confidence"] == 0.0
+        observed = episode["updated_at"]
+        assert store.query_episodes(source=source, time_from=observed - 1, time_to=observed + 1) == []
+    finally:
+        store.close()
+
+
+@pytest.mark.asyncio
 async def test_auto_chat_summary_relies_on_source_outbox(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,

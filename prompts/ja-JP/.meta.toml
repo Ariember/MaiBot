@@ -227,3 +227,8 @@ description = "外部 Planner 中断復帰。"
 display_name = "外部 Planner 継続実行"
 advanced = true
 description = "外部 Planner 継続実行。"
+
+[a_memorix_person_fact]
+display_name = "人物事実の抽出"
+advanced = true
+description = "ユーザーの原文から、証拠、有効期間、状態変化を持つ人物の事実を抽出します。"

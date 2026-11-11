@@ -187,6 +187,7 @@ class EpisodeService:
                     "event_time": self._to_optional_float(paragraph.get("event_time")),
                     "event_time_start": self._to_optional_float(paragraph.get("event_time_start")),
                     "event_time_end": self._to_optional_float(paragraph.get("event_time_end")),
+                    "event_time_unknown": bool((paragraph.get("metadata") or {}).get("event_time_unknown")),
                     "time_granularity": str(paragraph.get("time_granularity", "") or "").strip(),
                     "time_confidence": self._clamp_score(paragraph.get("time_confidence"), default=1.0),
                     "participants": participant_names,
@@ -321,6 +322,8 @@ class EpisodeService:
         conf_values: List[float] = []
 
         for p in paragraphs:
+            if (p.get("metadata") or {}).get("event_time_unknown"):
+                continue
             s = self._to_optional_float(p.get("event_time_start"))
             e = self._to_optional_float(p.get("event_time_end"))
             t = self._to_optional_float(p.get("event_time"))
@@ -346,7 +349,7 @@ class EpisodeService:
 
         time_start = min(starts) if starts else None
         time_end = max(ends) if ends else None
-        time_conf = sum(conf_values) / len(conf_values) if conf_values else 1.0
+        time_conf = sum(conf_values) / len(conf_values) if conf_values else 0.0
         return time_start, time_end, granularity, self._clamp_score(time_conf, default=1.0)
 
     @staticmethod
@@ -514,6 +517,8 @@ class EpisodeService:
                 ),
                 "input_fingerprint": input_fingerprint,
             }
+            if event_start is None and event_end is None:
+                payload.update(event_time_start=None, event_time_end=None, time_granularity=None, time_confidence=0.0)
             stored_payloads.append(payload)
 
         stored_hashes = {

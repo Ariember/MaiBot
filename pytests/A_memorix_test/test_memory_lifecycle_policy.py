@@ -1,6 +1,9 @@
 from pathlib import Path
 from random import Random
+from threading import Event, get_ident
+from unittest.mock import AsyncMock
 
+import asyncio
 import pytest
 
 from src.A_memorix.core.runtime.services import memory_maintenance_service, v5_admin_service
@@ -35,6 +38,72 @@ def _metadata_store(tmp_path: Path) -> MetadataStore:
     store = MetadataStore(data_dir=tmp_path / "metadata")
     store.connect()
     return store
+
+
+@pytest.mark.asyncio
+async def test_maintenance_database_and_persistence_run_outside_event_loop(tmp_path, monkeypatch) -> None:
+    store = _metadata_store(tmp_path)
+    graph = GraphStore(data_dir=tmp_path / "graph")
+    kernel = SDKMemoryKernel(plugin_root=tmp_path, config={})
+    kernel.metadata_store = store
+    kernel.graph_store = graph
+    loop_thread = get_ident()
+    calls = []
+    evaluate_lifecycles = store.evaluate_due_relation_lifecycles
+    get_isolated_nodes = graph.get_isolated_nodes
+
+    def evaluate(**kwargs):
+        assert get_ident() != loop_thread
+        calls.append("database")
+        return evaluate_lifecycles(**kwargs)
+
+    def read_isolated_nodes(**kwargs):
+        assert get_ident() != loop_thread
+        calls.append("graph")
+        return get_isolated_nodes(**kwargs)
+
+    def persist():
+        assert get_ident() != loop_thread
+        calls.append("persist")
+
+    monkeypatch.setattr(store, "evaluate_due_relation_lifecycles", evaluate)
+    monkeypatch.setattr(graph, "get_isolated_nodes", read_isolated_nodes)
+    monkeypatch.setattr(kernel, "_persist", persist)
+    monkeypatch.setattr(kernel, "_purge_deleted_memory", AsyncMock())
+    try:
+        await kernel._run_memory_maintenance_cycle(interval_hours=1.0)
+        assert {"database", "graph", "persist"} <= set(calls)
+    finally:
+        store.close()
+
+
+@pytest.mark.asyncio
+async def test_cancelled_maintenance_waits_for_persistence(tmp_path, monkeypatch) -> None:
+    kernel = SDKMemoryKernel(plugin_root=tmp_path, config={})
+    loop = asyncio.get_running_loop()
+    started = asyncio.Event()
+    release = Event()
+    finished = Event()
+
+    def persist():
+        loop.call_soon_threadsafe(started.set)
+        assert release.wait(timeout=5)
+        finished.set()
+
+    monkeypatch.setattr(kernel, "_process_freeze_and_prune", AsyncMock())
+    monkeypatch.setattr(kernel, "_orphan_gc_phase", AsyncMock())
+    monkeypatch.setattr(kernel, "_persist", persist)
+    task = asyncio.create_task(kernel._run_memory_maintenance_cycle(interval_hours=1.0))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=2)
+        task.cancel()
+        await asyncio.sleep(0)
+        assert not task.done()
+    finally:
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    assert finished.is_set()
 
 
 def test_wall_clock_decay_is_idempotent_and_downtime_equivalent() -> None:
