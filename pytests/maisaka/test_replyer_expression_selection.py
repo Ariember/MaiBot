@@ -1,5 +1,6 @@
+from threading import get_ident
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Dict, List
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -46,15 +47,24 @@ async def test_reply_context_skips_expression_selection_only_for_retro(monkeypat
 @pytest.mark.parametrize("fine", [False, True], ids=["fast", "fine"])
 async def test_expression_mode_controls_vector_and_llm_calls(monkeypatch, fine: bool) -> None:
     selector = MaisakaExpressionSelector()
+    event_loop_thread = get_ident()
     candidates = [
         {"id": index, "situation": f"情景{index}", "style": f"表达{index}", "count": index + 2}
         for index in range(12)
     ]
     monkeypatch.setattr(global_config.expression, "use_vector_expression", fine)
     monkeypatch.setattr(selector, "_can_use_expressions", lambda session_id: True)
-    monkeypatch.setattr(selector, "_load_all_expression_candidates", lambda session_id: candidates)
+
+    def load_candidates(session_id: str) -> List[Dict[str, Any]]:
+        assert get_ident() != event_loop_thread
+        return candidates
+
+    def update_activity_in_worker(selected_ids: List[int]) -> None:
+        assert get_ident() != event_loop_thread
+
+    monkeypatch.setattr(selector, "_load_all_expression_candidates", load_candidates)
     monkeypatch.setattr(selector, "_has_embedding_model_configured", lambda: True)
-    update_activity = Mock()
+    update_activity = Mock(side_effect=update_activity_in_worker)
     monkeypatch.setattr(selector, "_update_last_active_time", update_activity)
     vector_select = AsyncMock(return_value=candidates[:8])
     monkeypatch.setattr(expression_vector_index, "select_candidates", vector_select)
@@ -81,6 +91,48 @@ async def test_expression_mode_controls_vector_and_llm_calls(monkeypatch, fine: 
         assert len(set(result.selected_expression_ids)) == len(result.selected_expression_ids)
     assert result.expression_habits
     assert update_activity.call_args.args[0] == result.selected_expression_ids
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("override", ["ids", "expressions"])
+async def test_expression_hook_updates_activity_in_worker(monkeypatch, override: str) -> None:
+    selector = MaisakaExpressionSelector()
+    event_loop_thread = get_ident()
+    candidates = [
+        {"id": index, "situation": f"情景{index}", "style": f"表达{index}", "count": 1}
+        for index in range(12)
+    ]
+    monkeypatch.setattr(selector, "_can_use_expressions", lambda session_id: True)
+    monkeypatch.setattr(selector, "_load_all_expression_candidates", lambda session_id: candidates)
+    monkeypatch.setattr(selector, "_build_expression_candidate_pool", AsyncMock(return_value=candidates))
+    monkeypatch.setattr(
+        selector, "_build_default_selection_result", AsyncMock(return_value=MaisakaExpressionSelectionResult())
+    )
+
+    def update_activity(selected_ids: List[int]) -> None:
+        assert get_ident() != event_loop_thread
+        assert selected_ids == [1]
+
+    update_activity_mock = Mock(side_effect=update_activity)
+    monkeypatch.setattr(selector, "_update_last_active_time", update_activity_mock)
+
+    async def invoke_hook(name: str, **kwargs: Any) -> SimpleNamespace:
+        if name == "expression.select.after_selection":
+            if override == "ids":
+                kwargs["selected_expression_ids"] = [1]
+            else:
+                kwargs["selected_expressions"] = [candidates[1]]
+        return SimpleNamespace(aborted=False, kwargs=kwargs)
+
+    monkeypatch.setattr(selector, "_get_runtime_manager", lambda: SimpleNamespace(invoke_hook=invoke_hook))
+
+    result = await selector.select_for_reply(
+        session_id="test-session", chat_history=[], reply_message=None,
+        reply_reason="测试回复", sub_agent_runner=None,
+    )
+
+    assert result.selected_expression_ids == [1]
+    update_activity_mock.assert_called_once_with([1])
 
 
 @pytest.mark.asyncio

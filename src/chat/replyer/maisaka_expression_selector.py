@@ -2,6 +2,7 @@
 from datetime import datetime
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
+import asyncio
 import json
 
 from json_repair import repair_json
@@ -525,14 +526,16 @@ class MaisakaExpressionSelector:
     ) -> MaisakaExpressionSelectionResult:
         # 快速档直接使用加权抽样候选，由回复模型自行参考，不再额外请求选择模型。
         if not self._use_vector_candidate_pool():
-            return self._build_direct_selection_result(
+            return await asyncio.to_thread(
+                self._build_direct_selection_result,
                 session_id=session_id,
                 candidates=candidates,
             )
 
         if sub_agent_runner is None:
             logger.info("表达方式 LLM 选择已跳过：缺少子代理执行器，回退为直接注入")
-            return self._build_direct_selection_result(
+            return await asyncio.to_thread(
+                self._build_direct_selection_result,
                 session_id=session_id,
                 candidates=candidates,
             )
@@ -544,7 +547,8 @@ class MaisakaExpressionSelector:
             raw_response = await sub_agent_runner(selector_prompt)
         except Exception as exc:
             logger.warning(f"表达方式 LLM 选择子代理执行失败，回退为直接注入: {exc}")
-            return self._build_direct_selection_result(
+            return await asyncio.to_thread(
+                self._build_direct_selection_result,
                 session_id=session_id,
                 candidates=candidates,
             )
@@ -554,7 +558,8 @@ class MaisakaExpressionSelector:
             f"表达方式 LLM 选择完成：session_id={session_id} selected_ids={selected_ids!r} "
             f"候选预览={self._format_candidate_preview(candidates)}"
         )
-        return self._build_selection_result_from_ids(
+        return await asyncio.to_thread(
+            self._build_selection_result_from_ids,
             candidates=candidates,
             selected_ids=selected_ids,
         )
@@ -587,7 +592,7 @@ class MaisakaExpressionSelector:
             logger.info(f"表达方式选择已跳过：当前会话未启用表达方式，session_id={session_id}")
             return MaisakaExpressionSelectionResult()
 
-        all_candidates = self._load_all_expression_candidates(session_id)
+        all_candidates = await asyncio.to_thread(self._load_all_expression_candidates, session_id)
         if len(all_candidates) < 10:
             logger.info(f"表达方式选择已跳过：本地候选不足，session_id={session_id}")
             return MaisakaExpressionSelectionResult()
@@ -667,11 +672,12 @@ class MaisakaExpressionSelector:
         raw_selected_expressions = after_kwargs.get("selected_expressions")
         hook_selected_expressions = self._normalize_selected_expressions(raw_selected_expressions)
         if hook_selected_expressions and raw_selected_expressions != selected_expressions:
-            return self._build_selection_result_from_expressions(hook_selected_expressions)
+            return await asyncio.to_thread(self._build_selection_result_from_expressions, hook_selected_expressions)
 
         hook_selected_ids = self._normalize_selected_ids(raw_selected_ids, candidates)
         if hook_selected_ids or raw_selected_ids == []:
-            return self._build_selection_result_from_ids(
+            return await asyncio.to_thread(
+                self._build_selection_result_from_ids,
                 candidates=candidates,
                 selected_ids=hook_selected_ids,
             )

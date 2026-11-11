@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+from threading import RLock
 from typing import Any, Dict, List, Optional
 
 import json
@@ -13,6 +14,7 @@ logger = get_logger("expressor")
 REVIEW_LOG_PATH = Path("logs/expression_review/review_logs.json")
 AI_REVIEW_EVENT = "ai_review"
 MANUAL_RESCUE_EVENT = "manual_rescue"
+_review_log_lock = RLock()
 
 
 def _review_key(expression_id: int) -> str:
@@ -52,11 +54,12 @@ def _now_iso() -> str:
 
 
 def _append_log_entry(entry: Dict[str, Any]) -> None:
-    entries = read_review_log_entries()
-    entries.append(entry)
-    REVIEW_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with REVIEW_LOG_PATH.open("w", encoding="utf-8") as log_file:
-        json.dump(entries, log_file, ensure_ascii=False, indent=2)
+    with _review_log_lock:
+        entries = read_review_log_entries()
+        entries.append(entry)
+        REVIEW_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with REVIEW_LOG_PATH.open("w", encoding="utf-8") as log_file:
+            json.dump(entries, log_file, ensure_ascii=False, indent=2)
 
 
 def append_ai_review_log(
@@ -117,22 +120,23 @@ def append_manual_rescue_log(
 def read_review_log_entries() -> List[Dict[str, Any]]:
     """读取全部表达方式审核日志；文件损坏时删除重建，继续本次学习。"""
 
-    if not REVIEW_LOG_PATH.exists():
-        return []
+    with _review_log_lock:
+        if not REVIEW_LOG_PATH.exists():
+            return []
 
-    try:
-        with REVIEW_LOG_PATH.open("r", encoding="utf-8") as log_file:
-            parsed = json.load(log_file)
-        if not isinstance(parsed, list):
-            raise ValueError("表达方式审核日志格式异常，应为 JSON 数组")
-    except ValueError as exc:
-        # 审核历史损坏不应阻断当前表达入库，清空后由调用方继续记录本次审核。
-        REVIEW_LOG_PATH.unlink(missing_ok=True)
-        REVIEW_LOG_PATH.write_text("[]", encoding="utf-8")
-        logger.warning(f"表达方式审核日志损坏，已删除并重建 {REVIEW_LOG_PATH.as_posix()}: {exc}")
-        return []
+        try:
+            with REVIEW_LOG_PATH.open("r", encoding="utf-8") as log_file:
+                parsed = json.load(log_file)
+            if not isinstance(parsed, list):
+                raise ValueError("表达方式审核日志格式异常，应为 JSON 数组")
+        except ValueError as exc:
+            # 审核历史损坏不应阻断当前表达入库，清空后由调用方继续记录本次审核。
+            REVIEW_LOG_PATH.unlink(missing_ok=True)
+            REVIEW_LOG_PATH.write_text("[]", encoding="utf-8")
+            logger.warning(f"表达方式审核日志损坏，已删除并重建 {REVIEW_LOG_PATH.as_posix()}: {exc}")
+            return []
 
-    return [entry for entry in parsed if isinstance(entry, dict)]
+        return [entry for entry in parsed if isinstance(entry, dict)]
 
 
 def _parse_created_at(value: Any) -> datetime:

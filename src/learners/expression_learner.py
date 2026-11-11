@@ -1,7 +1,7 @@
 from copy import copy
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple
 
 import asyncio
 import json
@@ -347,7 +347,7 @@ class ExpressionLearner:
     ) -> bool:
         """对一批真实会话消息执行表达学习。"""
 
-        learning_session_id = self._resolve_learning_session_id(pending_messages)
+        learning_session_id = await asyncio.to_thread(self._resolve_learning_session_id, pending_messages)
         if learning_session_id is None:
             logger.warning(f"表达学习已跳过：无法解析到有效聊天流，learner_session_id={self.session_id}")
             self.learning_retry_blocked = True
@@ -384,14 +384,22 @@ class ExpressionLearner:
                 )
             return False
 
-        self.pending_messages.discard(pending_messages)
+        self.learning_status, self.learning_detail = "running", ""
         try:
             return await self._run_learning_batch(
                 pending_messages,
                 learning_session_id=learning_session_id,
                 learned_contents=learned_contents,
             )
+        except Exception as exc:
+            self.learning_status, self.learning_detail = "failed", f"表达学习失败，素材已保留：{exc}"
+            logger.exception(f"表达学习失败，素材已保留: session_id={learning_session_id}")
+            if learned_contents is not None:
+                raise
+            return False
         finally:
+            if self.learning_status in ("completed", "no_results", "skipped"):
+                self.pending_messages.discard(pending_messages)
             await expression_learning_batch_gate.release(learning_session_id)
 
     async def _run_learning_batch(
@@ -410,28 +418,22 @@ class ExpressionLearner:
         prompt_template.add_context("chat_str", readable_message)
         prompt = await prompt_manager.render_prompt(prompt_template)
 
-        try:
-            learning_messages = await self._build_multi_learning_messages(pending_messages, prompt)
-            if len(learning_messages) == 2:
-                self.learning_status, self.learning_detail = "no_results", "没有可学习的文字正文"
-                return False
-            generation_result = await express_learn_model.generate_response_with_context(
-                lambda _client: learning_messages,
-                session_id=learning_session_id,
-            )
-            self._log_learning_context_preview(
-                learning_messages,
-                session_id=learning_session_id,
-                source_message_count=len(pending_messages),
-                source_type="trimmed_history",
-                generation_result=generation_result,
-            )
-            response = generation_result.response
-        except Exception as e:
-            logger.error(f"学习表达方式失败: {e}")
-            if learned_contents is not None:
-                raise
+        learning_messages = await self._build_multi_learning_messages(pending_messages, prompt)
+        if len(learning_messages) == 2:
+            self.learning_status, self.learning_detail = "no_results", "没有可学习的文字正文"
             return False
+        generation_result = await express_learn_model.generate_response_with_context(
+            lambda _client: learning_messages,
+            session_id=learning_session_id,
+        )
+        self._log_learning_context_preview(
+            learning_messages,
+            session_id=learning_session_id,
+            source_message_count=len(pending_messages),
+            source_type="trimmed_history",
+            generation_result=generation_result,
+        )
+        response = generation_result.response
 
         expressions: List[Tuple[str, str, str]]
         expressions, _ = parse_expression_response(response)
@@ -473,13 +475,14 @@ class ExpressionLearner:
             return False
 
         learnt_expressions_str = "\n".join(f"{situation}->{style}" for situation, style in learnt_expressions)
-        session_display_name = self._get_session_display_name(learning_session_id)
+        session_display_name = await asyncio.to_thread(self._get_session_display_name, learning_session_id)
         expression_log_title = (
             "待优化的表达方式" if global_config.expression.expression_self_reflect else "学习到的表达"
         )
         logger.debug(f"[{session_display_name}] {expression_log_title}：\n{learnt_expressions_str}")
 
-        written_expressions: List[MaiExpression] = []
+        approved_expressions: List[Tuple[str, str]] = []
+        expression_self_reflect = global_config.expression.expression_self_reflect
         for situation, style in learnt_expressions:
             before_upsert_result = await self._get_runtime_manager().invoke_hook(
                 "expression.learn.before_upsert",
@@ -498,7 +501,6 @@ class ExpressionLearner:
                 logger.info(f"{self.session_id} 表达方式写入 Hook 中止: situation={situation!r}")
                 continue
 
-            expression_self_reflect = global_config.expression.expression_self_reflect
             if expression_self_reflect and not await self._check_expression_before_upsert(
                 situation,
                 style,
@@ -506,20 +508,19 @@ class ExpressionLearner:
             ):
                 continue
 
-            expression = await self._upsert_expression_to_db(
-                situation,
-                style,
+            approved_expressions.append((situation, style))
+
+        # 审核全部完成后再统一写库，失败重试不会重复累计已写入的候选。
+        written_expressions: List[MaiExpression] = []
+        if approved_expressions:
+            written_expressions = await asyncio.to_thread(
+                self._upsert_expressions_to_db,
+                approved_expressions,
                 session_id=learning_session_id,
-                checked=False,
                 modified_by=ModifiedBy.AI if expression_self_reflect else None,
             )
-            if expression is not None:
-                written_expressions.append(expression)
-                if learned_contents is not None:
-                    learned_contents.append(f"{situation} → {style}")
-
-        if written_expressions:
-            await self._sync_expression_vector_index_batch(written_expressions)
+        if learned_contents is not None:
+            learned_contents.extend(f"{situation} → {style}" for situation, style in approved_expressions)
         logger.info(
             f"[{session_display_name}] 表达学习完成 "
             f"候选={len(learnt_expressions)} 写入={len(written_expressions)}"
@@ -527,8 +528,10 @@ class ExpressionLearner:
         self.learning_status = "completed" if written_expressions else "no_results"
         self.learning_detail = (
             f"写入 {len(written_expressions)} 条表达" if written_expressions
-            else f"{len(learnt_expressions)} 条有效候选均被写入 Hook、审核或写入校验阻止"
+            else f"{len(learnt_expressions)} 条有效候选均被写入 Hook 或审核阻止"
         )
+        if written_expressions:
+            await self._sync_expression_vector_index_batch(written_expressions)
         return bool(written_expressions)
 
     def _resolve_learning_session_id(self, messages: List["SessionMessage"]) -> Optional[str]:
@@ -737,44 +740,61 @@ class ExpressionLearner:
         return filtered_expressions
 
     # ====== DB 操作相关 ======
-    async def _upsert_expression_to_db(
+    def _upsert_expressions_to_db(
         self,
-        situation: str,
-        style: str,
+        expressions: Sequence[Tuple[str, str]],
         *,
         session_id: str,
-        checked: bool = False,
         modified_by: Optional[ModifiedBy] = None,
-    ) -> Optional[MaiExpression]:
-        """将表达方式写入数据库，存在时更新，不存在时新增。
+    ) -> List[MaiExpression]:
+        """在同一个事务中写入整批表达，存在时更新，不存在时新增。
 
         Args:
-            situation: 表达方式对应的使用情景。
-            style: 表达方式风格。
+            expressions: 表达方式对应的使用情景和表达风格。
             session_id: 表达方式归属的真实会话 ID。
-            checked: 是否已经完成人工审核。
             modified_by: 最后修改者标记。
         """
-        expr, _ = self._find_similar_expression(situation, style, session_id=session_id) or (None, 0)
-        if expr:
-            # 只有完全一致的表达才会合并，保留原有使用情景。
-            expression = await self._update_existing_expression(
-                expr,
-                situation,
-                checked=checked,
-                modified_by=modified_by,
-            )
-        else:
-            # 没有找到匹配的记录，创建新记录
-            expression = self._create_expression(
-                situation,
-                style,
-                session_id=session_id,
-                checked=checked,
-                modified_by=modified_by,
-            )
+        with get_db_session() as session:
+            statement = select(Expression).filter_by(session_id=session_id)
+            existing_expressions: Dict[Tuple[str, str], Expression] = {}
+            for db_expression in session.exec(statement).all():
+                expression = MaiExpression.from_db_instance(db_expression)
+                normalized_style = normalize_expression_style_for_learning(expression.style)
+                for situation in [expression.situation, *expression.content]:
+                    existing_expressions.setdefault((situation.strip(), normalized_style), db_expression)
 
-        return expression
+            written_records: List[Expression] = []
+            for situation, style in expressions:
+                key = (situation.strip(), normalize_expression_style_for_learning(style))
+                if db_expression := existing_expressions.get(key):
+                    # 只有完全一致的表达才会合并，保留原有使用情景。
+                    expression = MaiExpression.from_db_instance(db_expression)
+                    expression.content.append(situation)
+                    db_expression.content_list = json.dumps(expression.content)
+                    db_expression.count += 1
+                    # 重复学习只补充计数，不覆盖人工审核结果。
+                    if db_expression.modified_by != ModifiedBy.USER:
+                        db_expression.checked = False
+                        db_expression.modified_by = modified_by
+                    db_expression.last_active_time = datetime.now()
+                else:
+                    # 没有找到匹配的记录，创建新记录
+                    db_expression = Expression(
+                        situation=situation,
+                        style=style,
+                        content_list=json.dumps([situation]),
+                        count=1,
+                        session_id=session_id,
+                        last_active_time=datetime.now(),
+                        checked=False,
+                        modified_by=modified_by,
+                    )
+                    existing_expressions[key] = db_expression
+                session.add(db_expression)
+                written_records.append(db_expression)
+
+            session.flush()
+            return [MaiExpression.from_db_instance(record) for record in written_records]
 
     @staticmethod
     def _should_sync_expression_vector_index() -> bool:
@@ -815,79 +835,6 @@ class ExpressionLearner:
                 f"表达向量索引同步失败，已保留数据库学习结果: count={len(index_items)}"
             )
 
-    def _create_expression(
-        self,
-        situation: str,
-        style: str,
-        *,
-        session_id: str,
-        checked: bool = False,
-        modified_by: Optional[ModifiedBy] = None,
-    ) -> Optional[MaiExpression]:
-        """创建新的表达方式记录。
-
-        Args:
-            situation: 表达方式对应的使用情景。
-            style: 表达方式风格。
-            session_id: 表达方式归属的真实会话 ID。
-            checked: 是否已经完成人工审核。
-            modified_by: 最后修改者标记。
-        """
-        content_list = [situation]
-        try:
-            with get_db_session() as db:
-                new_expr = Expression(
-                    situation=situation,
-                    style=style,
-                    content_list=json.dumps(content_list),
-                    count=1,
-                    session_id=session_id,
-                    last_active_time=datetime.now(),
-                    checked=checked,
-                    modified_by=modified_by,
-                )
-                db.add(new_expr)
-                db.flush()
-                db.refresh(new_expr)
-                return MaiExpression.from_db_instance(new_expr)
-        except Exception as e:
-            logger.error(f"创建表达方式失败: {e}")
-        return None
-
-    async def _update_existing_expression(
-        self,
-        expr: "MaiExpression",
-        situation: str,
-        *,
-        checked: bool = False,
-        modified_by: Optional[ModifiedBy] = None,
-    ) -> Optional[MaiExpression]:
-        expr.content.append(situation)
-        expr.count += 1
-        expr.checked = checked
-        expr.modified_by = modified_by
-        expr.last_active_time = datetime.now()
-
-        try:
-            with get_db_session() as session:
-                if expr.item_id is None:
-                    raise ValueError("表达方式对象缺少 item_id，无法更新数据库记录")
-                statement = select(Expression).filter_by(id=expr.item_id).limit(1)
-                if db_expr := session.exec(statement).first():
-                    db_expr.content_list = json.dumps(expr.content)
-                    db_expr.count = expr.count
-                    db_expr.checked = expr.checked
-                    db_expr.modified_by = expr.modified_by
-                    db_expr.last_active_time = expr.last_active_time
-                    db_expr.situation = expr.situation  # 更新 situation
-                    session.add(db_expr)
-                    return expr
-                else:
-                    logger.warning(f"表达方式 ID {expr.item_id} 在数据库中未找到，无法更新")
-        except Exception as e:
-            logger.error(f"更新表达方式失败: {e}")
-        return None
-
     async def _check_expression_before_upsert(
         self,
         situation: str,
@@ -904,7 +851,8 @@ class ExpressionLearner:
             session_id=review_session_id,
         )
         if error:
-            append_ai_review_log(
+            await asyncio.to_thread(
+                append_ai_review_log,
                 session_id=review_session_id,
                 situation=situation,
                 style=style,
@@ -913,10 +861,10 @@ class ExpressionLearner:
                 source="learn_before_upsert",
                 error=error,
             )
-            logger.error(f"检查表达方式时发生错误: {error}")
-            return False
+            raise RuntimeError(f"检查表达方式时发生错误: {error}")
 
-        append_ai_review_log(
+        await asyncio.to_thread(
+            append_ai_review_log,
             session_id=review_session_id,
             situation=situation,
             style=style,
@@ -930,47 +878,3 @@ class ExpressionLearner:
             f"表达检查{status} 场景={situation!r} 表达={style!r} 原因={reason or '无'}"
         )
         return suitable
-
-    def _find_similar_expression(
-        self,
-        situation: str,
-        style: str,
-        *,
-        session_id: str,
-    ) -> Optional[Tuple[MaiExpression, float]]:
-        """在数据库中查找完全一致的表达方式。
-
-        Args:
-            situation: 当前待匹配的情景描述。
-            style: 当前待匹配的表达风格。
-            session_id: 表达方式归属的真实会话 ID。
-
-        Returns:
-            Optional[Tuple[MaiExpression, float]]: 若找到完全一致的表达方式，则返回
-            ``(表达方式对象, 1.0)``；否则返回 ``None``。
-        """
-        normalized_situation = situation.strip()
-        normalized_style = normalize_expression_style_for_learning(style)
-        if not normalized_situation or not normalized_style:
-            return None
-
-        try:
-            with get_db_session(auto_commit=False) as session:
-                statement = select(Expression).filter_by(session_id=session_id)
-                expressions = session.exec(statement).all()
-
-                for db_expression in expressions:
-                    expression = MaiExpression.from_db_instance(db_expression)
-                    expression_style = normalize_expression_style_for_learning(expression.style)
-                    if expression_style != normalized_style:
-                        continue
-
-                    candidate_situations = [expression.situation, *expression.content]
-                    for candidate_situation in candidate_situations:
-                        if candidate_situation.strip() == normalized_situation:
-                            logger.debug(f"找到完全一致表达方式 [ID: {expression.item_id}]")
-                            return expression, 1.0
-
-        except Exception as e:
-            logger.error(f"查找相似表达方式失败: {e}")
-        return None
