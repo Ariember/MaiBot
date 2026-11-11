@@ -913,7 +913,7 @@
       "completeFailedTitle": "Setup failed",
       "skipFailedTitle": "Failed to skip the setup wizard",
       "customTokenSuccessTitle": "Token updated",
-      "customTokenSuccessDescription": "Please sign in again with the new custom token, then continue setup.",
+      "customTokenSuccessDescription": "You are now signed in. Continue setting up your bot.",
       "unknownError": "Unknown error"
     },
     "actions": {

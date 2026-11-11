@@ -1038,6 +1038,9 @@ class PluginRunner:
                 )
             else:
                 normalized_config, normalized_changed = config_for_normalize, False
+            if should_persist:
+                # 先让插件读取完整旧配置迁移字段，再按最新结构清理废弃字段。
+                normalized_config = rebuild_plugin_config_data(latest_default_config, normalized_config)
             # [plugin].enabled 是宿主保留键，插件配置模型未声明时会被归一化丢弃，需从原始配置带回；
             # 带回值非法时与模型校验失败同等处理
             normalized_config = _restore_host_reserved_plugin_config(raw_config, normalized_config)
@@ -1063,14 +1066,14 @@ class PluginRunner:
         raw_config: Mapping[str, Any],
         default_config: Mapping[str, Any],
     ) -> Tuple[Dict[str, Any], bool]:
-        """基于配置版本决定是否需要重建插件配置。
+        """检查配置版本，保留原始字段交给插件迁移。
 
         Args:
             raw_config: 当前磁盘上的插件配置。
             default_config: 插件最新默认配置。
 
         Returns:
-            Tuple[Dict[str, Any], bool]: 用于后续归一化的配置副本，以及是否需要写回文件。
+            Tuple[Dict[str, Any], bool]: 用于后续迁移的完整配置副本，以及是否需要重建并写回文件。
 
         Raises:
             PluginConfigVersionError: 当默认配置或当前配置缺少版本号时抛出。
@@ -1086,7 +1089,7 @@ class PluginRunner:
         current_version = extract_plugin_config_version(raw_config)
         if compare_versions(current_version, latest_version):
             logger.info(f"检测到插件配置版本升级: {current_version} -> {latest_version}")
-            return rebuild_plugin_config_data(default_config, raw_config), True
+            return rebuild_plugin_config_data(raw_config, {}), True
 
         return rebuild_plugin_config_data(raw_config, {}), False
 

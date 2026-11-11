@@ -344,9 +344,7 @@ function SetupPageContent() {
         description: t('setupPage.toast.customTokenSuccessDescription'),
       })
       setCustomToken('')
-      setTimeout(() => {
-        navigate({ to: '/auth' })
-      }, 1200)
+      setRequiresCustomToken(false)
       return true
     } catch (error) {
       toast({

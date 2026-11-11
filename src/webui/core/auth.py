@@ -107,9 +107,8 @@ def set_auth_cookie(response: Response, token: str, request: Optional[Request] =
     )
 
     logger.info(
-        f"已设置认证 Cookie: {token[:8]}... (secure={is_secure}, samesite=lax, httponly=True, path=/, max_age={COOKIE_MAX_AGE})"
+        f"已设置认证 Cookie (secure={is_secure}, samesite=lax, httponly=True, path=/, max_age={COOKIE_MAX_AGE})"
     )
-    logger.debug(f"完整 token 前缀: {token[:20]}...")
 
 
 def clear_auth_cookie(response: Response) -> None:

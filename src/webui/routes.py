@@ -297,15 +297,17 @@ async def check_auth_status(
 
 
 @router.post("/auth/update", response_model=TokenUpdateResponse, dependencies=[Depends(require_auth)])
-async def update_token(
-    request: TokenUpdateRequest,
+def update_token(
+    request_body: TokenUpdateRequest,
+    request: Request,
     response: Response,
 ):
     """
     更新访问令牌（需要当前有效的 token）
 
     Args:
-        request: 包含新 token 的更新请求
+        request_body: 包含新 token 的更新请求
+        request: FastAPI Request 对象
         response: FastAPI Response 对象
 
     Returns:
@@ -313,13 +315,18 @@ async def update_token(
     """
     try:
         token_manager = get_token_manager()
+        requires_custom_token = token_manager.get_token_source() == TOKEN_SOURCE_TEMPORARY
 
         # 更新 token
-        success, message = token_manager.update_token(request.new_token)
+        success, message = token_manager.update_token(request_body.new_token)
 
-        # 如果更新成功，清除 Cookie，要求用户重新登录
+        # 首次设置密码后续上当前浏览器的登录态；普通改密仍需重新登录。
         if success:
-            clear_auth_cookie(response)
+            if requires_custom_token:
+                set_auth_cookie(response, request_body.new_token, request)
+                response.headers["Cache-Control"] = "no-store"
+            else:
+                clear_auth_cookie(response)
 
         return TokenUpdateResponse(success=success, message=message)
     except HTTPException:

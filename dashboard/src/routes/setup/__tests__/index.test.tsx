@@ -417,7 +417,7 @@ describe('SetupPage 自定义 Token 步骤', () => {
     expect(mocks.updateAccessToken).not.toHaveBeenCalled()
   })
 
-  it('合法 Token 去除空白后提交，成功后延时跳转登录页', async () => {
+  it('合法 Token 去除空白后提交，成功后继续配置 Bot', async () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
@@ -433,14 +433,9 @@ describe('SetupPage 自定义 Token 步骤', () => {
       title: 'setupPage.toast.customTokenSuccessTitle',
       description: 'setupPage.toast.customTokenSuccessDescription',
     })
-    // 跳转在 1200ms 延时后发生
+    expect(screen.queryByLabelText('setupPage.forms.customToken.label')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('setupPage.forms.botBasic.nickname.label')).toHaveValue('麦麦')
     expect(mocks.navigate).not.toHaveBeenCalled()
-    await waitFor(
-      () => {
-        expect(mocks.navigate).toHaveBeenCalledWith({ to: '/auth' })
-      },
-      { timeout: 2500 }
-    )
   })
 
   it('后端拒绝新 Token 时提示后端返回的消息且不跳转', async () => {

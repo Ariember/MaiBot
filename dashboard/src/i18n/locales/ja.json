@@ -846,7 +846,7 @@
       "completeFailedTitle": "設定の完了に失敗しました",
       "skipFailedTitle": "セットアップのスキップに失敗しました",
       "customTokenSuccessTitle": "Token を更新しました",
-      "customTokenSuccessDescription": "新しいカスタム Token で再度ログインしてから、設定を続けてください。",
+      "customTokenSuccessDescription": "自動的にログインしました。引き続き設定を完了してください。",
       "unknownError": "不明なエラー"
     },
     "actions": {

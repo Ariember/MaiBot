@@ -75,6 +75,42 @@ async def test_send_failure_closes_websocket_so_client_reconnects() -> None:
     await manager.disconnect("conn")
 
 
+@pytest.mark.parametrize("entry_point", ["subscribe", "history.load"])
+@pytest.mark.parametrize("event_type", ["llm.retry", "llm.error"])
+@pytest.mark.asyncio
+async def test_monitor_history_marks_model_events_as_replayed(
+    monkeypatch: pytest.MonkeyPatch, entry_point: str, event_type: str
+) -> None:
+    from src.maisaka.monitor import event_store
+    from src.webui.routers.websocket import unified
+
+    manager = UnifiedWebSocketManager()
+    websocket = FakeWebSocket()
+    await manager.connect("conn", websocket)  # type: ignore[arg-type]
+    payload = {"session_id": "s", "event_id": 1, "message": "参数不正确"}
+    replay_events = [{"event": event_type, "data": payload}]
+    page = event_store.MonitorEventPage(events=replay_events, oldest_event_id=1, has_more=False)
+    monkeypatch.setattr(unified, "websocket_manager", manager)
+    monkeypatch.setattr(event_store, "replay_monitor_events", lambda **kwargs: replay_events)
+    monkeypatch.setattr(event_store, "load_session_event_page", lambda **kwargs: page)
+
+    try:
+        if entry_point == "subscribe":
+            await unified._handle_maisaka_monitor_subscribe("conn", "history", {})
+        else:
+            await unified._handle_maisaka_monitor_call(
+                "conn", {"id": "history", "method": "history.load", "data": {"session_id": "s"}}
+            )
+        await _drain(manager, "conn")
+        event = next(message for message in websocket.sent if message.get("event") == event_type)
+        response = next(message for message in websocket.sent if message.get("id") == "history")
+        assert event["data"] == {**payload, "replayed": True}
+        assert "replayed" not in payload
+        assert response["ok"] is True
+    finally:
+        await manager.disconnect("conn")
+
+
 @pytest.mark.asyncio
 async def test_monitor_broadcast_order_follows_event_id(monkeypatch: pytest.MonkeyPatch) -> None:
     from src.maisaka.monitor import event_store

@@ -913,7 +913,7 @@
       "completeFailedTitle": "配置失败",
       "skipFailedTitle": "跳过失败",
       "customTokenSuccessTitle": "密码已更新",
-      "customTokenSuccessDescription": "请使用新的自定义密码重新登录，然后继续配置。",
+      "customTokenSuccessDescription": "已自动登录，请继续完成配置。",
       "unknownError": "未知错误"
     },
     "actions": {
