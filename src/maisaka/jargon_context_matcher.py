@@ -140,14 +140,14 @@ def match_jargons_for_context(
         return []
 
     high_frequency_terms = _load_high_frequency_terms(session_id)
+    normalized_candidates = [(_normalize_match_text(candidate.content), candidate) for candidate in candidates]
     matches_by_content: dict[str, _JargonMatch] = {}
     for message_index, text in enumerate(user_texts):
         normalized_text = _normalize_match_text(text)
         if not normalized_text:
             continue
 
-        for candidate in candidates:
-            content_key = _normalize_match_text(candidate.content)
+        for content_key, candidate in normalized_candidates:
             if not content_key or content_key in matches_by_content:
                 continue
             if not _contains_mechanical_match(normalized_text, content_key):

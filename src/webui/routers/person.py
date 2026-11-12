@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import case
+from sqlalchemy import case, func
 from sqlmodel import col, delete, select
 
 import json
@@ -199,7 +199,7 @@ def get_person_list(
         with get_db_session() as session:
             persons = session.exec(statement).all()
 
-            count_statement = select(PersonInfo.id)
+            count_statement = select(func.count()).select_from(PersonInfo)
             if search:
                 count_statement = count_statement.where(
                     (col(PersonInfo.person_name).contains(search))
@@ -212,7 +212,7 @@ def get_person_list(
                 count_statement = count_statement.where(col(PersonInfo.platform) == platform)
             if user_id:
                 count_statement = count_statement.where(col(PersonInfo.user_id) == user_id)
-            total = len(session.exec(count_statement).all())
+            total = session.exec(count_statement).one()
             data = [person_to_response(person) for person in persons]
 
         return PersonListResponse(success=True, total=total, page=page, page_size=page_size, data=data)
@@ -350,16 +350,17 @@ def get_person_stats() -> Dict[str, Any]:
     """
     try:
         with get_db_session() as session:
-            total = len(session.exec(select(PersonInfo.id)).all())
-            known = len(session.exec(select(PersonInfo.id).where(col(PersonInfo.is_known))).all())
+            total = session.exec(select(func.count()).select_from(PersonInfo)).one()
+            known = session.exec(select(func.count()).select_from(PersonInfo).where(col(PersonInfo.is_known))).one()
         unknown = total - known
 
         # 按平台统计
         platforms = {}
         with get_db_session() as session:
-            for platform in session.exec(select(PersonInfo.platform)).all():
+            statement = select(PersonInfo.platform, func.count()).group_by(col(PersonInfo.platform))
+            for platform, count in session.exec(statement).all():
                 if platform:
-                    platforms[platform] = platforms.get(platform, 0) + 1
+                    platforms[platform] = count
 
         return {"success": True, "data": {"total": total, "known": known, "unknown": unknown, "platforms": platforms}}
 
