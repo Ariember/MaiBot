@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Awaitable, Dict, List, Optional
+from typing import Any, Awaitable, Dict, List, Optional, OrderedDict as OrderedDictType, Tuple
 
 import asyncio
 import json
@@ -44,11 +45,13 @@ class PersonFactWritebackService:
         self._reclassify_task: Optional[asyncio.Task] = None
         self._stopping = False
         self._extractor: Any | None = None
+        self._completed_windows: OrderedDictType[Tuple[str, str, Tuple[str, ...], str], None] = OrderedDict()
 
     async def start(self) -> None:
         if self._worker_task is not None and not self._worker_task.done():
             return
         self._stopping = False
+        self._completed_windows.clear()
         self._worker_task = asyncio.create_task(self._worker_loop(), name="A_Memorix.person_fact_writeback")
         self._reclassify_task = asyncio.create_task(self._historical_reclassify_loop(), name="A_Memorix.person_fact_reclassify")
 
@@ -142,8 +145,6 @@ class PersonFactWritebackService:
         reply_text = str(getattr(message, "processed_plain_text", "") or "").strip()
         if not reply_text:
             return
-        if self._looks_ephemeral(reply_text):
-            return
 
         target_person = await asyncio.to_thread(self._resolve_target_person, message)
         if target_person is None or not target_person.is_known:
@@ -151,11 +152,6 @@ class PersonFactWritebackService:
 
         evidence = await asyncio.to_thread(self._collect_user_evidence, message, target_person)
         if not evidence.target_messages:
-            return
-        user_evidence_text = self._format_user_evidence(evidence)
-
-        facts = await self._extract_facts(target_person, reply_text, user_evidence_text)
-        if not facts:
             return
 
         session_id = str(
@@ -170,11 +166,22 @@ class PersonFactWritebackService:
         if not person_name:
             return
 
-        evidence_message_ids = [
+        all_evidence_ids = [
             str(getattr(item, "message_id", "") or "").strip()
             for item in evidence.target_messages
-            if str(getattr(item, "message_id", "") or "").strip()
         ]
+        evidence_message_ids = [message_id for message_id in all_evidence_ids if message_id]
+        person_id = str(target_person.person_id or "").strip()
+        user_evidence_text = self._format_user_evidence(evidence)
+        window_key = (
+            (session_id, person_id, tuple(sorted(set(evidence_message_ids))), user_evidence_text)
+            if person_id and all(all_evidence_ids)
+            else None
+        )
+        if window_key in self._completed_windows:
+            return
+
+        facts = await self._extract_facts(target_person, reply_text, user_evidence_text)
         for item in facts:
             fact = str(item.get("fact", "") if isinstance(item, dict) else item).strip()
             if not fact:
@@ -210,16 +217,22 @@ class PersonFactWritebackService:
                     claim["valid_from"] = observed_at
             # 语义判断由提取模型完成，来源 ID 由本次实际输入的消息确定。
             # 记录完整的提取上下文，不把模型生成的消息 ID 写成真实证据。
-            await store_person_memory_from_answer(
+            stored = await store_person_memory_from_answer(
                 person_name,
                 fact,
                 session_id,
-                person_id=str(getattr(target_person, "person_id", "") or "").strip(),
+                person_id=person_id,
                 evidence_source="user_supported",
                 evidence_message_ids=evidence_message_ids,
                 fact_claim=claim,
                 observed_at=observed_at,
             )
+            if not stored:
+                return
+        if window_key is not None:
+            self._completed_windows[window_key] = None
+            if len(self._completed_windows) > 256:
+                self._completed_windows.popitem(last=False)
 
     def _resolve_target_person(self, message: Any) -> Optional[Person]:
         session = getattr(message, "session", None)
@@ -433,15 +446,11 @@ class PersonFactWritebackService:
             user_evidence_text=user_evidence_text,
             reply_text=reply_text,
         )
-        try:
-            if self._extractor is None:
-                from src.services.llm_service import LLMServiceClient
+        if self._extractor is None:
+            from src.services.llm_service import LLMServiceClient
 
-                self._extractor = LLMServiceClient(task_name="utils", request_type="A_Memorix.person_fact_writeback")
-            response_result = await self._extractor.generate_response(prompt)
-        except Exception as exc:
-            logger.debug(f"人物事实提取模型调用失败: {exc}")
-            return []
+            self._extractor = LLMServiceClient(task_name="utils", request_type="A_Memorix.person_fact_writeback")
+        response_result = await self._extractor.generate_response(prompt)
         return self._parse_fact_items(response_result.response)
 
     @staticmethod
@@ -480,22 +489,25 @@ class PersonFactWritebackService:
         """解析提取结果，同时兼容字符串数组格式。"""
 
         text = str(raw or "").strip()
-        if not text:
-            return []
         try:
             payload = parse_llm_json(text, repair=True)
-        except Exception:
-            return []
+        except Exception as exc:
+            raise ValueError("人物事实提取结果不是有效的 JSON 数组") from exc
         if not isinstance(payload, list):
-            return []
+            raise ValueError("人物事实提取结果必须是 JSON 数组")
         items: List[Any] = []
         seen = set()
         for raw_item in payload:
-            fact = str(raw_item.get("fact", "") if isinstance(raw_item, dict) else raw_item or "").strip()
+            fact = raw_item.get("fact") if isinstance(raw_item, dict) else raw_item
+            if not isinstance(fact, str) or not fact.strip():
+                raise ValueError("人物事实提取结果缺少有效的事实正文")
+            fact = fact.strip()
             if len(fact) < 4 or fact in seen:
                 continue
             seen.add(fact)
             items.append(raw_item if isinstance(raw_item, dict) else fact)
+        if payload and not items:
+            raise ValueError("人物事实提取结果没有有效的事实正文")
         return items[:5]
 
     @staticmethod
@@ -521,28 +533,6 @@ class PersonFactWritebackService:
             seen.add(fact)
             items.append(fact)
         return items[:5]
-
-    @staticmethod
-    def _looks_ephemeral(text: str) -> bool:
-        content = str(text or "").strip()
-        if not content:
-            return True
-        ephemeral_markers = (
-            "哈哈",
-            "好的",
-            "收到",
-            "嗯嗯",
-            "晚安",
-            "早安",
-            "拜拜",
-            "谢谢",
-            "在吗",
-            "？",
-        )
-        if len(content) <= 8 and any(marker in content for marker in ephemeral_markers):
-            return True
-        return False
-
 
 @dataclass
 class ChatSummaryWritebackState:

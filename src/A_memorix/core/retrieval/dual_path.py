@@ -3010,6 +3010,8 @@ class DualPathRetriever:
             temporal=temporal,
         )
         return {
+            "source": paragraph.get("source"),
+            "source_type": coerce_metadata_dict(paragraph.get("metadata")).get("source_type"),
             "event_time": paragraph.get("event_time"),
             "event_time_start": paragraph.get("event_time_start"),
             "event_time_end": paragraph.get("event_time_end"),

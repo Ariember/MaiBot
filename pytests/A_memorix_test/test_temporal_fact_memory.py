@@ -11,6 +11,7 @@ from src.A_memorix.core.runtime.sdk_memory_kernel import KernelSearchRequest, SD
 from src.A_memorix.core.storage.metadata_store import MetadataStore
 from src.A_memorix.core.utils.summary_importer import _normalize_summary_facts, _summary_event_time
 from src.common.async_work import run_sync_work
+from src.services.memory_service import MemoryService
 
 
 @pytest.fixture
@@ -98,6 +99,34 @@ def test_unknown_event_time_is_not_replaced_by_ingest_time(store):
     retriever = DualPathRetriever.__new__(DualPathRetriever)
     retriever.metadata_store = store
     assert not retriever._is_temporal_match(row, TemporalQueryOptions(time_from=row["created_at"] - 1))
+
+
+def test_relation_preserves_supporting_person_fact_observation_time(store):
+    observed_at = datetime(2026, 9, 5, 12, 30).timestamp()
+    paragraph = store.add_paragraph(
+        content="甲喜欢绿茶",
+        source="person_fact:person-a",
+        metadata={"source_type": "person_fact"},
+        time_meta={"event_time": observed_at},
+    )
+    relation = store.add_relation("甲", "喜欢", "绿茶", source_paragraph=paragraph)
+    retriever = DualPathRetriever.__new__(DualPathRetriever)
+    retriever.metadata_store = store
+
+    hits = retriever._build_relation_results_from_ids(
+        [relation], [1.0], source="relation_search",
+        temporal=TemporalQueryOptions(time_from=observed_at - 1, time_to=observed_at + 1),
+    )
+    result = MemoryService._coerce_search_result({"hits": [hit.to_dict() for hit in hits]})
+
+    assert len(result.hits) == 1
+    assert result.hits[0].metadata["time_meta"]["source"] == "person_fact:person-a"
+    assert result.hits[0].metadata["time_meta"]["source_type"] == "person_fact"
+    text = result.to_text()
+    assert "来源：person_fact:person-a" in text
+    assert "消息观察时间：2026/09/05 12:30" in text
+    assert "事件时间" not in text
+    assert "relation_search" not in text
 
 
 def test_historical_state_uses_validity_and_does_not_revive_retracted_evidence(store):

@@ -1,5 +1,6 @@
 import json
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -44,7 +45,6 @@ def test_person_fact_prompt_carries_structured_claim_contract(locale):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("quote", ["昨天搬到上海了", "并非用户原话"])
 async def test_person_fact_change_requires_source_and_keeps_effective_time(monkeypatch, quote):
-    from unittest.mock import AsyncMock
     import threading
 
     loop_thread = threading.get_ident()
@@ -104,12 +104,6 @@ def test_person_fact_claim_rejects_ambiguous_replacement_and_invalid_range():
         normalize({"fact_key": "interests", "cardinality": "set", "change": "replace"})
     with pytest.raises(ValueError, match="不能早于"):
         normalize({"fact_key": "residence_city", "valid_from": 200, "valid_to": 100})
-
-
-def test_person_fact_looks_ephemeral_detects_short_chitchat():
-    assert memory_flow_module.PersonFactWritebackService._looks_ephemeral("哈哈")
-    assert memory_flow_module.PersonFactWritebackService._looks_ephemeral("好的？")
-    assert not memory_flow_module.PersonFactWritebackService._looks_ephemeral("她最近在学法语和钢琴")
 
 
 def test_person_fact_resolve_target_person_for_private_chat(monkeypatch):
@@ -344,7 +338,7 @@ async def test_person_fact_writeback_uses_resolved_person_id(monkeypatch):
         message_info=SimpleNamespace(user_info=SimpleNamespace(user_id="10001")),
     )
 
-    service = memory_flow_module.PersonFactWritebackService.__new__(memory_flow_module.PersonFactWritebackService)
+    service = memory_flow_module.PersonFactWritebackService()
     service._resolve_target_person = lambda message: FakePerson()
 
     async def fake_extract_facts(person, reply_text, user_evidence_text):
@@ -362,6 +356,7 @@ async def test_person_fact_writeback_uses_resolved_person_id(monkeypatch):
                 **kwargs,
             }
         )
+        return True
 
     service._extract_facts = fake_extract_facts
     monkeypatch.setattr(memory_flow_module, "store_person_memory_from_answer", fake_store_person_memory_from_answer)
@@ -407,7 +402,7 @@ async def test_person_fact_writeback_marks_verified_user_statement_stable(monkey
         nickname = "测试用户"
         is_known = True
 
-    service = memory_flow_module.PersonFactWritebackService.__new__(memory_flow_module.PersonFactWritebackService)
+    service = memory_flow_module.PersonFactWritebackService()
     service._resolve_target_person = lambda message: FakePerson()
 
     async def fake_extract_facts(person, reply_text, user_evidence_text):
@@ -416,6 +411,7 @@ async def test_person_fact_writeback_marks_verified_user_statement_stable(monkey
 
     async def fake_store(person_name, memory_content, chat_id, **kwargs):
         stored_payloads.append(kwargs)
+        return True
 
     service._extract_facts = fake_extract_facts
     monkeypatch.setattr(memory_flow_module, "store_person_memory_from_answer", fake_store)
@@ -440,6 +436,158 @@ async def test_person_fact_writeback_marks_verified_user_statement_stable(monkey
         "profile_section": "stable_facts",
     }
     assert stored_payloads[0]["evidence_message_ids"] == ["user-1"]
+
+
+@pytest.fixture
+def person_fact_window(monkeypatch):
+    service = memory_flow_module.PersonFactWritebackService()
+    person = SimpleNamespace(person_id="person-1", person_name="Alice", is_known=True)
+    trigger = SimpleNamespace(processed_plain_text="我记住了你的喜好。", session_id="chat-1")
+    evidence = memory_flow_module.PersonFactEvidence(
+        [SimpleNamespace(message_id="user-1", processed_plain_text="我喜欢猫。", timestamp=100.0)],
+        [],
+    )
+    generate = AsyncMock(return_value=SimpleNamespace(response='["Alice喜欢猫。"]'))
+    write = AsyncMock(return_value=True)
+    service._extractor = SimpleNamespace(generate_response=generate)
+    service._resolve_target_person = lambda message: person
+    service._collect_user_evidence = lambda message, target: evidence
+    monkeypatch.setattr(memory_flow_module, "store_person_memory_from_answer", write)
+    return SimpleNamespace(service=service, person=person, trigger=trigger, evidence=evidence, generate=generate, write=write)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("response", ['["Alice喜欢猫。"]', "[]"])
+async def test_person_fact_completed_window_skips_repeated_extraction(person_fact_window, response):
+    state = person_fact_window
+    state.generate.return_value.response = response
+    await state.service._handle_message(state.trigger)
+    state.trigger.processed_plain_text = "还有什么其他喜好也可以告诉我。"
+    await state.service._handle_message(state.trigger)
+    assert state.generate.await_count == 1
+    assert state.write.await_count == (0 if response == "[]" else 1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reply_text", ["好的", "收到"])
+async def test_person_fact_short_confirmation_keeps_user_fact(person_fact_window, reply_text):
+    state = person_fact_window
+    state.trigger.processed_plain_text = reply_text
+    state.evidence.target_messages[0].processed_plain_text = "我对青霉素过敏。"
+    state.generate.return_value.response = '["Alice对青霉素过敏。"]'
+    await state.service._handle_message(state.trigger)
+    await state.service._handle_message(state.trigger)
+    state.generate.assert_awaited_once()
+    state.write.assert_awaited_once()
+    assert state.write.call_args.args[1] == "Alice对青霉素过敏。"
+
+
+@pytest.mark.asyncio
+async def test_person_fact_same_target_with_new_context_is_extracted_again(person_fact_window):
+    state = person_fact_window
+    state.evidence.target_messages[0].processed_plain_text = "青霉素。"
+    state.generate.return_value.response = "[]"
+    await state.service._handle_message(state.trigger)
+    state.evidence.context_messages = [
+        SimpleNamespace(message_id="question-1", processed_plain_text="你对什么过敏？"),
+        *state.evidence.target_messages,
+    ]
+    state.generate.return_value.response = '["Alice对青霉素过敏。"]'
+    await state.service._handle_message(state.trigger)
+    await state.service._handle_message(state.trigger)
+    assert state.generate.await_count == 2
+    state.write.assert_awaited_once()
+    assert state.write.call_args.args[1] == "Alice对青霉素过敏。"
+
+
+@pytest.mark.asyncio
+async def test_person_fact_window_is_scoped_and_new_evidence_is_processed(person_fact_window):
+    state = person_fact_window
+    await state.service._handle_message(state.trigger)
+    state.trigger.session_id = "chat-2"
+    await state.service._handle_message(state.trigger)
+    state.person.person_id = "person-2"
+    await state.service._handle_message(state.trigger)
+    state.evidence.target_messages.append(
+        SimpleNamespace(message_id="user-2", processed_plain_text="我也喜欢狗。", timestamp=200.0)
+    )
+    await state.service._handle_message(state.trigger)
+    state.evidence.target_messages.reverse()
+    await state.service._handle_message(state.trigger)
+    await state.service._handle_message(state.trigger)
+    assert state.generate.await_count == 5
+    assert state.write.await_count == 5
+
+
+@pytest.mark.asyncio
+async def test_person_fact_window_with_missing_message_id_is_not_cached(person_fact_window):
+    state = person_fact_window
+    state.evidence.target_messages.append(
+        SimpleNamespace(message_id="", processed_plain_text="我也喜欢狗。", timestamp=200.0)
+    )
+    await state.service._handle_message(state.trigger)
+    await state.service._handle_message(state.trigger)
+    assert state.generate.await_count == 2
+    assert not state.service._completed_windows
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("response", ["", "不是 JSON", "{}", "[{}]", "[1]", '[""]'])
+async def test_person_fact_invalid_output_does_not_complete_window(person_fact_window, response):
+    state = person_fact_window
+    state.generate.return_value.response = response
+    with pytest.raises(ValueError, match="人物事实提取结果"):
+        await state.service._handle_message(state.trigger)
+    state.generate.return_value.response = "[]"
+    await state.service._handle_message(state.trigger)
+    await state.service._handle_message(state.trigger)
+    assert state.generate.await_count == 2
+    state.write.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_person_fact_model_failure_does_not_complete_window(person_fact_window):
+    state = person_fact_window
+    state.generate.side_effect = RuntimeError("model unavailable")
+    with pytest.raises(RuntimeError, match="model unavailable"):
+        await state.service._handle_message(state.trigger)
+    state.generate.side_effect = None
+    await state.service._handle_message(state.trigger)
+    await state.service._handle_message(state.trigger)
+    assert state.generate.await_count == 2
+    state.write.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_person_fact_partial_write_failure_does_not_complete_window(person_fact_window):
+    state = person_fact_window
+    state.generate.return_value.response = '["Alice喜欢猫。", "Alice喜欢狗。"]'
+    state.write.side_effect = [True, False, True, True]
+    await state.service._handle_message(state.trigger)
+    await state.service._handle_message(state.trigger)
+    await state.service._handle_message(state.trigger)
+    assert state.generate.await_count == 2
+    assert state.write.await_count == 4
+
+
+@pytest.mark.asyncio
+async def test_person_fact_completed_windows_are_bounded_and_reset_on_start(person_fact_window):
+    state = person_fact_window
+    state.generate.return_value.response = "[]"
+    for index in range(257):
+        state.evidence.target_messages[0].message_id = f"user-{index}"
+        await state.service._handle_message(state.trigger)
+    assert len(state.service._completed_windows) == 256
+    state.evidence.target_messages[0].message_id = "user-0"
+    await state.service._handle_message(state.trigger)
+    assert state.generate.await_count == 258
+    state.service._worker_loop = AsyncMock()
+    state.service._historical_reclassify_loop = AsyncMock()
+    await state.service.start()
+    try:
+        assert not state.service._completed_windows
+    finally:
+        await state.service.shutdown()
 
 
 @pytest.mark.asyncio

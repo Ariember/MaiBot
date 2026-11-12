@@ -355,7 +355,8 @@ async def test_source_withdrawal_invalidates_materialized_episode_until_rebuild(
 
 
 @pytest.mark.asyncio
-async def test_public_hits_omit_internal_decisions_and_possible_duplicates(store):
+@pytest.mark.parametrize("check_current_effective", [False, True])
+async def test_public_hits_preserve_retrieval_time_and_omit_internal_decisions(store, check_current_effective):
     from src.A_memorix.core.runtime.services.search_hit_processing_service import MemorySearchHitProcessingService
 
     paragraph, _ = await seed(store)
@@ -374,11 +375,15 @@ async def test_public_hits_omit_internal_decisions_and_possible_duplicates(store
         metadata_store=store,
         _filter_active_relation_hits=lambda hits: hits,
         _filter_episode_hits=lambda hits: hits,
-        _filter_current_effective_hits=lambda hits: hits,
+        _current_effective_filter_store_check_needed=lambda hits: check_current_effective,
     )
     reader = MemorySearchHitProcessingService(kernel)
-    result = reader._filter_user_visible_hits([{"type": "paragraph", "hash": paragraph, "content": "ignored"}])
+    time_meta = {"event_time": 100.0, "ingest_time": 200.0, "match_basis": "event_time"}
+    result = reader._filter_user_visible_hits([
+        {"type": "paragraph", "hash": paragraph, "content": "ignored", "metadata": {"time_meta": time_meta}},
+    ])
     assert result[0]["content"] == "甲喜欢绿茶。"
+    assert result[0]["metadata"]["time_meta"] == time_meta
     assert not any(key.startswith("dedup_") or key == "fact_dedup_decisions" for key in result[0]["metadata"])
     assert "fact_event_times" not in result[0]["metadata"]
 

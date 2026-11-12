@@ -1,6 +1,8 @@
+from datetime import datetime
+
 import pytest
 
-from src.services.memory_service import MemorySearchResult, MemoryService
+from src.services.memory_service import MemoryHit, MemorySearchResult, MemoryService
 
 
 def test_coerce_write_result_treats_skipped_payload_as_success():
@@ -233,6 +235,53 @@ def test_coerce_search_result_preserves_aggregate_source_branches():
 
     assert result.hits[0].metadata["source_branches"] == ["search", "time"]
     assert result.hits[0].metadata["rank"] == 1
+
+
+def test_search_text_distinguishes_observation_validity_and_ingestion_time():
+    result = MemorySearchResult(hits=[MemoryHit(
+        content="在杭州工作", source="person_fact:person-1",
+        metadata={
+            "time_meta": {
+                "event_time": datetime(2026, 9, 5, 12, 30).timestamp(),
+                "ingest_time": datetime(2026, 9, 6, 13, 30).timestamp(),
+            },
+            "memory_change": {
+                "valid_from": datetime(2026, 9, 1).timestamp(),
+                "valid_to": datetime(2026, 10, 1).timestamp(),
+            },
+        },
+    )])
+
+    text = result.to_text()
+
+    assert "消息观察时间：2026/09/05 12:30" in text
+    assert "生效时间：2026/09/01 00:00" in text
+    assert "失效时间：2026/10/01 00:00" in text
+    assert "入库时间：2026/09/06 13:30" in text
+    assert "事件时间" not in text
+
+
+def test_search_text_does_not_present_ingestion_fallback_as_event_time():
+    timestamp = datetime(2026, 9, 6, 13, 30).timestamp()
+    result = MemorySearchResult(hits=[MemoryHit(
+        content="喜欢旅行", metadata={"time_meta": {
+            "ingest_time": timestamp, "effective_start": timestamp, "effective_end": timestamp,
+            "match_basis": "created_at_fallback",
+        }},
+    )])
+
+    text = result.to_text()
+
+    assert "入库时间：2026/09/06 13:30" in text
+    assert "事件时间" not in text
+    assert "生效时间" not in text
+
+
+def test_search_text_keeps_plain_hits_and_content_limit():
+    result = MemorySearchResult(hits=[MemoryHit(content="abcdef"), MemoryHit(content="second")])
+
+    assert result.to_text(limit=1, max_content_chars=3) == "1. abc..."
+    assert result.to_text(limit=1, truncate_content=False) == "1. abcdef"
 
 
 @pytest.mark.asyncio

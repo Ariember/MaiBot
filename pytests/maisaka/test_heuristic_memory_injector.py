@@ -5,15 +5,22 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.maisaka.memory import heuristic_injector
+from src.services.llm_service import LLMServiceClient
 from src.services.memory_service import MemoryHit
 
 
 @pytest.mark.asyncio
-async def test_heuristic_recall_reads_messages_outside_event_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("text", ["想再去杭州旅行", " \r\n "])
+async def test_heuristic_recall_uses_messages_without_generation(
+    monkeypatch: pytest.MonkeyPatch, text: str,
+) -> None:
     loop_thread = get_ident()
     reads = []
     session = SimpleNamespace(session_id="chat-real")
-    message = SimpleNamespace(platform="", message_info=SimpleNamespace(user_info=SimpleNamespace(user_id="")))
+    message = SimpleNamespace(
+        platform="", processed_plain_text=text,
+        message_info=SimpleNamespace(user_info=SimpleNamespace(user_id="", user_nickname="小明")),
+    )
     config = SimpleNamespace(
         heuristic_memory_recall_enabled=True,
         heuristic_memory_recall_window_size=1,
@@ -41,13 +48,48 @@ async def test_heuristic_recall_reads_messages_outside_event_loop(monkeypatch: p
 
     monkeypatch.setattr(heuristic_injector, "count_messages", count)
     monkeypatch.setattr(heuristic_injector, "find_messages", find)
+    generate = AsyncMock(side_effect=AssertionError("普通召回不应生成聊天印象"))
+    monkeypatch.setattr(LLMServiceClient, "generate_response", generate)
     injector = heuristic_injector.HeuristicMemoryInjector()
-    monkeypatch.setattr(injector, "_build_chat_impression", AsyncMock(return_value="旅行"))
-    monkeypatch.setattr(
-        injector, "_search_related_memory", AsyncMock(return_value=[MemoryHit(content="上周去了杭州。")])
-    )
+    search = AsyncMock(return_value=[MemoryHit(content="上周去了杭州。")])
+    monkeypatch.setattr(injector, "_search_related_memory", search)
 
     result = await injector.build_injection_message(session_id=session.session_id)
 
-    assert "上周去了杭州" in result
+    if text.strip():
+        assert "上周去了杭州" in result
+        search.assert_awaited_once()
+        assert search.await_args.args[0] == "- 小明: 想再去杭州旅行"
+    else:
+        assert result == ""
+        search.assert_not_awaited()
+    generate.assert_not_awaited()
     assert reads == ["count", "find"]
+
+
+def test_recall_query_keeps_latest_messages_within_budget() -> None:
+    messages = [
+        SimpleNamespace(
+            processed_plain_text=f"话题{index:02d}：" + "旅行" * 200,
+            message_info=SimpleNamespace(user_info=SimpleNamespace(user_nickname="小明")),
+        )
+        for index in range(20)
+    ]
+
+    query = heuristic_injector.HeuristicMemoryInjector._build_recall_query(messages)
+
+    assert len(query) <= 1000
+    assert "话题00" not in query
+    assert query.index("话题18") < query.index("话题19")
+    assert query.splitlines()[-1].startswith("- 小明: 话题19：")
+    assert query.endswith("...")
+
+
+def test_recall_query_skips_blank_messages_and_normalizes_lines() -> None:
+    user_info = SimpleNamespace(user_nickname="小明")
+    messages = [
+        SimpleNamespace(processed_plain_text=text, message_info=SimpleNamespace(user_info=user_info))
+        for text in [" 旧话题 ", "\r\n", "杭州\n旅行"]
+    ]
+
+    assert heuristic_injector.HeuristicMemoryInjector._build_recall_query(messages) == "- 小明: 旧话题\n- 小明: 杭州 旅行"

@@ -12,10 +12,8 @@ from src.chat.message_receive.message import SessionMessage
 from src.common.data_models.message_component_data_model import AtComponent, ReplyComponent
 from src.common.logger import get_logger
 from src.common.message_repository import count_messages, find_messages
-from src.common.prompt_i18n import load_prompt
 from src.config.config import global_config
 from src.person_info.person_info import get_person_id
-from src.services.llm_service import LLMServiceClient
 from src.services.memory_service import MemoryHit, memory_service
 
 logger = get_logger("maisaka_heuristic_memory")
@@ -46,14 +44,10 @@ class HeuristicMemoryContext:
 
 
 class HeuristicMemoryInjector:
-    """根据当前聊天流印象自然拉起长期记忆。"""
+    """根据最近聊天消息自然拉起长期记忆。"""
 
     def __init__(self) -> None:
         self._states: dict[str, HeuristicMemoryRecallState] = {}
-        self._impression_client = LLMServiceClient(
-            task_name="utils",
-            request_type="heuristic_memory_impression",
-        )
 
     async def build_injection_message(
         self,
@@ -112,11 +106,11 @@ class HeuristicMemoryInjector:
             total_message_count=total_message_count,
         )
         try:
-            impression = await self._build_chat_impression(context)
-            if not impression:
+            query = self._build_recall_query(context.recent_messages)
+            if not query:
                 self.clear_session_reference(session.session_id)
                 return ""
-            hits = await self._search_related_memory(impression, context)
+            hits = await self._search_related_memory(query, context)
             reference = self._format_reference(
                 hits,
                 max_chars=config.heuristic_memory_recall_max_chars,
@@ -161,18 +155,9 @@ class HeuristicMemoryInjector:
             return False
         return total_message_count - state.last_message_count >= min_new_messages
 
-    async def _build_chat_impression(self, context: HeuristicMemoryContext) -> str:
-        prompt = load_prompt(
-            "heuristic_memory_impression",
-            chat_identity=self._format_chat_identity(context.session),
-            message_window=self._format_message_window(context.recent_messages),
-        )
-        result = await self._impression_client.generate_response(prompt)
-        return str(result.response or "").strip()
-
     async def _search_related_memory(
         self,
-        impression: str,
+        query: str,
         context: HeuristicMemoryContext,
     ) -> list[MemoryHit]:
         config = global_config.a_memorix.integration
@@ -180,7 +165,7 @@ class HeuristicMemoryInjector:
         search_limit = limit * 4
         cross_chat_enabled = config.heuristic_memory_cross_chat_enabled
         result = await memory_service.search(
-            impression,
+            query,
             limit=min(20, search_limit),
             mode="search",
             chat_id="" if cross_chat_enabled else context.session.session_id,
@@ -330,34 +315,26 @@ class HeuristicMemoryInjector:
                         person_ids.add(get_person_id(platform, target_user_id))
         return person_ids
 
-    @staticmethod
-    def _format_chat_identity(session: BotChatSession) -> str:
-        chat_type = "group" if session.is_group_session else "private"
-        display_name = chat_manager.get_session_name(session.session_id) or session.session_id
-        parts = [
-            f"chat_type: {chat_type}",
-            f"display_name: {display_name}",
-            f"platform: {session.platform}",
-        ]
-        if session.group_id:
-            parts.append(f"group_id: {session.group_id}")
-        if session.user_id:
-            parts.append(f"user_id: {session.user_id}")
-        return "\n".join(parts)
-
     @classmethod
-    def _format_message_window(cls, messages: Sequence[SessionMessage]) -> str:
+    def _build_recall_query(cls, messages: Sequence[SessionMessage]) -> str:
+        """在查询预算内优先保留最近消息，再按对话顺序召回。"""
+
         lines: list[str] = []
-        for message in messages:
+        remaining_chars = 1000
+        for message in reversed(messages):
             sender = cls._message_sender_name(message)
-            text = str(getattr(message, "processed_plain_text", "") or "").strip()
+            text = str(message.processed_plain_text or "").strip()
             if not text:
                 continue
             text = text.replace("\r", " ").replace("\n", " ")
             if len(text) > 220:
                 text = text[:220].rstrip() + "..."
-            lines.append(f"- {sender}: {text}")
-        return "\n".join(lines) if lines else "no text messages available"
+            line = f"- {sender}: {text}"[:remaining_chars]
+            lines.append(line)
+            remaining_chars -= len(line) + 1
+            if remaining_chars <= 0:
+                break
+        return "\n".join(reversed(lines))
 
     @staticmethod
     def _message_sender_name(message: SessionMessage) -> str:
@@ -375,7 +352,7 @@ class HeuristicMemoryInjector:
             return ""
         lines = [
             HEURISTIC_MEMORY_REFERENCE_MARKER,
-            "Internal long-term memory recalled from the current chat impression. Use it only as reasoning context; do not quote it verbatim to the user.",
+            "Internal long-term memory recalled from recent messages. Use it only as reasoning context; do not quote it verbatim to the user.",
             "",
         ]
         for index, hit in enumerate(hits, start=1):

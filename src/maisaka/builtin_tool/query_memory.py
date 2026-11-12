@@ -10,7 +10,7 @@ from src.config.config import global_config
 from src.core.tooling import ToolExecutionContext, ToolExecutionResult, ToolInvocation, ToolSpec
 from src.maisaka.utils.tool_post_execution import with_memory_feedback_task
 from src.person_info.person_info import resolve_person_id_for_memory
-from src.services.memory_service import MemorySearchResult, memory_service
+from src.services.memory_service import MemorySearchResult, format_memory_hit_context, memory_service
 
 from .context import BuiltinToolRuntimeContext
 
@@ -160,6 +160,8 @@ def _build_replyer_memory_reference(structured_content: Dict[str, Any]) -> str:
         if effective_mode and effective_mode != mode:
             mode_text = f"{mode} -> {effective_mode}"
         lines.append(f"模式：{mode_text}")
+    if structured_content.get("fallback_applied"):
+        lines.append("提示：人物定向检索未命中，已放宽人物限制，结果不保证属于该人物。")
 
     hit_lines: list[str] = []
     for index, raw_hit in enumerate(raw_hits, start=1):
@@ -173,6 +175,12 @@ def _build_replyer_memory_reference(structured_content: Dict[str, Any]) -> str:
         label_parts = [part for part in (title, hit_type) if part]
         label = f"（{' / '.join(label_parts)}）" if label_parts else ""
         normalized_content = " ".join(content.split())
+        metadata = raw_hit.get("metadata")
+        context = format_memory_hit_context(
+            metadata if isinstance(metadata, dict) else {}, str(raw_hit.get("source") or "")
+        )
+        if context:
+            normalized_content = f"{normalized_content}（{context}）"
         hit_lines.append(f"{index}. {label}{normalized_content}")
 
     if not hit_lines:
@@ -267,25 +275,24 @@ async def handle_tool(
         )
     primary_hit_count = len(result.hits)
 
-    # 方案2：人物过滤未命中时，降级到关键词检索，避免直接“空结果”。
+    # 人物过滤未命中时只放宽人物限制，保留检索模式和时间范围。
     if result.success and person_id and not result.filtered and not result.hits and clean_query:
         fallback_applied = True
         fallback_reason = "person_filter_miss"
         fallback_query = clean_query
-        effective_mode = "search"
         logger.info(
-            f"{runtime.log_prefix} 人物过滤未命中，降级为关键词检索: "
+            f"{runtime.log_prefix} 人物过滤未命中，放宽人物限制: "
             f"query={fallback_query!r} original_mode={mode} person_id={person_id!r}"
         )
         try:
             fallback_result = await memory_service.search(
                 fallback_query,
                 limit=limit,
-                mode="search",
+                mode=mode,
                 chat_id=session_id,
                 person_id="",
-                time_start=None,
-                time_end=None,
+                time_start=time_start,
+                time_end=time_end,
                 respect_filter=respect_filter,
                 user_id=user_id,
                 group_id=group_id,
@@ -293,9 +300,9 @@ async def handle_tool(
             if fallback_result.success:
                 result = fallback_result
             else:
-                logger.warning(f"{runtime.log_prefix} 关键词降级检索失败，回退原结果: error={fallback_result.error}")
+                logger.warning(f"{runtime.log_prefix} 放宽人物限制后检索失败，保留原结果: error={fallback_result.error}")
         except Exception as exc:
-            logger.warning(f"{runtime.log_prefix} 关键词降级检索异常，回退原结果: {exc}")
+            logger.warning(f"{runtime.log_prefix} 放宽人物限制后检索异常，保留原结果: {exc}")
 
     structured_content: Dict[str, Any] = result.to_dict()
     structured_content.update(
@@ -329,7 +336,7 @@ async def handle_tool(
 
     content = _build_success_content(result, limit=limit)
     if fallback_applied:
-        content = f"提示：人物定向检索未命中，已自动降级为关键词检索。\n{content}"
+        content = f"提示：人物定向检索未命中，已放宽人物限制，结果不保证属于该人物。\n{content}"
     metadata: Dict[str, Any] = with_memory_feedback_task()
     replyer_memory_reference = _build_replyer_memory_reference(structured_content)
     if replyer_memory_reference:

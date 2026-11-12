@@ -27,7 +27,7 @@ async def test_store_person_memory_from_answer_writes_person_fact(monkeypatch):
     monkeypatch.setattr(person_info_module, "Person", FakePerson)
     monkeypatch.setattr(person_info_module.memory_service, "ingest_text", fake_ingest_text)
 
-    await person_info_module.store_person_memory_from_answer("Alice", "她喜欢猫和爵士乐", "session-1")
+    assert await person_info_module.store_person_memory_from_answer("Alice", "她喜欢猫和爵士乐", "session-1")
 
     assert len(calls) == 1
     payload = calls[0]
@@ -141,7 +141,7 @@ async def test_store_person_memory_from_answer_skips_unknown_person(monkeypatch)
     monkeypatch.setattr(person_info_module, "Person", FakePerson)
     monkeypatch.setattr(person_info_module.memory_service, "ingest_text", fake_ingest_text)
 
-    await person_info_module.store_person_memory_from_answer("Alice", "她喜欢猫和爵士乐", "session-1")
+    assert not await person_info_module.store_person_memory_from_answer("Alice", "她喜欢猫和爵士乐", "session-1")
 
     assert calls == []
 
@@ -156,6 +156,30 @@ async def test_store_person_memory_from_answer_skips_empty_content(monkeypatch):
 
     monkeypatch.setattr(person_info_module.memory_service, "ingest_text", fake_ingest_text)
 
-    await person_info_module.store_person_memory_from_answer("Alice", "   ", "session-1")
+    assert not await person_info_module.store_person_memory_from_answer("Alice", "   ", "session-1")
 
     assert calls == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("raises", [False, True])
+async def test_store_person_memory_reports_ingest_failure(monkeypatch, raises):
+    session = SimpleNamespace(platform="qq", user_id="10001", group_id="", session_id="session-1")
+    monkeypatch.setattr(
+        person_info_module, "_chat_manager", SimpleNamespace(get_session_by_session_id=lambda chat_id: session)
+    )
+    monkeypatch.setattr(
+        person_info_module,
+        "Person",
+        lambda **kwargs: SimpleNamespace(person_name="Alice", nickname="Alice", is_known=True),
+    )
+
+    async def fail_ingest(**kwargs):
+        if raises:
+            raise RuntimeError("ingest failed")
+        return SimpleNamespace(success=False, detail="ingest failed")
+
+    monkeypatch.setattr(person_info_module.memory_service, "ingest_text", fail_ingest)
+    assert not await person_info_module.store_person_memory_from_answer(
+        "Alice", "Alice 喜欢猫。", "session-1", person_id="person-1"
+    )

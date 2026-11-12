@@ -3,11 +3,43 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from src.A_memorix.core.utils.metadata import coerce_metadata_dict
+from src.A_memorix.core.utils.runtime_payloads import coerce_datetime
 from src.A_memorix.host_service import a_memorix_host_service
 from src.common.logger import get_logger
 
 
 logger = get_logger("memory_service")
+
+
+def format_memory_hit_context(metadata: Dict[str, Any], source: str = "") -> str:
+    """保留记忆来源，并区分事件、事实有效期和消息观察时间。"""
+    time_meta = coerce_metadata_dict(metadata.get("time_meta")) or metadata
+    evidence_source = str(time_meta.get("source") or metadata.get("source") or "").strip()
+    parts = [f"来源：{evidence_source}"] if evidence_source else ([f"检索路径：{source}"] if source else [])
+    memory_change = coerce_metadata_dict(metadata.get("memory_change"))
+    person_fact = (
+        time_meta.get("source_type") == "person_fact"
+        or metadata.get("source_type") == "person_fact"
+        or (evidence_source or source).startswith("person_fact:")
+    )
+    event_label = "消息观察时间" if person_fact else "事件时间"
+    time_fields = [
+        (f"{event_label}起始", time_meta.get("event_time_start")),
+        (f"{event_label}结束", time_meta.get("event_time_end")),
+    ]
+    if all(value is None for _, value in time_fields):
+        time_fields = [(event_label, time_meta.get("event_time"))]
+    time_fields.extend([
+        ("生效时间", memory_change.get("valid_from")),
+        ("失效时间", memory_change.get("valid_to")),
+        ("入库时间", time_meta.get("ingest_time")),
+    ])
+    for label, value in time_fields:
+        timestamp = coerce_datetime(value)
+        if timestamp is not None:
+            parts.append(f"{label}：{timestamp:%Y/%m/%d %H:%M}")
+    return "；".join(parts)
 
 
 @dataclass
@@ -50,6 +82,9 @@ class MemorySearchResult:
             content = item.content.strip().replace("\n", " ")
             if truncate_content and len(content) > max_content_chars:
                 content = content[:max_content_chars] + "..."
+            context = format_memory_hit_context(item.metadata, item.source)
+            if context:
+                content = f"{content}（{context}）"
             lines.append(f"{index}. {content}")
         return "\n".join(lines)
 

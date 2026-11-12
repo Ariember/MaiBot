@@ -1354,7 +1354,7 @@ class AMemorixIntegrationConfig(ConfigBase):
             "x-widget": "switch",
         },
     )
-    """是否根据当前聊天印象自然拉起长期记忆"""
+    """是否根据最近聊天消息自然拉起长期记忆"""
 
     heuristic_memory_cross_chat_enabled: bool = Field(
         default=False,
@@ -1375,15 +1375,15 @@ class AMemorixIntegrationConfig(ConfigBase):
         le=200,
         json_schema_extra={
             "label": {
-                "zh_CN": "印象窗口消息数",
-                "en_US": "Impression window size",
-                "ja_JP": "印象ウィンドウ件数",
+                "zh_CN": "召回窗口消息数",
+                "en_US": "Recall message window size",
+                "ja_JP": "呼び出しメッセージウィンドウ件数",
             },
             "x-widget": "input",
             "advanced": True,
         },
     )
-    """生成当前聊天印象时使用的最近消息数量"""
+    """构建轻量召回查询时读取的最近消息数量，查询最多保留最近的 1000 字符"""
 
     heuristic_memory_recall_limit: int = Field(
         default=3,

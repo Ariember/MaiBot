@@ -125,7 +125,11 @@ class MemorySearchHitProcessingService(KernelServiceBase):
                 paragraph = self.metadata_store.project_fact_paragraph(paragraphs[hit["hash"]], **time_options)
                 if paragraph is None:
                     continue
-                hit = {**hit, "content": paragraph["content"], "metadata": paragraph["metadata"]}
+                metadata = dict(paragraph["metadata"])
+                time_meta = coerce_metadata_dict(hit.get("metadata")).get("time_meta")
+                if time_meta is not None:
+                    metadata["time_meta"] = time_meta
+                hit = {**hit, "content": paragraph["content"], "metadata": metadata}
             elif hit.get("type") == "relation" and relation_paragraphs.get(hit.get("hash")):
                 supported = False
                 for row in relation_paragraphs[hit["hash"]]:
@@ -172,7 +176,10 @@ class MemorySearchHitProcessingService(KernelServiceBase):
                 elif item_type == "relation":
                     stored = relation_map.get(hash_value)
                 if stored is not None:
-                    metadata = coerce_metadata_dict(stored.get("metadata"))
+                    stored_metadata = coerce_metadata_dict(stored.get("metadata"))
+                    if "time_meta" in metadata:
+                        stored_metadata = {**stored_metadata, "time_meta": metadata["time_meta"]}
+                    metadata = stored_metadata
             memory_change = metadata.get("memory_change") if isinstance(metadata.get("memory_change"), dict) else {}
             if metadata.get("dedup_phase") == "pending":
                 continue
