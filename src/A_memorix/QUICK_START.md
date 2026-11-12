@@ -10,25 +10,19 @@
 
 ## 1. 环境准备
 
-- Python 3.10+
+- Python 3.12+
 - 与 MaiBot 主程序相同的运行环境
 - 可访问你配置的 embedding 服务
 
-安装依赖：
+在 MaiBot 仓库根目录安装依赖，后续命令也在该目录执行：
 
 ```bash
-pip install -r src/A_memorix/requirements.txt --upgrade
-```
-
-如果当前目录就是 `src/A_memorix`，也可以：
-
-```bash
-pip install -r requirements.txt --upgrade
+uv sync --inexact
 ```
 
 ## 2. 配置子系统
 
-当前分支固定使用 `config/a_memorix.toml` 作为 A_Memorix 配置文件。
+记忆系统配置位于 `config/bot_config.toml` 的 `a_memorix` 配置节，正文中的参数名称均为该节内的相对路径。
 
 推荐的配置入口有两种：
 
@@ -38,13 +32,13 @@ pip install -r requirements.txt --upgrade
 常用完整示例：
 
 ```toml
-[plugin]
+[a_memorix.plugin]
 enabled = true
 
-[storage]
+[a_memorix.storage]
 data_dir = "data/a-memorix"
 
-[embedding]
+[a_memorix.embedding]
 model_name = "auto"
 dimension = 1024
 dimension_request_mode = "explicit"
@@ -53,18 +47,18 @@ max_concurrent = 5
 enable_cache = false
 quantization_type = "int8"
 
-[embedding.fallback]
+[a_memorix.embedding.fallback]
 enabled = true
 probe_interval_seconds = 180
 allow_metadata_only_write = true
 
-[embedding.paragraph_vector_backfill]
+[a_memorix.embedding.paragraph_vector_backfill]
 enabled = true
 interval_seconds = 60
 batch_size = 64
 max_retry = 5
 
-[retrieval]
+[a_memorix.retrieval]
 top_k_paragraphs = 20
 top_k_relations = 10
 top_k_final = 10
@@ -75,7 +69,7 @@ ppr_timeout_seconds = 1.5
 ppr_concurrency_limit = 4
 enable_parallel = true
 
-[retrieval.sparse]
+[a_memorix.retrieval.sparse]
 enabled = true
 backend = "fts5"
 mode = "auto"
@@ -83,18 +77,18 @@ tokenizer_mode = "jieba"
 candidate_k = 80
 relation_candidate_k = 60
 
-[threshold]
+[a_memorix.threshold]
 min_threshold = 0.3
 max_threshold = 0.95
 percentile = 75.0
 min_results = 3
 
-[filter]
+[a_memorix.filter]
 enabled = true
 mode = "blacklist"
 chats = []
 
-[episode]
+[a_memorix.episode]
 enabled = true
 generation_enabled = true
 source_poll_interval_seconds = 1
@@ -107,7 +101,7 @@ max_chars_per_call = 6000
 source_time_window_hours = 24
 segmentation_model = "auto"
 
-[person_profile]
+[a_memorix.person_profile]
 enabled = true
 refresh_interval_minutes = 30
 active_window_hours = 72
@@ -116,18 +110,18 @@ top_k_evidence = 12
 evidence_classification_max_tokens = 1200
 evidence_classification_temperature = 0.1
 
-[memory]
+[a_memorix.memory]
 enabled = true
 half_life_hours = 24.0
 prune_threshold = 0.1
 freeze_duration_hours = 24.0
 
-[advanced]
+[a_memorix.advanced]
 enable_auto_save = true
 auto_save_interval_minutes = 5
 debug = false
 
-[web.import]
+[a_memorix.web.import]
 enabled = true
 max_queue_size = 20
 max_files_per_task = 200
@@ -140,14 +134,14 @@ default_narrative_overlap = 400
 default_factual_target_size = 1200
 max_chunk_chars = 3200
 
-[web.import.timeout]
+[a_memorix.web.import.timeout]
 llm_call_seconds = 240
 process_poll_seconds = 1
 process_terminate_seconds = 5
 process_kill_seconds = 3
 convert_preflight_seconds = 20
 
-[web.tuning]
+[a_memorix.web.tuning]
 enabled = true
 max_queue_size = 8
 poll_interval_ms = 1200
@@ -161,10 +155,12 @@ default_sample_size = 24
 
 ## 3. 运行时自检（强烈建议）
 
+离线脚本使用独立的 `config/a_memorix.toml`。请将主配置 `a_memorix` 节的所需内容同步到该文件，表名去掉 `a_memorix.` 前缀，例如 `[a_memorix.embedding]` 改为 `[embedding]`。`runtime_self_check.py` 也支持通过 `--config` 指定这种独立配置文件。
+
 先确认 embedding 实际输出维度与向量库兼容：
 
 ```bash
-python src/A_memorix/scripts/runtime_self_check.py --json
+uv run --no-sync python src/A_memorix/scripts/runtime_self_check.py --json
 ```
 
 如果结果 `ok=false`，先修复 embedding 配置或向量库，再继续导入。
@@ -184,25 +180,25 @@ data/a-memorix/imports/source/raw/
 执行：
 
 ```bash
-python src/A_memorix/scripts/process_knowledge.py
+uv run --no-sync python src/A_memorix/scripts/process_knowledge.py
 ```
 
 常用参数：
 
 ```bash
-python src/A_memorix/scripts/process_knowledge.py --force
-python src/A_memorix/scripts/process_knowledge.py --chat-log
-python src/A_memorix/scripts/process_knowledge.py --chat-log --chat-reference-time "2026/02/12 10:30"
+uv run --no-sync python src/A_memorix/scripts/process_knowledge.py --force
+uv run --no-sync python src/A_memorix/scripts/process_knowledge.py --chat-log
+uv run --no-sync python src/A_memorix/scripts/process_knowledge.py --chat-log --chat-reference-time "2026/02/12 10:30"
 ```
 
 ### 4.2 其他导入脚本
 
 ```bash
-python src/A_memorix/scripts/import_lpmm_json.py data/a-memorix/imports/source/lpmm/<json文件或目录>
-python src/A_memorix/scripts/convert_lpmm.py -i data/a-memorix/imports/source/lpmm/<数据集> -o data/a-memorix/imports/converted/<数据集>
-python src/A_memorix/scripts/migrate_chat_history.py --help
-python src/A_memorix/scripts/migrate_maibot_memory.py --help
-python src/A_memorix/scripts/migrate_person_memory_points.py --help
+uv run --no-sync python src/A_memorix/scripts/import_lpmm_json.py data/a-memorix/imports/source/lpmm/<json文件或目录>
+uv run --no-sync python src/A_memorix/scripts/convert_lpmm.py -i data/a-memorix/imports/source/lpmm/<数据集> -o data/a-memorix/imports/converted/<数据集>
+uv run --no-sync python src/A_memorix/scripts/migrate_chat_history.py --help
+uv run --no-sync python src/A_memorix/scripts/migrate_maibot_memory.py --help
+uv run --no-sync python src/A_memorix/scripts/migrate_person_memory_points.py --help
 ```
 
 ## 5. 核心 Tool 调用
@@ -329,4 +325,4 @@ python src/A_memorix/scripts/migrate_person_memory_points.py --help
 
 - 配置细节见 [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md)
 - 导入细节见 [IMPORT_GUIDE.md](IMPORT_GUIDE.md)
-- 版本历史见 [CHANGELOG.md](CHANGELOG.md)
+- 版本历史见 [更新日志](../../changelogs/changelog.md)

@@ -1997,7 +1997,7 @@ async def test_rebuild_publishes_batch_progress_for_manual_and_model_sync(monkey
         )
         return {"success": True, "done": done, "failed": failed}
 
-    monkeypatch.setattr(service, "_execute_vector_rebuild_locked", rebuild)
+    monkeypatch.setitem(kernel.__dict__, "_execute_vector_rebuild_locked", rebuild)
     await service._rebuild_all_vectors_locked()
     assert snapshots[0]["processed"] == 0
     assert snapshots[1]["processed"] == 2
@@ -2020,7 +2020,7 @@ async def test_rebuild_progress_finishes_on_error_or_cancellation(monkeypatch, t
     async def rebuild(**kwargs):
         raise error
 
-    monkeypatch.setattr(service, "_execute_vector_rebuild_locked", rebuild)
+    monkeypatch.setitem(kernel.__dict__, "_execute_vector_rebuild_locked", rebuild)
     with pytest.raises(type(error)):
         await service._rebuild_all_vectors_locked()
     status = kernel._dual_vector_auto_migration_status

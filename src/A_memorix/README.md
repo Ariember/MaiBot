@@ -7,6 +7,8 @@
 A_Memorix 是 MaiBot 内置的长期记忆子系统。  
 它把文本、关系、Episode、人物画像和检索调优统一在一套运行时里，适合长期运行的 Agent 记忆场景。
 
+本目录由 [Ariember/MaiBot](https://github.com/Ariember/MaiBot) 直接维护，原始实现来自 [A-Dawn/A_memorix](https://github.com/A-Dawn/A_memorix)。
+
 ## 快速导航
 
 - [快速入门](QUICK_START.md)
@@ -14,7 +16,8 @@ A_Memorix 是 MaiBot 内置的长期记忆子系统。
 - [导入指南与最佳实践](IMPORT_GUIDE.md)
 - [可分享记忆包格式](docs/memory_bundle_format.md)
 - [修改约定](MODIFICATION_POLICY.md)
-- [更新日志](CHANGELOG.md)
+- [维护说明](../../docs/a_memorix_maintenance.md)
+- [更新日志](../../changelogs/changelog.md)
 
 ## 2.0.0 版本定位
 
@@ -22,7 +25,7 @@ A_Memorix 是 MaiBot 内置的长期记忆子系统。
 
 - 旧 `components/commands/*`、`components/tools/*` 与 `server.py` 已移除。
 - 统一入口为宿主侧 host service + [`core/runtime/sdk_memory_kernel.py`](core/runtime/sdk_memory_kernel.py)。
-- 元数据 schema 为 `v26`，支持外部引用、知识包安装登记、图片记忆、空摘要触发进度与运维操作记录。
+- 元数据 schema 为 `v29`，支持外部引用、知识包安装登记、图片记忆、空摘要触发进度与运维操作记录。
 
 如果你还在使用旧版 slash 命令（如 `/query`、`/memory`、`/visualize`），需要按本文的 Tool 接口迁移。
 
@@ -117,30 +120,24 @@ A_Memorix 是 MaiBot 内置的长期记忆子系统。
 
 ### 1. 安装依赖
 
-在 MaiBot 主程序使用的同一个 Python 环境中执行：
+在 MaiBot 仓库根目录安装依赖，记忆系统与主程序使用同一环境：
 
 ```bash
-pip install -r src/A_memorix/requirements.txt --upgrade
-```
-
-如果当前目录已经是 `src/A_memorix`，也可以执行：
-
-```bash
-pip install -r requirements.txt --upgrade
+uv sync --inexact
 ```
 
 ### 2. 配置子系统
 
-在 `config/a_memorix.toml` 中启用 A_Memorix：
+在 `config/bot_config.toml` 的 `a_memorix` 配置节中启用 A_Memorix：
 
 ```toml
-[plugin]
+[a_memorix.plugin]
 enabled = true
 ```
 
 ### 配置方式
 
-- 默认配置文件：`config/a_memorix.toml`
+- 默认配置文件：`config/bot_config.toml`，记忆系统配置位于 `a_memorix` 节。
 - 运行目录主路径：`storage.data_dir`（当前模板默认 `data/a-memorix`）
 - 长期记忆控制台：适合修改常用高频项，如 embedding、检索、Episode、人物画像、导入与调优开关。
 - 原始 TOML：适合复制整份配置、批量粘贴参数，或编辑未在可视化表单中展示的高级项。
@@ -148,14 +145,16 @@ enabled = true
 
 ### 3. 先做运行时自检
 
+离线脚本使用独立的 `config/a_memorix.toml`，其中保存主配置 `a_memorix` 节的内容，表名不带 `a_memorix.` 前缀。运行前请同步所需配置，具体格式见 [配置参考](CONFIG_REFERENCE.md)。
+
 ```bash
-python src/A_memorix/scripts/runtime_self_check.py --json
+uv run --no-sync python src/A_memorix/scripts/runtime_self_check.py --json
 ```
 
 ### 4. 导入文本并验证统计
 
 ```bash
-python src/A_memorix/scripts/process_knowledge.py
+uv run --no-sync python src/A_memorix/scripts/process_knowledge.py
 ```
 
 然后调用 `memory_stats` 或 `search_memory` 检查是否有数据。
@@ -222,9 +221,9 @@ MAIBOT_UI_REUSE_SERVICES=1 bash scripts/verify_a_memorix_webui.sh
 推荐使用方式：
 
 - 常用配置：优先通过 WebUI 长期记忆控制台维护。
-- 高级配置：通过 `config/a_memorix.toml` 或 WebUI 的原始 TOML 模式维护。
+- 高级配置：通过 `config/bot_config.toml` 的 `a_memorix` 配置节或 WebUI 的原始 TOML 模式维护。
 
-高频配置项：
+高频配置项（相对于 `a_memorix` 配置节）：
 
 - `storage.data_dir`
 - `embedding.dimension`（唯一公开维度控制项，provider 差异由插件内部映射）
@@ -245,7 +244,7 @@ MAIBOT_UI_REUSE_SERVICES=1 bash scripts/verify_a_memorix_webui.sh
 如果环境中的 SQLite 未启用 `FTS5`，可关闭稀疏检索：
 
 ```toml
-[retrieval.sparse]
+[a_memorix.retrieval.sparse]
 enabled = false
 ```
 
@@ -254,7 +253,7 @@ enabled = false
 若日志提示当前 embedding 输出维度与既有向量库不一致，请先执行：
 
 ```bash
-python src/A_memorix/scripts/runtime_self_check.py --json
+uv run --no-sync python src/A_memorix/scripts/runtime_self_check.py --json
 ```
 
 必要时重建向量或调整 embedding 配置后再启动 A_Memorix。
@@ -269,6 +268,6 @@ python src/A_memorix/scripts/runtime_self_check.py --json
 
 ## 贡献说明
 
-当前不接受 PR，只接受 issue。
+问题与改动请提交到 [Ariember/MaiBot](https://github.com/Ariember/MaiBot)，开发前请阅读 [项目开发规范](../../AGENTS.md) 和 [修改约定](MODIFICATION_POLICY.md)。
 
 **作者**: `A_Dawn`

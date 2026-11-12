@@ -5,7 +5,36 @@ on:
     paths:
       - "src/A_memorix/**"
       - "src/services/memory_service.py"
+      - "src/services/memory_flow_service.py"
+      - "src/services/image_writeback_journal.py"
+      - "src/services/person_fact_verifier.py"
+      - "src/services/person_fact_reverification.py"
+      - "src/person_info/person_info.py"
+      - "src/config/**"
+      - "src/webui/config_schema.py"
       - "src/webui/routers/memory.py"
+      - "prompts/**/a_memorix_*.prompt"
+      - "pytests/A_memorix_test/**"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - ".github/workflows/a-memorix-tests.yml"
+  push:
+    branches:
+      - main
+      - dev
+      - r-dev
+    paths:
+      - "src/A_memorix/**"
+      - "src/services/memory_service.py"
+      - "src/services/memory_flow_service.py"
+      - "src/services/image_writeback_journal.py"
+      - "src/services/person_fact_verifier.py"
+      - "src/services/person_fact_reverification.py"
+      - "src/person_info/person_info.py"
+      - "src/config/**"
+      - "src/webui/config_schema.py"
+      - "src/webui/routers/memory.py"
+      - "prompts/**/a_memorix_*.prompt"
       - "pytests/A_memorix_test/**"
       - "pyproject.toml"
       - "requirements.txt"
@@ -26,4 +55,4 @@ jobs:
       - name: 安装项目依赖
         run: uv sync --group dev
       - name: 运行 A_Memorix 测试
-        run: uv run pytest -q pytests/A_memorix_test
+        run: uv run --no-sync pytest -q pytests/A_memorix_test

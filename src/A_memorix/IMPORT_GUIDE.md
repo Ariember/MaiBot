@@ -7,10 +7,12 @@
 
 ## 1. 导入前检查
 
+命令均在 MaiBot 仓库根目录运行，依赖安装见 [快速入门](QUICK_START.md)。离线脚本使用独立的 `config/a_memorix.toml`，请按 [配置参考](CONFIG_REFERENCE.md) 同步主配置 `a_memorix` 节的所需内容，并去掉表名中的 `a_memorix.` 前缀。
+
 建议先执行：
 
 ```bash
-python src/A_memorix/scripts/runtime_self_check.py --json
+uv run --no-sync python src/A_memorix/scripts/runtime_self_check.py --json
 ```
 
 再确认：
@@ -37,27 +39,27 @@ data/a-memorix/imports/source/raw/
 执行：
 
 ```bash
-python src/A_memorix/scripts/process_knowledge.py
+uv run --no-sync python src/A_memorix/scripts/process_knowledge.py
 ```
 
 常用参数：
 
 ```bash
-python src/A_memorix/scripts/process_knowledge.py --force
-python src/A_memorix/scripts/process_knowledge.py --chat-log
-python src/A_memorix/scripts/process_knowledge.py --chat-log --chat-reference-time "2026/02/12 10:30"
+uv run --no-sync python src/A_memorix/scripts/process_knowledge.py --force
+uv run --no-sync python src/A_memorix/scripts/process_knowledge.py --chat-log
+uv run --no-sync python src/A_memorix/scripts/process_knowledge.py --chat-log --chat-reference-time "2026/02/12 10:30"
 ```
 
 ## 2.2 OpenIE JSON 导入
 
 ```bash
-python src/A_memorix/scripts/import_lpmm_json.py data/a-memorix/imports/source/lpmm/<json文件或目录>
+uv run --no-sync python src/A_memorix/scripts/import_lpmm_json.py data/a-memorix/imports/source/lpmm/<json文件或目录>
 ```
 
 ## 2.3 LPMM 数据转换
 
 ```bash
-python src/A_memorix/scripts/convert_lpmm.py \
+uv run --no-sync python src/A_memorix/scripts/convert_lpmm.py \
   -i data/a-memorix/imports/source/lpmm/<数据集> \
   -o data/a-memorix/imports/converted/<数据集>
 ```
@@ -65,18 +67,18 @@ python src/A_memorix/scripts/convert_lpmm.py \
 ## 2.4 历史数据迁移
 
 ```bash
-python src/A_memorix/scripts/migrate_chat_history.py --help
-python src/A_memorix/scripts/migrate_maibot_memory.py --help
-python src/A_memorix/scripts/migrate_person_memory_points.py --help
+uv run --no-sync python src/A_memorix/scripts/migrate_chat_history.py --help
+uv run --no-sync python src/A_memorix/scripts/migrate_maibot_memory.py --help
+uv run --no-sync python src/A_memorix/scripts/migrate_person_memory_points.py --help
 ```
 
 ## 2.5 导入后修复与重建
 
 ```bash
-python src/A_memorix/scripts/backfill_temporal_metadata.py --dry-run
-python src/A_memorix/scripts/backfill_relation_vectors.py --limit 1000
-python src/A_memorix/scripts/rebuild_episodes.py --all --wait
-python src/A_memorix/scripts/audit_vector_consistency.py --json
+uv run --no-sync python src/A_memorix/scripts/backfill_temporal_metadata.py --dry-run
+uv run --no-sync python src/A_memorix/scripts/backfill_relation_vectors.py --limit 1000
+uv run --no-sync python src/A_memorix/scripts/rebuild_episodes.py --all --wait
+uv run --no-sync python src/A_memorix/scripts/audit_vector_consistency.py --json
 ```
 
 ## 3. 方式 B：`memory_import_admin` 任务导入

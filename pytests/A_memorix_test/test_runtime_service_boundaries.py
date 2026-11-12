@@ -42,8 +42,8 @@ def test_v5_status_skips_relation_removed_after_hash_resolution(monkeypatch: pyt
         ),
     )
     service = MemoryV5AdminService(kernel)
-    monkeypatch.setattr(service, "_resolve_relation_hashes", lambda target: ["removed-relation"])
-    monkeypatch.setattr(service, "_resolve_deleted_relation_hashes", lambda target: [])
+    monkeypatch.setitem(kernel.__dict__, "_resolve_relation_hashes", lambda target: ["removed-relation"])
+    monkeypatch.setitem(kernel.__dict__, "_resolve_deleted_relation_hashes", lambda target: [])
 
     result = service._memory_v5_status(target="removed-relation")
 
@@ -1488,8 +1488,8 @@ async def test_v5_restore_relation_service_routes_to_durable_outbox_boundary(
             "failures": [{"hash": "missing-relation", "error": "relation 不存在"}],
         }
 
-    monkeypatch.setattr(
-        kernel._delete_admin_service,
+    monkeypatch.setitem(
+        kernel.__dict__,
         "restore_deleted_relations",
         fake_restore_deleted_relations,
     )
@@ -2272,7 +2272,7 @@ async def test_memory_maintenance_freeze_prune_uses_delete_coordinator_boundary(
         return {"success": True}
 
     monkeypatch.setattr(memory_maintenance_service.time, "time", lambda: 10_000.0)
-    monkeypatch.setattr(kernel._delete_admin_service, "_execute_delete_action", fake_execute_delete_action)
+    monkeypatch.setitem(kernel.__dict__, "_execute_delete_action", fake_execute_delete_action)
 
     await kernel._process_freeze_and_prune()
 

@@ -204,7 +204,7 @@ async def test_delete_and_restore_enqueue_person_profile_refresh(
             profile_resolution_connections.append(conn)
             return original_profile_resolution(items, conn=conn)
 
-        monkeypatch.setattr(delete_service, "_profile_person_ids_for_delete_items", track_profile_resolution)
+        monkeypatch.setitem(kernel.__dict__, "_profile_person_ids_for_delete_items", track_profile_resolution)
         restored = await kernel._delete_admin_service._restore_delete_operation(operation)
 
         assert restored["success"] is True
@@ -485,8 +485,8 @@ async def test_relation_restore_outbox_survives_hard_exit_before_projection(
         assert first.metadata_store.resolve_relation_hash_alias(alias, include_deleted=True) == []
 
         with monkeypatch.context() as projection_patch:
-            projection_patch.setattr(
-                first._delete_admin_service,
+            projection_patch.setitem(
+                first.__dict__,
                 "_process_pending_storage_cleanup_jobs_serialized",
                 leave_projection_pending,
             )
@@ -1054,8 +1054,8 @@ async def test_completed_vector_jobs_are_durable_before_graph_job_across_hard_ex
     try:
         memory = await _seed_linked_memory(first_kernel, source="vector-job-durability")
         with monkeypatch.context() as cleanup_patch:
-            cleanup_patch.setattr(
-                first_kernel._delete_admin_service,
+            cleanup_patch.setitem(
+                first_kernel.__dict__,
                 "_process_pending_storage_cleanup_jobs_serialized",
                 leave_cleanup_pending,
             )
@@ -1140,8 +1140,8 @@ async def test_completed_vector_jobs_are_durable_before_graph_job_across_hard_ex
         operation = delete_restarted.metadata_store.get_delete_operation(operation_id)
         assert operation is not None
         with monkeypatch.context() as cleanup_patch:
-            cleanup_patch.setattr(
-                delete_restarted._delete_admin_service,
+            cleanup_patch.setitem(
+                delete_restarted.__dict__,
                 "_process_pending_storage_cleanup_jobs_serialized",
                 leave_cleanup_pending,
             )

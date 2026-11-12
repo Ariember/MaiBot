@@ -72,7 +72,7 @@ webui中设计聊天会话流的，涉及显示聊天流信息的，优先显示
 # 关于 A_memorix 修改
 如果修改涉及 `src/A_memorix`，请先阅读 `src/A_memorix/MODIFICATION_POLICY.md`。
 
-1. `src/A_memorix` 的实现层改动应优先遵守 `src/A_memorix/MODIFICATION_POLICY.md` 中的归属约束。
+1. `src/A_memorix` 及其宿主接入由本仓库直接维护，核心实现、脚本与测试的修改均在本仓库完成，具体约定见 `src/A_memorix/MODIFICATION_POLICY.md`。
 2. 不要提交无边界的 `ruff`、格式化、导入整理或大面积实现整理。
 3. 本地实验目录或依赖其运行的测试，除非明确说明并确认，否则不要进入共享历史。
 

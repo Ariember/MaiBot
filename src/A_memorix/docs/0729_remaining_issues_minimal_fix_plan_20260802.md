@@ -16,7 +16,7 @@
 - 兼容旧数据优先使用读取语义补齐。只有无法从既有字段可靠解释的数据，才进入显式审计或人工修复。
 - 非阻塞不等于吞掉错误。迁移、图、Episode 或后台任务失败后，应保留结构化错误状态，同时让不依赖该通道的功能继续运行。
 - 不为普通增量修改引入全存储 staging。只有 LPMM 这类会整体替换三类存储的离线转换，才保留独立输出目录。
-- `src/A_memorix/core`、`src/A_memorix/scripts` 的实现修改应优先提交到上游 `MaiBot_branch`，再同步回 MaiBot。Dashboard、宿主服务和集成测试可直接在 MaiBot 仓库修改。
+- 核心实现、脚本、Dashboard、宿主服务和集成测试统一由本仓库维护，遵循 [A_Memorix 维护约定](../MODIFICATION_POLICY.md)。
 
 ## 2. Web 导入归属与检索范围不一致
 

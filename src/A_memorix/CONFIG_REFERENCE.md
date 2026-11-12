@@ -1,11 +1,12 @@
 # A_Memorix 配置参考 (v2.0.0)
 
-本文档对应当前仓库代码（`__version__ = 2.0.0`、`SCHEMA_VERSION = 26`）。
+本文档对应当前仓库代码（`__version__ = 2.0.0`、`SCHEMA_VERSION = 29`）。
 
 说明：
 
 - 本文只覆盖 **当前运行时实际读取** 的配置键。
-- 默认配置文件路径为 `config/a_memorix.toml`。
+- 配置位于 `config/bot_config.toml` 的 `a_memorix` 节，参数说明使用该节内的相对路径，TOML 示例包含完整前缀。
+- 离线脚本使用独立的 `config/a_memorix.toml`。其内容对应主配置的 `a_memorix` 节，表名不带 `a_memorix.` 前缀，例如 `[embedding]`、`[storage]`；运行前需同步所需配置。支持 `--config` 的脚本可指定其他独立配置文件。
 - 旧版 `/query`、`/memory`、`/visualize` 命令体系相关配置，不再作为主路径说明。
 - 未配置的键会回退到代码默认值。
 - 长期记忆控制台已可视化高频常用字段；未展示的长尾高级项仍然有效，请通过“源码模式 / 原始 TOML”编辑。
@@ -13,13 +14,13 @@
 ## 常用完整配置
 
 ```toml
-[plugin]
+[a_memorix.plugin]
 enabled = true
 
-[storage]
+[a_memorix.storage]
 data_dir = "data/a-memorix"
 
-[embedding]
+[a_memorix.embedding]
 model_name = "auto"
 dimension = 1024
 dimension_request_mode = "explicit"
@@ -28,18 +29,18 @@ max_concurrent = 5
 enable_cache = false
 quantization_type = "int8"
 
-[embedding.fallback]
+[a_memorix.embedding.fallback]
 enabled = true
 probe_interval_seconds = 180
 allow_metadata_only_write = true
 
-[embedding.paragraph_vector_backfill]
+[a_memorix.embedding.paragraph_vector_backfill]
 enabled = true
 interval_seconds = 60
 batch_size = 64
 max_retry = 5
 
-[retrieval]
+[a_memorix.retrieval]
 top_k_paragraphs = 20
 top_k_relations = 10
 top_k_final = 10
@@ -50,7 +51,7 @@ ppr_timeout_seconds = 1.5
 ppr_concurrency_limit = 4
 enable_parallel = true
 
-[retrieval.sparse]
+[a_memorix.retrieval.sparse]
 enabled = true
 backend = "fts5"
 mode = "auto"
@@ -58,18 +59,18 @@ tokenizer_mode = "jieba"
 candidate_k = 80
 relation_candidate_k = 60
 
-[threshold]
+[a_memorix.threshold]
 min_threshold = 0.29
 max_threshold = 0.95
 percentile = 75.0
 min_results = 4
 
-[filter]
+[a_memorix.filter]
 enabled = true
 mode = "blacklist"
 chats = []
 
-[episode]
+[a_memorix.episode]
 enabled = true
 generation_enabled = true
 source_poll_interval_seconds = 1
@@ -82,7 +83,7 @@ max_chars_per_call = 6000
 source_time_window_hours = 24
 segmentation_model = "auto"
 
-[person_profile]
+[a_memorix.person_profile]
 enabled = true
 refresh_interval_minutes = 30
 active_window_hours = 72
@@ -91,7 +92,7 @@ top_k_evidence = 12
 evidence_classification_max_tokens = 1200
 evidence_classification_temperature = 0.1
 
-[memory]
+[a_memorix.memory]
 enabled = true
 half_life_hours = 24.0
 prune_threshold = 0.1
@@ -103,12 +104,12 @@ explicit_reinforcement_alpha = 0.5
 weaken_alpha = 0.5
 lifecycle_batch_size = 1000
 
-[advanced]
+[a_memorix.advanced]
 enable_auto_save = true
 auto_save_interval_minutes = 5
 debug = false
 
-[web.import]
+[a_memorix.web.import]
 enabled = true
 max_queue_size = 20
 max_files_per_task = 200
@@ -121,14 +122,14 @@ default_narrative_overlap = 400
 default_factual_target_size = 1200
 max_chunk_chars = 3200
 
-[web.import.timeout]
+[a_memorix.web.import.timeout]
 llm_call_seconds = 240
 process_poll_seconds = 1
 process_terminate_seconds = 5
 process_kill_seconds = 3
 convert_preflight_seconds = 20
 
-[web.tuning]
+[a_memorix.web.tuning]
 enabled = true
 max_queue_size = 8
 poll_interval_ms = 1200
@@ -317,22 +318,22 @@ default_sample_size = 24
 用于 `respect_filter=true` 场景（检索和写入都支持）。
 
 ```toml
-[filter]
+[a_memorix.filter]
 enabled = true
 mode = "blacklist" # blacklist / whitelist
 chats = ["group:123", "user:456", "stream:abc"]
 
-[filter.retrieval.chat_stream]
+[a_memorix.filter.retrieval.chat_stream]
 enabled = false
 mode = "blacklist"
 chats = []
 
-[filter.retrieval.chat_summary]
+[a_memorix.filter.retrieval.chat_summary]
 enabled = false
 mode = "blacklist"
 chats = []
 
-[filter.retrieval.episode]
+[a_memorix.filter.retrieval.episode]
 enabled = false
 mode = "blacklist"
 chats = []
@@ -368,14 +369,14 @@ chats = []
 `chat_id`，只在检索时把当前聊天流扩展为同组允许范围。
 
 ```toml
-[[shared_memory_groups]]
+[[a_memorix.shared_memory_groups]]
 
-[[shared_memory_groups.targets]]
+[[a_memorix.shared_memory_groups.targets]]
 platform = "qq"
 item_id = "123"
 rule_type = "group"
 
-[[shared_memory_groups.targets]]
+[[a_memorix.shared_memory_groups.targets]]
 platform = "qq"
 item_id = "456"
 rule_type = "group"

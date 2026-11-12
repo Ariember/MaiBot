@@ -289,8 +289,8 @@ async def test_rename_node_reports_vector_invalidation_failure_without_hiding_co
         del kwargs
         return {"status": "completed", "entity": {"ready": True}, "relations": {}}
 
-    monkeypatch.setattr(kernel._graph_admin_service, "_delete_vectors_by_type", fail_vector_invalidation)
-    monkeypatch.setattr(kernel._graph_admin_service, "_rebuild_renamed_vectors", complete_vector_rebuild)
+    monkeypatch.setitem(kernel.__dict__, "_delete_vectors_by_type", fail_vector_invalidation)
+    monkeypatch.setitem(kernel.__dict__, "_rebuild_renamed_vectors", complete_vector_rebuild)
     try:
         result = await kernel.memory_graph_admin(
             action="rename_node",
