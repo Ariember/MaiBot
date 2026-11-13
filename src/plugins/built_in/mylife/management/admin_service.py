@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 from ..config import PLUGIN_VERSION
 
 
-_SCOPES = {"overview", "users", "groups", "dates", "bookshelf", "tokens", "proactive", "search"}
+_SCOPES = {"overview", "users", "groups", "dates", "tokens", "proactive", "search"}
 
 
 def _bounded_limit(value: Any, default: int = 20) -> int:
@@ -38,8 +38,6 @@ class AdminService:
             return {"scope": normalized, "items": await self._groups(limit)}
         if normalized == "dates":
             return {"scope": normalized, "items": await self.store.management_date_candidates(limit)}
-        if normalized == "bookshelf":
-            return {"scope": normalized, "items": await self.store.management_bookshelf(limit)}
         if normalized == "tokens":
             return {"scope": normalized, **await self._tokens(now)}
         if normalized == "proactive":
@@ -105,8 +103,6 @@ class AdminService:
             "users": counts.get("users", 0),
             "owners": counts.get("owners", 0),
             "pending_dates": counts.get("pending_dates", 0),
-            "bookshelf_documents": counts.get("bookshelf_documents", 0),
-            "private_documents": counts.get("private_documents", 0),
             "pending_proactive": counts.get("pending_proactive", 0),
             "token_calls_today": sum(int(item.get("calls") or 0) for item in tokens),
             "token_total_today": sum(int(item.get("total_tokens") or 0) for item in tokens),
@@ -123,7 +119,7 @@ class AdminService:
             return (
                 "麦日常 管理概览\n"
                 f"用户 {data['users']}（主人 {data['owners']}）｜待确认日期 {data['pending_dates']}\n"
-                f"书柜 {data['bookshelf_documents']}（私人 {data['private_documents']}）｜待发送主动 {data['pending_proactive']}\n"
+                f"待发送主动 {data['pending_proactive']}\n"
                 f"今日模型调用 {data['token_calls_today']}｜Token {data['token_total_today']}｜搜索 API 请求 {data['search_calls_today']}\n"
                 f"联网 {'开' if data['network_enabled'] else '关'}｜社交 {'开' if data['social_enabled'] else '关'}"
             )
@@ -143,10 +139,6 @@ class AdminService:
             lines = ["待确认日期"] + [
                 f"#{item['id']} 用户 {item['user_id']}｜{item['event_name']}｜{item['date_text']}"
                 for item in data["items"]
-            ]
-        elif scope == "bookshelf":
-            lines = ["书柜元数据（不含正文）"] + [
-                f"{item['id']}｜{item['title']}｜{item['privacy']}｜{item['status']}" for item in data["items"]
             ]
         elif scope == "tokens":
             if not data["model_usage"] and not data["search_api_usage"]:

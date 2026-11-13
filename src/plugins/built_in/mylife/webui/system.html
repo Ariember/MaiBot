@@ -502,7 +502,6 @@
     group: { title: '群聊回复与观察 (group)', badge: '群聊' },
     memory: { title: '重要日期 (memory)', badge: '记忆' },
     network: { title: '联网见闻与搜索 (network)', badge: '联网' },
-    reading: { title: '小说阅读 (reading)', badge: '阅读' },
     proactive: { title: '主动私聊巡检 (proactive)', badge: '主动' },
     usage: { title: '用量统计保留 (usage)', badge: '审计' },
   };
@@ -560,11 +559,6 @@
     search_daily_max: '每日自主搜索上限',
     patrol_interval_minutes: '后台巡检间隔(分)',
     'proactive.patrol_interval_minutes': '主动判断与发送间隔（分）',
-    'reading.enabled': '启用小说阅读',
-    'reading.directory': '小说目录（插件目录内）',
-    'reading.chunk_chars': '每次阅读字符数',
-    'reading.daily_max': '每日阅读次数上限',
-    'reading.interval_minutes': '阅读最小间隔（分）',
     recent_user_silence_minutes: '用户刚发言静默期(分)',
     pending_expire_seconds: '主动任务待响应过期(秒)',
     max_retries_per_opportunity: '单契机最大重试次数',
@@ -634,11 +628,6 @@
         <div class="ml-kpi-label">待决主动事件</div>
         <div class="ml-kpi-value">${ov.pending_proactive ?? 0}</div>
         <div class="ml-kpi-sub">Host Planner 异步终审中</div>
-      </div>
-      <div class="ml-kpi-tile">
-        <div class="ml-kpi-label">阅读笔记 (私密)</div>
-        <div class="ml-kpi-value">${ov.bookshelf_documents ?? 0} (${ov.private_documents ?? 0})</div>
-        <div class="ml-kpi-sub">保留实际阅读片段与批注</div>
       </div>
       <div class="ml-kpi-tile">
         <div class="ml-kpi-label">今日 Token (调用数)</div>

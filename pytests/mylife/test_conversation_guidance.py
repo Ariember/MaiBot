@@ -22,7 +22,6 @@ def test_conversation_rules_and_role_survive_long_background(plugin_module, stag
 
     information = {
         "news": [{"title": "新见闻", "summary": "新闻内容" * 1000, "score": 0.9}],
-        "reading": {"items": [{"title": "私人小说", "excerpt": "仅主人可见的摘录"}]},
     }
 
     prompt = method(
@@ -33,7 +32,6 @@ def test_conversation_rules_and_role_survive_long_background(plugin_module, stag
         max_chars=budget,
         continuity={"unresolved_topics": ["尚在讨论的话题" * 100]},
         information=information,
-        bookshelf={"items": [{"title": "读书笔记", "summary": "记录内容" * 1000}]},
         **options,
     )
 
@@ -60,8 +58,6 @@ def test_conversation_rules_and_role_survive_long_background(plugin_module, stag
         assert "该用户是普通朋友" in prompt
 
         assert "不得对这位用户使用主人/恋人称呼" in prompt
-
-        assert "仅主人可见的摘录" not in prompt
 
     if stage == "planner":
         assert "仅实际执行记录可当作经历" in prompt

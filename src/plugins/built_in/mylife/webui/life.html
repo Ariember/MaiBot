@@ -315,44 +315,6 @@
     border-color: var(--series-1);
   }
 
-  /* Reading Notes Split View */
-  .ml-reader-split {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 16px;
-    align-items: start;
-  }
-  @media (max-width: 920px) {
-    .ml-reader-split {
-      grid-template-columns: 1fr;
-    }
-  }
-  .ml-item-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 560px;
-    overflow-y: auto;
-    padding-right: 4px;
-  }
-  .ml-item-row {
-    text-align: left;
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: calc(var(--ml-radius) - 4px);
-    border: 1px solid var(--ml-border);
-    background: var(--ml-soft);
-    color: var(--ml-fg);
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .ml-item-row.active {
-    background: var(--ml-surface);
-    border-color: var(--ml-primary);
-    box-shadow: 0 0 0 1px var(--ml-primary);
-  }
   .ml-reader-pane {
     padding: 18px 22px;
     border-radius: calc(var(--ml-radius) - 2px);
@@ -470,7 +432,7 @@
     <div class="ml-brand">
       <div class="ml-brand-icon" aria-hidden="true">忆</div>
       <div>
-        <h1 class="ml-brand-title">记忆与牵挂 · 关系、阅读与见闻</h1>
+        <h1 class="ml-brand-title">记忆与牵挂 · 关系与见闻</h1>
         <div class="ml-brand-sub" id="life-subtitle">真实 QQ 号隔离隐私边界 · 主人后台全量透视</div>
       </div>
     </div>
@@ -486,7 +448,7 @@
     <button type="button" class="ml-btn" id="btn-retry">重试</button>
   </div>
 
-  <!-- 4-Tab 切换栏 -->
+  <!-- 3-Tab 切换栏 -->
   <nav class="ml-tabs-bar" role="tablist" aria-label="记忆与牵挂模块切换">
     <button type="button" class="ml-tab-btn active" data-tab="users">
       <span>社交关系与温度</span>
@@ -495,10 +457,6 @@
     <button type="button" class="ml-tab-btn" data-tab="dates">
       <span>重要日期与候选</span>
       <span class="ml-tab-count" id="tab-cnt-dates">—</span>
-    </button>
-    <button type="button" class="ml-tab-btn" data-tab="shelf">
-      <span>小说阅读笔记</span>
-      <span class="ml-tab-count" id="tab-cnt-shelf">—</span>
     </button>
     <button type="button" class="ml-tab-btn" data-tab="digest">
       <span>联网见闻与搜索</span>
@@ -572,36 +530,7 @@
     </div>
   </section>
 
-  <!-- ==================== TAB 4: 小说阅读笔记 ==================== -->
-  <section id="panel-shelf" class="ml-tab-panel ml-hidden">
-    <div class="ml-kpi-row" id="shelf-kpi-row"></div>
-
-    <div class="ml-card">
-      <div class="ml-card-header">
-        <h2 class="ml-card-title">小说阅读片段与批注</h2>
-        <div class="ml-seg-group">
-          <button type="button" class="ml-seg-btn active" id="btn-shelf-split">分篇阅读</button>
-          <button type="button" class="ml-seg-btn" id="btn-shelf-full">笔记全文拼接</button>
-        </div>
-      </div>
-      <div class="ml-reader-split" id="shelf-split-view">
-        <div class="ml-item-list" id="shelf-book-list"></div>
-        <div class="ml-reader-pane" id="shelf-reader-pane">
-          <div class="ml-empty">点击左侧任意笔记查看阅读片段与批注</div>
-        </div>
-      </div>
-      <div class="ml-reader-pane ml-hidden" id="shelf-full-view">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <strong>近期阅读笔记全文（最多 20 篇）</strong>
-          <button type="button" class="ml-btn" id="btn-copy-shelf" style="padding:4px 10px;font-size:12px;">复制全文</button>
-        </div>
-        <div class="ml-reader-body" id="shelf-full-text"></div>
-      </div>
-    </div>
-
-  </section>
-
-  <!-- ==================== TAB 5: 联网见闻与搜索审计 ==================== -->
+  <!-- ==================== TAB 3: 联网见闻与搜索审计 ==================== -->
   <section id="panel-digest" class="ml-tab-panel ml-hidden">
     <div class="ml-kpi-row" id="digest-kpi-row"></div>
     <div class="ml-card" id="digest-sources"></div>
@@ -662,11 +591,9 @@
     activeTab: 'users',
     users: null,
     dates: null,
-    shelf: null,
     digest: null,
     userFilter: 'all',
     userSearch: '',
-    selectedBookIdx: 0,
     loading: false,
   };
 
@@ -728,7 +655,7 @@
     document.querySelectorAll('[data-tab]').forEach((btn) => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
     });
-    ['users', 'dates', 'shelf', 'digest'].forEach((id) => {
+    ['users', 'dates', 'digest'].forEach((id) => {
       const panel = document.getElementById(`panel-${id}`);
       if (panel) panel.classList.toggle('ml-hidden', id !== tabId);
     });
@@ -864,60 +791,7 @@
     }).join('') : '<tr><td colspan="5" class="ml-empty">暂无待确认的日期候选</td></tr>';
   }
 
-  function renderShelf() {
-    const d = state.shelf;
-    if (!d) return;
-    const c = d.counts || {};
-    document.getElementById('tab-cnt-shelf').textContent = `${c.documents ?? 0}`;
-    document.getElementById('shelf-kpi-row').innerHTML = `
-      <div class="ml-kpi-tile"><div class="ml-kpi-label">阅读笔记篇数</div><div class="ml-kpi-value">${c.documents ?? 0}</div></div>
-    `;
-
-    const books = d.books || [];
-    const listEl = document.getElementById('shelf-book-list');
-    const readerEl = document.getElementById('shelf-reader-pane');
-    document.getElementById('shelf-full-text').textContent = d.books_full_text || '（暂无阅读笔记）';
-
-    if (!books.length) {
-      listEl.innerHTML = '<div class="ml-empty">暂无阅读笔记</div>';
-      readerEl.innerHTML = '<div class="ml-empty">阅读小说后会在这里保存片段和批注</div>';
-    } else {
-      if (state.selectedBookIdx >= books.length) state.selectedBookIdx = 0;
-      listEl.innerHTML = books.map((b, idx) => `
-        <button type="button" class="ml-item-row ${idx === state.selectedBookIdx ? 'active' : ''}" data-book-idx="${idx}">
-          <div style="display:flex;justify-content:space-between;width:100%;font-size:11.5px;color:var(--ml-muted);">
-            <span>${esc(b.doc_type || '阅读笔记')} · ${esc(b.privacy || '—')}</span>
-            <span>${esc(b.updated_age || '')}</span>
-          </div>
-          <div style="font-weight:650;font-size:13.5px;">${esc(b.title || '未命名笔记')}</div>
-        </button>
-      `).join('');
-
-      const cur = books[state.selectedBookIdx];
-      readerEl.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
-          <h3 style="margin:0;font-size:18px;">${esc(cur.title || '未命名笔记')}</h3>
-          <div style="display:flex;gap:6px;">
-            <span class="ml-badge">${esc(cur.doc_type || '阅读笔记')}</span>
-            <span class="ml-badge">${esc(cur.privacy || '—')}</span>
-            <span class="ml-badge">${esc(cur.status || '—')}</span>
-          </div>
-        </div>
-        ${cur.summary ? `<div style="margin-top:10px;padding:8px 12px;background:var(--ml-surface);border-radius:6px;font-size:12.5px;color:var(--ml-muted);">摘要：${esc(cur.summary)}</div>` : ''}
-        <div class="ml-reader-body">${esc(cur.content || '（无正文）')}</div>
-      `;
-
-      listEl.querySelectorAll('[data-book-idx]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          state.selectedBookIdx = Number(btn.getAttribute('data-book-idx') || 0);
-          renderShelf();
-        });
-      });
-    }
-
-  }
-
-  // ==================== 5. Render Information Digest ====================
+  // ==================== 3. Render Information Digest ====================
   function renderDigest() {
     const d = state.digest;
     if (!d) return;
@@ -1013,7 +887,6 @@
     const errors = await runQueriesWithLimit([
       { name: 'users', label: '用户关系', onSuccess: (r) => { state.users = r; renderUsers(); } },
       { name: 'dates', label: '重要日期', onSuccess: (r) => { state.dates = r; renderDates(); } },
-      { name: 'shelf', label: '阅读笔记', onSuccess: (r) => { state.shelf = r; renderShelf(); } },
       { name: 'digest', label: '联网见闻', onSuccess: (r) => { state.digest = r; renderDigest(); } },
     ], 2);
 
@@ -1046,23 +919,6 @@
     renderUsers();
   });
 
-  // Shelf view mode toggles
-  document.getElementById('btn-shelf-split').addEventListener('click', (e) => {
-    e.currentTarget.classList.add('active');
-    document.getElementById('btn-shelf-full').classList.remove('active');
-    document.getElementById('shelf-split-view').classList.remove('ml-hidden');
-    document.getElementById('shelf-full-view').classList.add('ml-hidden');
-  });
-  document.getElementById('btn-shelf-full').addEventListener('click', (e) => {
-    e.currentTarget.classList.add('active');
-    document.getElementById('btn-shelf-split').classList.remove('active');
-    document.getElementById('shelf-split-view').classList.add('ml-hidden');
-    document.getElementById('shelf-full-view').classList.remove('ml-hidden');
-  });
-  document.getElementById('btn-copy-shelf').addEventListener('click', (e) => {
-    copyText(state.shelf?.books_full_text || '', e.currentTarget);
-  });
-
   // Digest sub-view toggles
   document.querySelectorAll('[data-digest-sub]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1086,7 +942,7 @@
 
   window.maibot.ready.then(() => {
     const initialTab = window.maibot.page?.state?.tab;
-    if (initialTab && ['users', 'dates', 'shelf', 'digest'].includes(initialTab)) {
+    if (initialTab && ['users', 'dates', 'digest'].includes(initialTab)) {
       switchTab(initialTab);
     }
     loadAll();

@@ -15,7 +15,6 @@ import tomllib
 from src.plugins.built_in.mylife import plugin as plugin_module
 from src.plugins.built_in.mylife.config import CONFIG_SCHEMA_VERSION, MaiLifeSettings, PLUGIN_VERSION
 from src.plugins.built_in.mylife.core.storage import LifeStore
-from src.plugins.built_in.mylife.creation.bookshelf_service import BookshelfService
 from src.plugins.built_in.mylife.life.memory_service import MemoryService
 
 
@@ -33,7 +32,11 @@ def test_defaults_template_and_webui_contract():
     manifest = json.loads((ROOT / "_manifest.json").read_text(encoding="utf-8"))
     assert manifest["version"] == PLUGIN_VERSION
     assert manifest["id"] == "fraternity-z.mai-mylife"
-    schema = json.dumps(MaiLifeSettings.model_json_schema(), ensure_ascii=False).lower()
+    model_schema = MaiLifeSettings.model_json_schema()
+    assert model_schema["$defs"]["PluginSettings"]["properties"]["enabled"]["hidden"] is True
+    assert "reading" not in model_schema["properties"]
+    assert "reading" not in template
+    schema = json.dumps(model_schema, ensure_ascii=False).lower()
     assert "diary" not in schema
     assert "日记" not in schema
     assert not hasattr(plugin, "webui_memories")
@@ -75,50 +78,6 @@ async def test_important_dates_still_remind_before_two_am(tmp_path):
         assert "diary_entries" not in tables
         assert not hasattr(store, "save_diary")
         llm.generate_json.assert_not_awaited()
-    finally:
-        await store.close()
-
-
-@pytest.mark.asyncio
-async def test_old_diary_data_is_preserved_but_never_exposed(tmp_path):
-    store = LifeStore(str(tmp_path), clock=lambda: NOW.timestamp())
-    await store.initialize()
-    try:
-        await store.save_reading_note(
-            {
-                "id": "old",
-                "source_api": "local_novel",
-                "external_id": "old",
-                "title": "私人旧记录",
-                "summary": "私人内容",
-                "annotation": "私人正文",
-                "source_digest": "old",
-                "created_at": NOW.timestamp(),
-            }
-        )
-        store.conn.execute("UPDATE bookshelf_documents SET doc_type='diary' WHERE id='reading:old'")
-        store.conn.execute("CREATE TABLE diary_entries(day TEXT PRIMARY KEY, content TEXT)")
-        store.conn.execute("INSERT INTO diary_entries VALUES('2026-11-12','旧日记正文')")
-        store.conn.commit()
-        await store.add_opportunity(
-            {
-                "id": "old-opportunity",
-                "framework_id": "diary:2026-11-12",
-                "topic": "旧日记",
-                "motive": "旧日记",
-                "weight": 0.5,
-                "privacy": "owner_only",
-                "target_user_id": "10001",
-                "expires_at": NOW.timestamp() + 3600,
-            }
-        )
-        await store.close()
-        await store.initialize()
-        assert store.conn.execute("SELECT content FROM diary_entries").fetchone()[0] == "旧日记正文"
-        assert await store.list_bookshelf_documents(allow_private=True) == []
-        assert await store.get_bookshelf_document("reading:old", allow_private=True) == {}
-        assert await BookshelfService(store, MaiLifeSettings()).context_for_user({"role": "owner"}) == {"items": []}
-        assert await store.active_opportunities(NOW.timestamp()) == []
     finally:
         await store.close()
 

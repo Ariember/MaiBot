@@ -26,7 +26,7 @@
 
 [plugin]
 # 配置结构版本，请勿手动修改。
-config_version = "1.19.0"
+config_version = "1.20.0"
 
 # 插件总开关。关闭后保留数据库，但停止任务执行、状态维护和主动消息。
 enabled = false
@@ -163,17 +163,16 @@ outbound_turn_guard = true
 # 轮次锁过期时间（秒）；发送失败时会提前释放。
 turn_expire_seconds = 120
 
-# 慢变背景（记忆/见闻/书柜）按用户缓存的分钟数；0 = 每轮实时读取。
+# 慢变背景（记忆/见闻）按用户缓存的分钟数；0 = 每轮实时读取。
 background_cache_minutes = 5
 
 # 回复层（Replyer）背景详略：full = 完整（默认，行为不变）；compact = 精简
-#（见闻/书柜摘要减半，更省 token）。
+#（见闻摘要减半，更省 token）。
 replyer_detail = "full"
 
 
 
 [models]
-reading_annotation_task = ""
 # 模型输出 token 上限；0=不限制，由服务商决定（推荐）。
 # 推理模型的思考链占用输出预算，写死小上限（如 300/900）会把正文挤成空响应。
 max_output_tokens = 0
@@ -183,17 +182,6 @@ max_output_tokens = 0
 # 只统计，不设置每日 Token 限额。
 enabled = true
 retention_days = 30
-
-
-[reading]
-# 在固定阅读时段读取真实小说。
-# 将 UTF-8 .txt 文件放入data/plugins/fraternity-z.mai-mylife/novels 文件夹，按文件名排序逐段阅读。
-# 原文片段和批注存入私人书柜，朋友无权读取；学习结果供上下文使用，不训练模型权重。
-enabled = true
-directory = "novels"
-chunk_chars = 4000
-daily_max = 4
-interval_minutes = 60
 
 
 [proactive]

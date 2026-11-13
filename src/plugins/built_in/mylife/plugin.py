@@ -19,12 +19,10 @@ import time
 import uuid
 
 from .config import MaiLifeSettings, PLUGIN_VERSION, PluginConfigBase
-from .creation import BookshelfService
 from .core.environment import EnvironmentService
 from .core.llm_service import LLMService
 from .core.storage import LifeStore, RECORD_RETENTION_DAYS
 from .information.information_service import InformationService
-from .information.reading_service import ReadingService
 from .life.continuity import ContinuityService
 from .life.memory_service import MemoryService
 from .life.proactive import ProactiveEngine
@@ -313,7 +311,7 @@ class _PayloadCache:
 
 
 
-    只缓存分钟级变化的数据（memory/information/bookshelf）；
+    只缓存分钟级变化的数据（memory/information）；
 
     state/weather/context/continuity 保持每轮实时读取。
 
@@ -404,8 +402,6 @@ class MaiLifePlugin(MaiBotPlugin):
 
         self._information: Optional[InformationService] = None
 
-        self._reading: Optional[ReadingService] = None
-
         self._activity_lock = asyncio.Lock()
 
         self._activity_status: Dict[str, str] = {}
@@ -413,8 +409,6 @@ class MaiLifePlugin(MaiBotPlugin):
         self._group_observer: Optional[GroupObserver] = None
 
         self._relay: Optional[RelayService] = None
-
-        self._bookshelf: Optional[BookshelfService] = None
 
         self._admin: Optional[AdminService] = None
 
@@ -466,10 +460,8 @@ class MaiLifePlugin(MaiBotPlugin):
                 self._continuity,
                 self._memory,
                 self._information,
-                self._reading,
                 self._group_observer,
                 self._relay,
-                self._bookshelf,
                 self._admin,
             )
         )
@@ -556,10 +548,6 @@ class MaiLifePlugin(MaiBotPlugin):
             self.ctx, self._store, self.config, self._llm, self.ctx.logger, bot_name=self._bot_name
         )
 
-        self._reading = ReadingService(
-            self._store, self.config, self._llm, data_dir, self.ctx.logger, bot_name=self._bot_name
-        )
-
         self._group_observer = GroupObserver(self._store, self.config, self._llm, self.ctx.logger)
 
         self._relay = RelayService(
@@ -570,8 +558,6 @@ class MaiLifePlugin(MaiBotPlugin):
             bot_name=self._bot_name,
             clock=self._env.clock.timestamp,
         )
-
-        self._bookshelf = BookshelfService(self._store, self.config)
 
         self._admin = AdminService(self._store, self.config)
 
@@ -672,10 +658,8 @@ class MaiLifePlugin(MaiBotPlugin):
                 self._continuity,
                 self._memory,
                 self._information,
-                self._reading,
                 self._group_observer,
                 self._relay,
-                self._bookshelf,
                 self._admin,
             ):
                 if service:
@@ -804,7 +788,7 @@ class MaiLifePlugin(MaiBotPlugin):
         if not self._ready or not self.config.plugin.enabled:
             return
 
-        assert self._information and self._reading and self._env and self._store and self._schedule
+        assert self._information and self._env and self._store and self._schedule
 
         async with self._activity_lock:
             now = self._env.now()
@@ -822,23 +806,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
             status = str(current.get("summary") or "等待活动窗口")
 
-            if current.get("kind") == "study":
-                result = await self._reading.tick(now, schedule)
-
-                if result.get("status") == "read":
-                    summary = str(result["summary"])
-
-                else:
-                    status = {
-                        "disabled": "小说阅读已关闭",
-                        "no_source": "等待小说书源（novels/*.txt）",
-                        "completed": "现有小说已读完",
-                        "failed": "小说读取失败，请检查书源和日志",
-                        "daily_limit": "今日阅读额度已用完",
-                        "interval": "等待下次阅读间隔",
-                    }.get(str(result.get("status") or ""), "本轮未执行小说阅读")
-
-            elif self.config.network.enabled:
+            if self.config.network.enabled:
                 topics = []
 
                 if self.config.network.search_include_chat_topics:
@@ -1007,7 +975,7 @@ class MaiLifePlugin(MaiBotPlugin):
     def _apply_bot_name(self) -> None:
         """把角色名分发给所有会写提示词的服务，避免各处硬编码旧名。"""
 
-        for target in (self._schedule, self._memory, self._information, self._reading, self._relay):
+        for target in (self._schedule, self._memory, self._information, self._relay):
             setter = getattr(target, "set_bot_name", None)
 
             if setter:
@@ -1654,7 +1622,7 @@ class MaiLifePlugin(MaiBotPlugin):
         if self._stopping or self._reloading or not self.config.plugin.enabled or not self._ready:
             return None
 
-        assert self._store and self._env and self._schedule and self._memory and self._information and self._bookshelf
+        assert self._store and self._env and self._schedule and self._memory and self._information
 
         user = await self._user_by_session(session_id)
 
@@ -1694,9 +1662,6 @@ class MaiLifePlugin(MaiBotPlugin):
             await self._cached_block("information", user["user_id"], now, self._information.context, now)
         )
 
-        if self._reading:
-            information["reading"] = await self._reading.context_for_user(user)
-
         return {
             "state": await self._store.get_state(),
             "weather": await self._store.get_weather() or {"description": "天气未知"},
@@ -1711,15 +1676,12 @@ class MaiLifePlugin(MaiBotPlugin):
             ),
             "continuity": continuity,
             "intent": "主动联系（当前没有新用户消息）" if proactive else str(runtime.get("intent") or ""),
-            # P4 慢变块缓存：loader 签名不同（context_for_user 带 now、information.context 带 now、
-            # bookshelf 带 user），键必须区分参数集，否则跨参数会误命中缓存。
+            # P4 慢变块缓存：context_for_user 带 user 和 now，information.context 只带 now，
+            # 键必须区分参数集，否则跨参数会误命中缓存。
             "memory": await self._cached_block(
                 "memory", user["user_id"], now, self._memory.context_for_user, user, now
             ),
             "information": information,
-            "bookshelf": await self._cached_block(
-                "bookshelf", user["user_id"], now, self._bookshelf.context_for_user, user
-            ),
         }
 
     @staticmethod
@@ -1846,7 +1808,6 @@ class MaiLifePlugin(MaiBotPlugin):
                     int(self.config.context.prompt_max_chars),
                     memory=payload["memory"],
                     information=payload["information"],
-                    bookshelf=payload["bookshelf"],
                     bot_name=self._bot_name,
                 )
 
@@ -1933,7 +1894,6 @@ class MaiLifePlugin(MaiBotPlugin):
                     min(2400, int(self.config.context.prompt_max_chars)),
                     memory=payload["memory"],
                     information=payload["information"],
-                    bookshelf=payload["bookshelf"],
                     bot_name=self._bot_name,
                     detail=str(self.config.context.replyer_detail),
                 )
@@ -2640,7 +2600,7 @@ class MaiLifePlugin(MaiBotPlugin):
         return await self._information.search_for_tool(query, self._env.now(), result_limit=result_limit)
 
     def _schedule_tool_text(self, now: Any, context: Dict[str, Any]) -> str:
-        """群聊任务时间线和实际执行结果，不携带私人阅读内容。"""
+        """群聊任务时间线和实际执行结果。"""
 
         nodes = context.get("nodes") or []
 
@@ -2688,7 +2648,7 @@ class MaiLifePlugin(MaiBotPlugin):
             "不要背诵整张时间表；用户只是闲聊没问这些时就不要调用。"
         ),
         detailed_description=(
-            "日程是检索、阅读和待机的任务窗口，可以在群聊里自然分享；只能把实际执行记录作为已发生的经历，"
+            "日程是检索和待机的任务窗口，可以在群聊里自然分享；只能把实际执行记录作为已发生的经历，"
             "没有执行记录时明确尚未执行。"
             "对方没有问就不要主动报日程，也不要把麦麦的日程说成是对方的安排。"
         ),
@@ -3469,7 +3429,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
     # 时间戳字段（*_at / *_until）一律给 epoch 秒，人读字段（*_age / window / countdown）一律给中文；
 
-    # WebUI 后台只有 MaiBot 主人可进，阅读笔记/关系/日期/Token 全部可以上网页，唯一例外是 Key 只出指纹。
+    # WebUI 后台只有 MaiBot 主人可进，关系/日期/Token 全部可以上网页，唯一例外是 Key 只出指纹。
 
     @API(
         name="webui_status_overview",
@@ -3668,50 +3628,6 @@ class MaiLifePlugin(MaiBotPlugin):
                 "explorations_full_text": explorations_full_text,
                 "search_history": searches,
             }
-
-        except Exception as exc:
-            return {"success": False, "error": f"{type(exc).__name__}: {exc}"[:200]}
-
-    @API(name="webui_bookshelf_overview", description="WebUI 阅读笔记：私人批注列表与正文", version="1", public=False)
-    async def webui_bookshelf_overview(self, **kwargs: Any) -> Dict[str, Any]:
-
-        try:
-            if not (self._store and self._env):
-                return {"success": False, "error": "not_ready"}
-
-            assert self._store and self._env
-
-            now = self._env.now()
-
-            now_ts = now.timestamp()
-
-            rows = await self._store.list_bookshelf_documents(allow_private=True, limit=20, doc_type="reading_note")
-
-            # 主人后台可查看私人阅读批注。
-
-            books = [
-                {
-                    "doc_type": str(row.get("doc_type") or ""),
-                    "title": str(row.get("title") or "")[:160],
-                    "privacy": str(row.get("privacy") or ""),
-                    "status": str(row.get("status") or ""),
-                    "updated_age": _relative_age(float(row.get("updated_at") or 0), now_ts),
-                    "summary": str(row.get("summary") or ""),
-                    "content": str(row.get("content") or ""),
-                }
-                for row in rows
-            ]
-
-            books_full_text = (
-                _FULL_TEXT_SEP.join(
-                    f"【{row['title']}】（{row['doc_type'] or '—'}｜{row['privacy'] or '—'}｜{row['status'] or '—'}｜"
-                    f"更新于 {row['updated_age']}）\n\n{row['content'] or '（无正文）'}"
-                    for row in books
-                )
-                or "（暂无阅读笔记）"
-            )
-
-            return {"counts": {"documents": len(books)}, "books": books, "books_full_text": books_full_text}
 
         except Exception as exc:
             return {"success": False, "error": f"{type(exc).__name__}: {exc}"[:200]}
@@ -4123,13 +4039,6 @@ class MaiLifePlugin(MaiBotPlugin):
                     "search_enabled": _switch(cfg.network.search_enabled),
                     "search_daily_max": int(cfg.network.search_daily_max),
                 },
-                "reading": {
-                    "enabled": _switch(cfg.reading.enabled),
-                    "directory": str(cfg.reading.directory),
-                    "chunk_chars": int(cfg.reading.chunk_chars),
-                    "daily_max": int(cfg.reading.daily_max),
-                    "interval_minutes": int(cfg.reading.interval_minutes),
-                },
                 "proactive": {
                     "enabled": _switch(cfg.proactive.enabled),
                     "work_start": cfg.proactive.work_start,
@@ -4321,8 +4230,6 @@ class MaiLifePlugin(MaiBotPlugin):
                     "owners": int(overview.get("owners") or 0),
                     "pending_dates": int(overview.get("pending_dates") or 0),
                     "pending_proactive": int(overview.get("pending_proactive") or 0),
-                    "bookshelf_documents": int(overview.get("bookshelf_documents") or 0),
-                    "private_documents": int(overview.get("private_documents") or 0),
                     "token_calls_today": int(overview.get("token_calls_today") or 0),
                     "token_total_today": int(overview.get("token_total_today") or 0),
                     "search_calls_today": int(overview.get("search_calls_today") or 0),
@@ -4368,10 +4275,10 @@ class MaiLifePlugin(MaiBotPlugin):
     @HomeCard(
         name="mai_life_management",
         title="麦日常管理",
-        description="配置生活、社交、联网与书柜模块；运行明细请在 WebUI「系统与配置」页查看。",
+        description="配置生活、社交与联网模块；运行明细请在 WebUI「系统与配置」页查看。",
         content=[
             {"type": "key_value", "entries": {"版本": PLUGIN_VERSION, "诊断指令": "/麦麦状态", "私密 API": "不公开"}},
-            {"type": "list", "items": ["用户角色与主动额度", "QQ群与日期候选", "联网服务、书柜与 Token 聚合"]},
+            {"type": "list", "items": ["用户角色与主动额度", "QQ群与日期候选", "联网服务与 Token 聚合"]},
         ],
         link_url="/plugin-config?plugin=fraternity-z.mai-mylife",
         link_label="打开麦日常配置",

@@ -265,7 +265,7 @@ class DailyLifeTests(unittest.IsolatedAsyncioTestCase):
             all(left["end_minute"] == right["start_minute"] for left, right in zip(nodes, nodes[1:], strict=False))
         )
 
-        self.assertEqual({node["kind"] for node in nodes}, {"sleep", "leisure", "study"})
+        self.assertEqual({node["kind"] for node in nodes}, {"sleep", "leisure"})
 
         self.assertTrue(all(node["location"] == "在线" and node["shareability"] == 0 for node in nodes))
 

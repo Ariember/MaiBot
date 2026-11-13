@@ -20,7 +20,7 @@ import re
 
 PLUGIN_VERSION = "1.3.0"
 
-CONFIG_SCHEMA_VERSION = "1.19.0"
+CONFIG_SCHEMA_VERSION = "1.20.0"
 
 _TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
@@ -173,6 +173,7 @@ class PluginSettings(PluginConfigBase):
             0,
             label_en="Enable Mai MyLife",
             hint_en="Keep data but stop life tracking and proactive behavior when disabled.",
+            hidden=True,
         ),
     )
 
@@ -1288,10 +1289,10 @@ class ContextSettings(PluginConfigBase):
         default=5,
         ge=0,
         le=60,
-        description="慢变背景块（生活记忆/外界见闻/书柜）的会话级缓存分钟数；0 表示每轮实时读取。",
+        description="慢变背景块（生活记忆/外界见闻）的会话级缓存分钟数；0 表示每轮实时读取。",
         json_schema_extra=_ui(
             "背景缓存（分钟）",
-            "记忆/见闻/书柜按用户缓存指定分钟数，减少每轮重复读取与注入；0 关闭。",
+            "记忆/见闻按用户缓存指定分钟数，减少每轮重复读取与注入；0 关闭。",
             5,
             label_en="Background Cache (min)",
             hint_en="Cache slow-changing background blocks per user; 0 disables.",
@@ -1300,10 +1301,10 @@ class ContextSettings(PluginConfigBase):
 
     replyer_detail: Literal["full", "compact"] = Field(
         default="full",
-        description="Replyer 背景详略：full 完整背景；compact 精简（书柜/见闻预算减半）。",
+        description="Replyer 背景详略：full 完整背景；compact 精简（见闻预算减半）。",
         json_schema_extra=_ui(
             "回复背景详略",
-            "full=与 Planner 同源完整背景；compact=精简版（省 token，书柜与见闻摘要减半）。默认 full 不改行为。",
+            "full=与 Planner 同源完整背景；compact=精简版（省 token，见闻摘要减半）。默认 full 不改行为。",
             6,
             label_en="Replyer Detail",
             hint_en="full keeps parity with planner; compact slims replyer-only background to save tokens.",
@@ -1385,18 +1386,6 @@ class ModelRoutingSettings(PluginConfigBase):
         ),
     )
 
-    creative_task: str = Field(
-        default="replyer",
-        description="阅读批注的写作任务名。",
-        json_schema_extra=_ui(
-            "写作任务",
-            "默认 replyer，用于阅读批注。",
-            2,
-            label_en="Writing Task",
-            hint_en="MaiBot task name for reading annotations.",
-        ),
-    )
-
     continuity_task: str = Field(
         default="",
         description="连续话题任务覆盖。",
@@ -1469,18 +1458,6 @@ class ModelRoutingSettings(PluginConfigBase):
         ),
     )
 
-    reading_annotation_task: str = Field(
-        default="",
-        description="阅读批注任务覆盖。",
-        json_schema_extra=_ui(
-            "阅读批注任务覆盖",
-            "留空继承写作任务。",
-            20,
-            label_en="Reading Annotation Override",
-            hint_en="Leave empty to inherit writing task.",
-        ),
-    )
-
     max_output_tokens: int = Field(
         default=0,
         ge=0,
@@ -1526,50 +1503,6 @@ class UsageSettings(PluginConfigBase):
             label_en="Detail Retention Days",
             hint_en="Retention period for individual call records.",
         ),
-    )
-
-
-class ReadingSettings(PluginConfigBase):
-    """从本地真实文本分段阅读，保存进度和私人笔记。"""
-
-    __ui_label__: ClassVar[str] = "小说阅读"
-
-    __ui_order__: ClassVar[int] = 8
-
-    enabled: bool = Field(
-        default=True,
-        description="在阅读时段分段阅读本地小说。",
-        json_schema_extra=_ui("启用小说阅读", "无文本时跳过；阅读笔记仅主人可见。", 0),
-    )
-
-    directory: str = Field(
-        default="novels",
-        description="麦日常数据目录内存放 UTF-8 .txt 小说的相对路径。",
-        json_schema_extra=_ui("小说目录", "只读取目录直属文本文件，拒绝越界路径和链接。", 1),
-    )
-
-    chunk_chars: int = Field(
-        default=4000,
-        ge=500,
-        le=12000,
-        description="每次实际阅读的字符上限。",
-        json_schema_extra=_ui("每次阅读字数", "保存片段、进度和私人批注，不把摘要当作读完整本书。", 2),
-    )
-
-    daily_max: int = Field(
-        default=4,
-        ge=0,
-        le=24,
-        description="每天最多阅读片段数，0 表示暂停。",
-        json_schema_extra=_ui("每日阅读上限", "按已保存的片段计数，重启不重置。", 3),
-    )
-
-    interval_minutes: int = Field(
-        default=60,
-        ge=1,
-        le=1440,
-        description="两次阅读的最小间隔（分钟）。",
-        json_schema_extra=_ui("阅读间隔", "由持久化记录控制，避免反复读取或连续调用模型。", 4),
     )
 
 
@@ -1786,17 +1719,6 @@ class MaiLifeSettings(PluginConfigBase):
             7,
             label_en="Passive Reply Context",
             hint_en="Relationship, state, intent and conversation continuity.",
-        ),
-    )
-
-    reading: ReadingSettings = Field(
-        default_factory=ReadingSettings,
-        json_schema_extra=_ui(
-            "小说阅读",
-            "真实文本、阅读进度和私人笔记。",
-            8,
-            label_en="Novel Reading",
-            hint_en="Source text, progress and private reading notes.",
         ),
     )
 
