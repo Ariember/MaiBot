@@ -826,7 +826,7 @@ async def test_real_chat_services_share_one_planner_without_starting_individual_
     monkeypatch.setattr(global_config.experimental, "focus_mode", True)
     monkeypatch.setattr(global_config.experimental, "focus_groups", [])
     monkeypatch.setattr(global_config.experimental, "focus_chat_whitelist", [])
-    monkeypatch.setattr(global_config.chat.reply_timing, "message_debounce_mode", "off")
+    monkeypatch.setattr(global_config.chat.reply_timing, "message_debounce_seconds", 0.0)
     sessions = {
         sid: SimpleNamespace(
             session_id=sid,

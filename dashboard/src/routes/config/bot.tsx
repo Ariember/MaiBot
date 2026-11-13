@@ -1066,9 +1066,13 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
       }
 
       if (subcategoryName) {
-        const isChatQuoteField = searchFieldPath === 'chat.reply_style.private_quote_frequency' ||
-          searchFieldPath === 'chat.reply_style.group_quote_frequency'
-        const subtabId = isChatQuoteField ? 'chat' : `${sectionName}.${subcategoryName}`
+        const isChatSettingsField = [
+          'chat.reply_style.private_quote_frequency',
+          'chat.reply_style.group_quote_frequency',
+          'chat.reply_timing.message_debounce_seconds',
+          'chat.reply_timing.private_message_debounce_seconds',
+        ].includes(searchFieldPath)
+        const subtabId = isChatSettingsField ? 'chat' : `${sectionName}.${subcategoryName}`
         setActiveSubtabByGroup((current) => ({
           ...current,
           [targetTab.id]: subtabId,
@@ -1129,6 +1133,7 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
   const personalityStyleFieldNames = new Set(['behavior_style', 'reply_style'])
   const basicChatPromptFieldNames = new Set(['group_chat_prompt', 'private_chat_prompts'])
   const chatQuoteFieldNames = new Set(['private_quote_frequency', 'group_quote_frequency'])
+  const chatDebounceFieldNames = new Set(['message_debounce_seconds', 'private_message_debounce_seconds'])
   const basicChatContextFieldNames = new Set(['max_context_size', 'max_private_context_size'])
   const basicChatTimingFieldNames = new Set([
     'talk_value', 'private_reply_paused', 'mentioned_bot_reply', 'inevitable_at_reply',
@@ -1151,6 +1156,13 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
     nested: {},
   } : null
   const replyStyleSchema = configSchema.nested.chat?.nested?.reply_style
+  const chatDebounceSchema: ConfigSchema | null = replyTimingSchema ? {
+    ...replyTimingSchema,
+    fields: replyTimingSchema.fields
+      .filter((field) => chatDebounceFieldNames.has(field.name))
+      .map((field) => ({ ...field, advanced: false, 'x-row': 'chat-message-debounce' })),
+    nested: {},
+  } : null
   // 群聊与私聊的引用频率展示在聊天设置中，仍通过 reply_style 路径读写。
   const chatQuoteSchema: ConfigSchema | null = replyStyleSchema ? {
     ...replyStyleSchema,
@@ -1312,6 +1324,12 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
         ...schema,
         nested: {
           ...schema.nested,
+          ...(replyTimingSchema ? {
+            reply_timing: {
+              ...replyTimingSchema,
+              fields: replyTimingSchema.fields.filter((field) => !chatDebounceFieldNames.has(field.name)),
+            },
+          } : {}),
           reply_style: {
             ...replyStyleSchema,
             uiLabel: '聊天流prompt',
@@ -1448,6 +1466,17 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
                   values={(sectionValue.reply_style as ConfigSectionData) ?? {}}
                   onChange={(field, value) => updateSectionValueByPath('chat', ['reply_style', field], value)}
                   basePath="chat.reply_style"
+                  hooks={fieldHooks}
+                  advancedVisible={advancedVisible}
+                  sectionColumns={1}
+                />
+              )}
+              {sectionName === 'chat' && chatDebounceSchema && chatDebounceSchema.fields.length > 0 && (
+                <DynamicConfigForm
+                  schema={chatDebounceSchema}
+                  values={(sectionValue.reply_timing as ConfigSectionData) ?? {}}
+                  onChange={(field, value) => updateSectionValueByPath('chat', ['reply_timing', field], value)}
+                  basePath="chat.reply_timing"
                   hooks={fieldHooks}
                   advancedVisible={advancedVisible}
                   sectionColumns={1}

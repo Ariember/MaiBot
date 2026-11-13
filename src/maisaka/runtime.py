@@ -1661,33 +1661,31 @@ class MaisakaHeartFlowChatting(MaisakaRuntimeDisplayMixin):
             except TimeoutError:
                 pass
 
-    def _get_message_debounce_mode(self) -> Literal["off", "fast", "natural", "steady"]:
-        """按真实聊天流类型读取档位，使群聊和私聊的配置及热重载互不影响。"""
+    def _get_message_debounce_seconds(self) -> float:
+        """按真实聊天流类型读取等待时长，使群聊和私聊的配置及热重载互不影响。"""
         timing = global_config.chat.reply_timing
         if self.chat_stream.is_group_session:
-            return timing.message_debounce_mode
-        return timing.private_message_debounce_mode
+            return timing.message_debounce_seconds
+        return timing.private_message_debounce_seconds
 
     def _is_message_debounce_enabled(self) -> bool:
-        return self._get_message_debounce_mode() != "off"
+        return self._get_message_debounce_seconds() > 0
 
     def _observe_message_debounce(self, message: SessionMessage, received_at: float) -> None:
         """在触发调度之前更新截止时间；开关热重载时清除旧批次。"""
-        mode = self._get_message_debounce_mode()
-        enabled = mode != "off"
+        wait_seconds = self._get_message_debounce_seconds()
+        enabled = wait_seconds > 0
         if enabled != self._message_debounce_was_enabled:
             self._fixed_message_debouncer.consume()
             self._message_debounce_was_enabled = enabled
-        if mode == "off":
+        if not enabled:
             return
         if message.is_notify or message.is_command or is_bot_self(message.platform, message.message_info.user_info.user_id):
             return
         kind, length = get_message_shape(message)
         reason = self._fixed_message_debouncer.observe(
-            author=message.message_info.user_info.user_id,
-            is_bare_image=kind == 1 and length == 0,
             is_pure_emoji=kind == 2 and length == 0,
-            mode=mode,
+            wait_seconds=wait_seconds,
             at_bot=message.is_at or message.is_mentioned,
             received_at=received_at,
             wall_time=time.time(),
@@ -1695,9 +1693,8 @@ class MaisakaHeartFlowChatting(MaisakaRuntimeDisplayMixin):
         )
         deadline = self._fixed_message_debouncer.deadline
         if deadline is not None:
-            mode_label = {"fast": "快速", "natural": "自然", "steady": "沉稳"}[mode]
             logger.info(
-                f"{self.log_prefix} 消息防抖：档位={mode_label}，规则={reason}，"
+                f"{self.log_prefix} 消息防抖：时长={wait_seconds:g} 秒，规则={reason}，"
                 f"剩余等待={max(0.0, deadline - time.monotonic()):.3f} 秒，"
                 f"待处理={self._get_pending_message_count() + 1} 条，消息编号={message.message_id}"
             )

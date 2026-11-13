@@ -1,10 +1,64 @@
 from pathlib import Path
 from typing import Any
 
+import pytest
 import tomlkit
 
 from src.config import config as config_module
 from src.config.config import Config, ConfigManager, ModelConfig, load_config_from_file
+
+
+@pytest.mark.parametrize("mode,seconds", [("off", 0.0), ("fast", 1.0), ("natural", 2.0), ("steady", 4.0)])
+def test_load_converts_debounce_modes_to_seconds(monkeypatch, tmp_path: Path, mode: str, seconds: float) -> None:
+    config_path = tmp_path / "bot_config.toml"
+    config_path.write_text(tomlkit.dumps({
+        "inner": {"version": "8.15.71"},
+        "chat": {"reply_timing": {"message_debounce_mode": mode, "private_message_debounce_mode": mode}},
+    }), encoding="utf-8")
+    monkeypatch.setattr(config_module, "should_apply_legacy_migration", lambda _file_name: False)
+
+    config, updated = load_config_from_file(Config, config_path, config_module.CONFIG_VERSION)
+
+    assert updated is True
+    assert config.chat.reply_timing.message_debounce_seconds == seconds
+    assert config.chat.reply_timing.private_message_debounce_seconds == seconds
+    saved = tomlkit.loads(config_path.read_text(encoding="utf-8"))["chat"]["reply_timing"]
+    assert saved["message_debounce_seconds"] == seconds
+    assert saved["private_message_debounce_seconds"] == seconds
+    assert "message_debounce_mode" not in saved
+    assert "private_message_debounce_mode" not in saved
+
+
+def test_load_keeps_explicit_debounce_seconds(monkeypatch, tmp_path: Path) -> None:
+    config_path = tmp_path / "bot_config.toml"
+    config_path.write_text(tomlkit.dumps({
+        "inner": {"version": "8.15.71"},
+        "chat": {"reply_timing": {
+            "message_debounce_mode": "steady", "message_debounce_seconds": 0.0,
+            "private_message_debounce_mode": "off", "private_message_debounce_seconds": 2.7,
+        }},
+    }), encoding="utf-8")
+    monkeypatch.setattr(config_module, "should_apply_legacy_migration", lambda _file_name: False)
+
+    config, _ = load_config_from_file(Config, config_path, config_module.CONFIG_VERSION)
+
+    assert config.chat.reply_timing.message_debounce_seconds == 0.0
+    assert config.chat.reply_timing.private_message_debounce_seconds == 2.7
+
+
+def test_load_rejects_invalid_debounce_mode_without_rewriting_file(monkeypatch, tmp_path: Path) -> None:
+    config_path = tmp_path / "bot_config.toml"
+    original = tomlkit.dumps({
+        "inner": {"version": "8.15.71"},
+        "chat": {"reply_timing": {"message_debounce_mode": "invalid"}},
+    })
+    config_path.write_text(original, encoding="utf-8")
+    monkeypatch.setattr(config_module, "should_apply_legacy_migration", lambda _file_name: False)
+
+    with pytest.raises(ValueError, match=r"chat.reply_timing.message_debounce_mode"):
+        load_config_from_file(Config, config_path, config_module.CONFIG_VERSION)
+
+    assert config_path.read_text(encoding="utf-8") == original
 
 
 

@@ -74,7 +74,7 @@ BOT_CONFIG_PATH: Path = (CONFIG_DIR / "bot_config.toml").resolve().absolute()
 MODEL_CONFIG_PATH: Path = (CONFIG_DIR / "model_config.toml").resolve().absolute()
 LEGACY_ENV_PATH: Path = (PROJECT_ROOT / ".env").resolve().absolute()
 MMC_VERSION: str = read_project_version(PROJECT_ROOT)
-CONFIG_VERSION: str = "8.15.71"
+CONFIG_VERSION: str = "8.15.72"
 MODEL_CONFIG_VERSION: str = "1.17.25"
 
 logger = get_logger("config")
@@ -808,6 +808,17 @@ def load_config_from_file(
     if hook_result.migrated:
         logger.warning(f"检测到配置升级钩子变更，已应用: {hook_result.reason}")
     config_data = hook_result.data
+    if config_class is Config:
+        timing = config_data.get("chat", {}).get("reply_timing", {})
+        debounce_seconds = {"off": 0.0, "fast": 1.0, "natural": 2.0, "steady": 4.0}
+        for prefix in ("", "private_"):
+            old_field = f"{prefix}message_debounce_mode"
+            new_field = f"{prefix}message_debounce_seconds"
+            if old_field in timing and new_field not in timing:
+                old_mode = timing[old_field]
+                if old_mode not in debounce_seconds:
+                    raise ValueError(f"chat.reply_timing.{old_field} 的防抖档位无效: {old_mode!r}")
+                timing[new_field] = debounce_seconds[old_mode]
     # 保留一份“干净”的原始数据副本，避免第一次 from_dict 过程中对 dict 的就地修改
     original_data: dict[str, Any] = copy.deepcopy(config_data)
     try:

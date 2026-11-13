@@ -14,25 +14,25 @@ from src.maisaka.turn_trigger import scheduler as scheduler_module
 from src.maisaka.turn_trigger.scheduler import MessageTurnScheduler
 
 
-@pytest.mark.parametrize("group_mode", ["off", "fast", "natural", "steady"])
-@pytest.mark.parametrize("private_mode", ["off", "fast", "natural", "steady"])
+@pytest.mark.parametrize("group_seconds", [0.0, 0.1, 2.3, 8.0])
+@pytest.mark.parametrize("private_seconds", [0.0, 0.1, 2.3, 8.0])
+@pytest.mark.parametrize("message_shape", [(0, 5), (1, 0)])
 def test_group_and_private_debounce_waits_and_hot_reload_are_independent(
-    monkeypatch: pytest.MonkeyPatch, group_mode: str, private_mode: str
+    monkeypatch: pytest.MonkeyPatch, group_seconds: float, private_seconds: float, message_shape: tuple[int, int]
 ) -> None:
-    timing = SimpleNamespace(message_debounce_mode=group_mode, private_message_debounce_mode=private_mode)
+    timing = SimpleNamespace(message_debounce_seconds=group_seconds, private_message_debounce_seconds=private_seconds)
     monkeypatch.setattr(runtime_module, "global_config", SimpleNamespace(chat=SimpleNamespace(reply_timing=timing)))
     monkeypatch.setattr(runtime_module.time, "monotonic", lambda: 100.0)
     monkeypatch.setattr(runtime_module.time, "time", lambda: 1000.0)
     monkeypatch.setattr(runtime_module, "is_bot_self", lambda platform, user_id: False)
-    monkeypatch.setattr(runtime_module, "get_message_shape", lambda message: (0, 5))
+    monkeypatch.setattr(runtime_module, "get_message_shape", lambda message: message_shape)
     message = SimpleNamespace(
         is_notify=False, is_command=False, is_at=False, is_mentioned=False,
         platform="test", message_id="message-1",
         message_info=SimpleNamespace(user_info=SimpleNamespace(user_id="user-1")),
     )
     runtimes = []
-    waits = {"off": 0.0, "fast": 1.0, "natural": 2.0, "steady": 4.0}
-    for is_group, mode in ((True, group_mode), (False, private_mode)):
+    for is_group, seconds in ((True, group_seconds), (False, private_seconds)):
         runtime = object.__new__(MaisakaHeartFlowChatting)
         runtime.chat_stream = SimpleNamespace(is_group_session=is_group)
         runtime._fixed_message_debouncer = MessageDebouncer()
@@ -41,18 +41,70 @@ def test_group_and_private_debounce_waits_and_hot_reload_are_independent(
         runtime._last_processed_index = 0
         runtime.log_prefix = "[test]"
         runtime._observe_message_debounce(message, 1000.0)
-        assert runtime._get_message_quiet_period_remaining_seconds() == waits[mode]
+        assert runtime._get_message_quiet_period_remaining_seconds() == pytest.approx(seconds)
         runtimes.append(runtime)
 
     group, private = runtimes
     # 热重载无需新消息即可结束对应类型的等待，另一类型保持原有截止时间。
-    timing.private_message_debounce_mode = "off"
+    timing.private_message_debounce_seconds = 0.0
     assert private._get_message_quiet_period_remaining_seconds() == 0.0
-    assert group._get_message_quiet_period_remaining_seconds() == waits[group_mode]
-    timing.private_message_debounce_mode = private_mode
-    timing.message_debounce_mode = "off"
+    assert group._get_message_quiet_period_remaining_seconds() == pytest.approx(group_seconds)
+    timing.private_message_debounce_seconds = private_seconds
+    timing.message_debounce_seconds = 0.0
     assert group._get_message_quiet_period_remaining_seconds() == 0.0
-    assert private._get_message_quiet_period_remaining_seconds() == waits[private_mode]
+    assert private._get_message_quiet_period_remaining_seconds() == pytest.approx(private_seconds)
+
+
+def test_custom_debounce_collects_continuous_messages_with_eight_second_limit() -> None:
+    runtime = object.__new__(MaisakaHeartFlowChatting)
+    runtime._fixed_message_debouncer = MessageDebouncer()
+    runtime.message_cache = []
+    runtime._last_processed_index = 0
+    for now, expected_deadline in ((100.0, 102.3), (102.0, 104.3), (104.0, 106.3), (106.0, 108.0), (107.0, 108.0)):
+        runtime._fixed_message_debouncer.observe(
+            is_pure_emoji=False, at_bot=False, received_at=now, wall_time=now, now=now, wait_seconds=2.3,
+        )
+        runtime.message_cache.append(SimpleNamespace(message_id=str(now)))
+        assert runtime._fixed_message_debouncer.deadline == pytest.approx(expected_deadline)
+
+    messages = list(runtime.message_cache)
+    assert runtime._collect_pending_messages() == messages
+    assert runtime._fixed_message_debouncer.deadline is None
+    assert runtime._collect_pending_messages() == []
+
+
+def test_duration_change_applies_to_next_message_without_reopening_expired_batch() -> None:
+    debouncer = MessageDebouncer()
+    for now, seconds, deadline in ((100.0, 4.5, 104.5), (101.0, 1.3, 102.3), (103.0, 7.0, 102.3)):
+        debouncer.observe(
+            is_pure_emoji=False, at_bot=False, received_at=now, wall_time=now, now=now, wait_seconds=seconds,
+        )
+        assert debouncer.deadline == pytest.approx(deadline)
+
+    debouncer.consume()
+    debouncer.observe(
+        is_pure_emoji=False, at_bot=False, received_at=104.0, wall_time=104.0, now=104.0, wait_seconds=3.7,
+    )
+    assert debouncer.deadline == pytest.approx(107.7)
+
+
+@pytest.mark.parametrize("is_pure_emoji,at_bot,received_at,expected_deadline", [
+    (True, False, 101.0, 103.5),
+    (False, True, 101.0, 102.0),
+    (False, True, 100.5, 101.5),
+])
+def test_custom_debounce_preserves_emoji_and_mention_limits(
+    is_pure_emoji: bool, at_bot: bool, received_at: float, expected_deadline: float,
+) -> None:
+    debouncer = MessageDebouncer()
+    debouncer.observe(
+        is_pure_emoji=False, at_bot=False, received_at=100.0, wall_time=100.0, now=100.0, wait_seconds=3.5,
+    )
+    debouncer.observe(
+        is_pure_emoji=is_pure_emoji, at_bot=at_bot, received_at=received_at,
+        wall_time=101.0, now=101.0, wait_seconds=3.5,
+    )
+    assert debouncer.deadline == pytest.approx(expected_deadline)
 
 
 def _build_scheduler(
