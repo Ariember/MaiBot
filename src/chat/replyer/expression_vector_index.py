@@ -1718,36 +1718,32 @@ class ExpressionVectorIndex:
     def _build_cluster_summaries(raw_expressions: Sequence[dict[str, Any]]) -> List[dict[str, Any]]:
         """生成索引 JSON 中的轻量聚类摘要。"""
 
-        summaries: List[dict[str, Any]] = []
-        profile_cluster_keys = sorted(
-            {
-                (normalize_text(raw_expression.get("embedding_profile_marker")), int(raw_expression.get("cluster_id") or 0))
-                for raw_expression in raw_expressions
-            }
-        )
-        for profile_marker, cluster_id in profile_cluster_keys:
-            members = [
-                raw_expression
-                for raw_expression in raw_expressions
-                if normalize_text(raw_expression.get("embedding_profile_marker")) == profile_marker
-                and int(raw_expression.get("cluster_id") or 0) == cluster_id
-            ]
-            summaries.append(
-                {
+        summaries_by_cluster: Dict[Tuple[str, int], Dict[str, Any]] = {}
+        for raw_expression in raw_expressions:
+            profile_marker = normalize_text(raw_expression.get("embedding_profile_marker"))
+            cluster_id = int(raw_expression.get("cluster_id") or 0)
+            key = (profile_marker, cluster_id)
+            summary = summaries_by_cluster.get(key)
+            if summary is None:
+                summary = {
                     "embedding_profile_marker": profile_marker,
                     "cluster_id": cluster_id,
-                    "size": len(members),
-                    "members": [
-                        {
-                            "id": int(member.get("id") or 0),
-                            "situation": normalize_text(member.get("situation")),
-                            "style": normalize_text(member.get("style")),
-                            "count": int(member.get("count") or 0),
-                        }
-                        for member in members[:8]
-                    ],
+                    "size": 0,
+                    "members": [],
                 }
-            )
+                summaries_by_cluster[key] = summary
+            summary["size"] += 1
+            if len(summary["members"]) < 8:
+                summary["members"].append(
+                    {
+                        "id": int(raw_expression.get("id") or 0),
+                        "situation": normalize_text(raw_expression.get("situation")),
+                        "style": normalize_text(raw_expression.get("style")),
+                        "count": int(raw_expression.get("count") or 0),
+                    }
+                )
+        # 先按分组键排序，让大小相同时的稳定排序保持原有顺序。
+        summaries = [summaries_by_cluster[key] for key in sorted(summaries_by_cluster)]
         return sorted(summaries, key=lambda item: int(item["size"]), reverse=True)
 
     def _rebuild_profile_arrays(
