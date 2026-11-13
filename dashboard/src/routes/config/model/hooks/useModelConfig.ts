@@ -508,7 +508,7 @@ export function useModelConfig() {
     )
   }, [])
 
-  const removeModelsForProviders = useCallback(
+  const removeModelsAndTaskReferences = useCallback(
     (
       sourceModels: ModelInfo[],
       sourceTaskConfig: ModelTaskConfig | null,
@@ -632,7 +632,7 @@ export function useModelConfig() {
       }
 
       // 级联删除涉及模型和任务引用，必须整份写入，避免产生不一致的中间状态。
-      const { models: nextModels, taskConfig: nextTaskConfig } = removeModelsForProviders(
+      const { models: nextModels, taskConfig: nextTaskConfig } = removeModelsAndTaskReferences(
         models,
         taskConfig,
         affectedModels
@@ -664,7 +664,7 @@ export function useModelConfig() {
       models,
       persistModelConfigDraft,
       prepareProviderSaveBarrier,
-      removeModelsForProviders,
+      removeModelsAndTaskReferences,
       syncProviderState,
       taskConfig,
     ]
@@ -1247,11 +1247,16 @@ export function useModelConfig() {
   // 确认删除模型
   const handleConfirmDelete = useCallback(() => {
     if (deletingIndex !== null) {
-      const newModels = models.filter((_, i) => i !== deletingIndex)
+      const { models: newModels, taskConfig: nextTaskConfig } = removeModelsAndTaskReferences(
+        models,
+        taskConfig,
+        models.filter((_, i) => i === deletingIndex)
+      )
       setModels(newModels)
       setModelNames(newModels.map((m) => m.name))
+      setTaskConfig(nextTaskConfig)
       // 重新检查任务配置问题
-      checkTaskConfigIssues(taskConfig, newModels)
+      checkTaskConfigIssues(nextTaskConfig, newModels)
       toast({
         title: '删除成功',
         description: '配置将在 2 秒后自动保存',
@@ -1259,7 +1264,7 @@ export function useModelConfig() {
     }
     setDeleteDialogOpen(false)
     setDeletingIndex(null)
-  }, [checkTaskConfigIssues, deletingIndex, models, taskConfig, toast])
+  }, [checkTaskConfigIssues, deletingIndex, models, removeModelsAndTaskReferences, taskConfig, toast])
 
   const openProviderDeleteDialog = useCallback((index: number) => {
     setDeletingProviderIndex(index)
@@ -1488,18 +1493,23 @@ export function useModelConfig() {
   // 确认批量删除
   const handleConfirmBatchDelete = useCallback(() => {
     const deletedCount = selectedModels.size
-    const newModels = models.filter((_, index) => !selectedModels.has(index))
+    const { models: newModels, taskConfig: nextTaskConfig } = removeModelsAndTaskReferences(
+      models,
+      taskConfig,
+      models.filter((_, index) => selectedModels.has(index))
+    )
     setModels(newModels)
     setModelNames(newModels.map((m) => m.name))
+    setTaskConfig(nextTaskConfig)
     // 重新检查任务配置问题
-    checkTaskConfigIssues(taskConfig, newModels)
+    checkTaskConfigIssues(nextTaskConfig, newModels)
     setSelectedModels(new Set())
     setBatchDeleteDialogOpen(false)
     toast({
       title: '批量删除成功',
       description: `已删除 ${deletedCount} 个模型，配置将在 2 秒后自动保存`,
     })
-  }, [checkTaskConfigIssues, models, selectedModels, taskConfig, toast])
+  }, [checkTaskConfigIssues, models, removeModelsAndTaskReferences, selectedModels, taskConfig, toast])
 
   // ---- 任务配置更新（与 embedding 警告协调）----
   const updateTaskConfig = useCallback(

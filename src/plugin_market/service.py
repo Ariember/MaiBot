@@ -9,6 +9,7 @@ import asyncio
 import json
 
 from src.common.git_source import GitSource
+from src.common.logger import get_logger
 from src.config.config import MMC_VERSION
 
 from .catalog import _filter_plugins, _normalize_plugin_catalog_item, _sort_stat_plugins
@@ -25,6 +26,8 @@ from .releases import (
     release_compatibility,
 )
 from .sources import download_source, fetch_information_file, load_source_settings, request_market, request_market_detail
+
+logger = get_logger("plugin_market")
 
 MarketSort = Literal[
     "name", "downloads", "likes", "rating", "downloads_growth_7d", "likes_growth_7d",
@@ -79,6 +82,21 @@ def _icon_url(icon: str, target: GitSource) -> str:
     return urlsplit(resolved)._replace(query=parsed.query, fragment=parsed.fragment).geturl()
 
 
+def _fallback_release_entry(plugin: Dict[str, Any], official_url: Any) -> Optional[PluginReleaseEntry]:
+    """发布信息不可用时保留插件展示，按校验结果选择官方或清单仓库地址。"""
+    error: Optional[ValueError] = None
+    for repository_url in (official_url, plugin["repository_url"]):
+        try:
+            return PluginReleaseEntry(
+                id=plugin["marketplace_id"], manifest_id=plugin["id"], repositoryUrl=repository_url,
+                mode="releases", versions=[], sync_error="插件发布信息不可用，请先同步插件中心",
+            )
+        except ValueError as exc:
+            error = exc
+    logger.warning(f"跳过仓库地址无效的插件市场条目 {plugin['id']}：{error}")
+    return None
+
+
 def _catalog(
     items: List[Dict[str, Any]], source: str, index: Optional[PluginReleaseIndex] = None,
 ) -> List[Dict[str, Any]]:
@@ -102,7 +120,11 @@ def _catalog(
     plugins = []
     for item in items:
         if source == "official":
-            entry = parse_market_release_entry({**item, "versions": [item["release"]] if item.get("release") else []})
+            try:
+                entry = parse_market_release_entry({**item, "versions": [item["release"]] if item.get("release") else []})
+            except ValueError as exc:
+                logger.warning(f"插件市场条目的发布信息无效：{exc}")
+                entry = None
             raw = {"id": item["marketplace_id"], "manifest": item["manifest"]}
         else:
             entry = entries.get(item["id"])
@@ -120,10 +142,11 @@ def _catalog(
             raise ValueError(f"插件 {plugin['id']} 的统计数据格式无效")
         plugin["stats"] = {**stats, "plugin_id": plugin["id"]} if stats is not None else None
         if entry is None:
-            entry = PluginReleaseEntry(
-                id=plugin["marketplace_id"], manifest_id=plugin["id"], repositoryUrl=plugin["repository_url"],
-                mode="releases", versions=[], sync_error="插件尚未收录到版本索引，请先同步插件中心",
-            )
+            entry = _fallback_release_entry(plugin, item.get("repository_url"))
+            if entry is None:
+                continue
+            # README 与更新日志按该字段读取远端文档。
+            plugin["repository_url"] = entry.repositoryUrl
         plugin["releases"] = _release_description(entry, plugin["manifest"])
         assets = item.get("assets") or {}
         icon = item.get("icon_url") if source == "official" else assets.get("icon_64")

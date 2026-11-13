@@ -1,0 +1,4 @@
+上一次未能生成有效的对话摘要。请根据前面的对话资料和摘要要求重新生成。
+这是摘要任务，禁止调用任何工具，包括 stop、reply、wait；不要执行或继续此前 Planner 的动作流程。
+只输出合法的 JSON 对象，不加代码块、分析或解释。必须包含 topics、background、progress、pending、agreements 五个字段，值均为字符串数组，没有内容的分类使用空数组。
+保留仍有用的实际对话信息，不要返回空摘要。摘要正文含栏目名最多 {max_summary_chars} 个字符。

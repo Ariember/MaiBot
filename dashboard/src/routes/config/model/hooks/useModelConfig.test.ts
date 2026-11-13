@@ -1096,11 +1096,11 @@ describe('useModelConfig 删除、批量与分页搜索', () => {
       result.current.handleConfirmDelete()
     })
     expect(result.current.models).toEqual([])
-    // 任务里仍挂着已删模型名，应记入无效引用而不是空任务
-    expect(result.current.invalidModelRefs).toEqual([
-      { taskName: 'replyer', invalidModels: ['chat'] },
-      { taskName: 'embedding', invalidModels: ['chat'] },
-    ])
+    expect(result.current.taskConfig).toEqual({
+      replyer: { model_list: [] },
+      embedding: { model_list: [] },
+    })
+    expect(result.current.invalidModelRefs).toEqual([])
     expect(lastToast()).toEqual(expect.objectContaining({ title: '删除成功' }))
     expect(result.current.deleteDialogOpen).toBe(false)
     unmount()
@@ -1170,9 +1170,11 @@ describe('useModelConfig 删除、批量与分页搜索', () => {
     })
     expect(result.current.models.map((item) => item.name)).toEqual(['vision'])
     expect(result.current.selectedModels.size).toBe(0)
-    expect(result.current.invalidModelRefs).toEqual([
-      { taskName: 'replyer', invalidModels: ['chat'] },
-    ])
+    expect(result.current.taskConfig).toEqual({
+      replyer: { model_list: [] },
+      utils: { model_list: ['vision'] },
+    })
+    expect(result.current.invalidModelRefs).toEqual([])
     expect(lastToast()).toEqual(
       expect.objectContaining({
         title: '批量删除成功',

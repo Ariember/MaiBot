@@ -1,0 +1,4 @@
+The previous response did not produce a valid conversation summary. Generate it again from the preceding conversation material and summary requirements.
+This is a summarization task. Do not call any tools, including stop, reply, or wait, and do not execute or continue the preceding Planner action workflow.
+Output only a valid JSON object without code fences, analysis, or explanation. Include all five fields: topics, background, progress, pending, and agreements. Every value must be an array of strings; use an empty array for categories with no content.
+Keep useful information from the actual conversation and do not return an empty summary. The rendered summary, including section labels, must fit within {max_summary_chars} characters.

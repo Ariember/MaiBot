@@ -500,27 +500,24 @@ class MaisakaReasoningEngine:
         }
         self._runtime._update_stage_status("Replyer", "根据 Planner 正文生成可见回复")
         tool_ctx = BuiltinToolRuntimeContext(self, self._runtime)
-        if target is None:
-            result = tool_ctx.build_failure_result("reply", "Planner 请求快照中没有可回复的真实消息。")
-        else:
-            try:
-                snapshot = self._runtime._chat_loop_service.planner_request_snapshot
+        try:
+            snapshot = self._runtime._chat_loop_service.planner_request_snapshot
 
-                async def supplement_runner() -> ReplySupplement:
-                    if snapshot is None:
-                        raise ValueError("缺少本轮 Planner 请求快照，无法生成回复补充内容")
-                    return await generate_reply_supplement(
-                        snapshot, content, self._runtime.session_id, self._runtime.chat_stream.is_group_session,
-                    )
-
-                result = await execute_reply(
-                    tool_ctx, arguments, call_id=execution_id, target_message=target,
-                    supplement_runner=supplement_runner,
+            async def supplement_runner() -> ReplySupplement:
+                if snapshot is None:
+                    raise ValueError("缺少本轮 Planner 请求快照，无法生成回复补充内容")
+                return await generate_reply_supplement(
+                    snapshot, content, self._runtime.session_id, self._runtime.chat_stream.is_group_session,
                 )
-            except Exception as exc:
-                # 直接执行不再经过 ToolRegistry 的异常边界；记录完整异常并结束，不能重新发送。
-                logger.exception(f"{self._runtime.log_prefix} Planner 正文触发回复异常")
-                result = tool_ctx.build_failure_result("reply", f"回复执行异常：{type(exc).__name__}: {exc}")
+
+            result = await execute_reply(
+                tool_ctx, arguments, call_id=execution_id, target_message=target,
+                supplement_runner=supplement_runner,
+            )
+        except Exception as exc:
+            # 直接执行不再经过 ToolRegistry 的异常边界；记录完整异常并结束，不能重新发送。
+            logger.exception(f"{self._runtime.log_prefix} Planner 正文触发回复异常")
+            result = tool_ctx.build_failure_result("reply", f"回复执行异常：{type(exc).__name__}: {exc}")
         ended_at = time.time()
         cycle_detail.time_records["replyer"] = ended_at - started_at
         summary = result.get_history_content()

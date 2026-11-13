@@ -20,7 +20,7 @@ from src.core.tooling import ToolAvailabilityContext, ToolExecutionContext, Tool
 from src.maisaka.quote import decide_quote
 from src.maisaka.context.message_adapter import build_visible_text_from_sequence, parse_speaker_content
 from src.maisaka.context.message_id_alias import to_display_message_id
-from src.maisaka.context.messages import LLMContextMessage, SessionBackedMessage
+from src.maisaka.context.messages import InternalContextMessage, LLMContextMessage, SessionBackedMessage
 from src.maisaka.context.planner_messages import extract_quote_ids_from_message_sequence
 from src.plugin_runtime.host.message_utils import PluginMessageUtils
 from src.plugin_runtime.host.reply_extensions import ReplyExtensionExecution, build_reply_extensions_schema
@@ -127,7 +127,7 @@ def get_tool_spec(context: Optional[ToolAvailabilityContext] = None) -> ToolSpec
     properties: dict[str, Any] = {
         "msg_id": {
             "type": "string",
-            "description": "要回复的消息msg_id。",
+            "description": "可选。要回复的真实聊天消息 msg_id；省略或留空表示向当前会话主动发言。内部任务编号也按无目标发言处理。",
         },
         "reply_reference": {
             "type": "string",
@@ -231,7 +231,7 @@ def get_tool_spec(context: Optional[ToolAvailabilityContext] = None) -> ToolSpec
         parameters_schema={
             "type": "object",
             "properties": properties,
-            "required": ["msg_id", "reply_reference"],
+            "required": ["reply_reference"],
         },
         provider_name="maisaka_builtin",
         provider_type="builtin",
@@ -296,9 +296,11 @@ def _resolve_segment_reply_context(
 async def _resolve_reply_quote(
     tool_ctx: BuiltinToolRuntimeContext,
     text: str,
-    target_message: SessionMessage,
+    target_message: Optional[SessionMessage],
 ) -> Tuple[bool, Optional[float]]:
     """群聊和私聊分别按固定公式及频率决定引用。"""
+    if target_message is None:
+        return False, 0.0
     stream = tool_ctx.runtime.chat_stream
     frequency = (
         config_module.global_config.chat.reply_style.group_quote_frequency if stream.is_group_session
@@ -426,21 +428,24 @@ async def execute_reply(
     if not _use_expression_intent():
         reply_tool_args.pop("expression_intent", None)
 
-    if not target_message_id:
-        return tool_ctx.build_failure_result(
-            "reply",
-            "reply 工具需要提供有效的 `msg_id` 参数。",
-        )
-
-    if target_message is None:
+    if target_message is not None:
+        if target_message.message_id != target_message_id:
+            raise ValueError("回复快照的消息 ID 与回复参数不一致")
+    elif target_message_id:
         target_message = tool_ctx.runtime.find_source_message_by_id(target_message_id)
-    elif target_message.message_id != target_message_id:
-        raise ValueError("回复快照的消息 ID 与回复参数不一致")
-    if target_message is None:
-        return tool_ctx.build_failure_result(
-            "reply",
-            f"未找到要回复的目标消息，msg_id={to_display_message_id(target_message_id)}",
-        )
+        if target_message is None:
+            # 内部上下文可作为发言缘由，但不是可引用的真实聊天消息。
+            if any(
+                isinstance(message, InternalContextMessage) and message.message_id == target_message_id
+                for message in tool_ctx.runtime._chat_history
+            ):
+                target_message_id = ""
+            else:
+                return tool_ctx.build_failure_result(
+                    "reply",
+                    f"未找到要回复的目标消息，msg_id={to_display_message_id(target_message_id)}",
+                )
+    invocation_arguments["msg_id"] = target_message_id
 
     extension_execution = ReplyExtensionExecution(
         context=ToolAvailabilityContext(
@@ -773,13 +778,15 @@ async def execute_reply(
             metadata=reply_metadata,
         )
 
-    target_user_info = target_message.message_info.user_info
     bot_name = config_module.global_config.bot.nickname.strip() or "MaiSaka"
-    if is_bot_self(tool_ctx.runtime.chat_stream.platform, target_user_info.user_id):
-        # 自身消息只是回复的引用锚点，不能把其作者当作实际收件人。
+    if target_message is None or is_bot_self(
+        tool_ctx.runtime.chat_stream.platform, target_message.message_info.user_info.user_id,
+    ):
+        # 无目标发言直接发送到会话；自身消息也只是引用锚点，不能把其作者当作实际收件人。
         target_user_name = ""
         reply_receipt = f'"{bot_name}"已生成并向当前会话发送了回复"{combined_reply_text}"'
     else:
+        target_user_info = target_message.message_info.user_info
         target_user_name = target_user_info.user_cardname or target_user_info.user_nickname or target_user_info.user_id
         reply_receipt = f'"{bot_name}"已生成并向"{target_user_name}"发送了回复"{combined_reply_text}"'
 

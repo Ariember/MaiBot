@@ -1,3 +1,8 @@
+[context_compaction_retry]
+display_name = "コンテキスト要約の再試行"
+advanced = true
+description = "要約が無効な場合、形式・ツールの制限・文字数上限を再提示して生成し直します。"
+
 [reply_supplement_retry]
 display_name = "返信補足の再試行"
 advanced = true

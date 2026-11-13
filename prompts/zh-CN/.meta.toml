@@ -1,3 +1,8 @@
+[context_compaction_retry]
+display_name = "上下文摘要重试"
+advanced = true
+description = "上下文摘要无效时，重申摘要格式、工具限制和长度预算后重新生成。"
+
 [reply_supplement_retry]
 display_name = "回复补充器重试"
 advanced = true

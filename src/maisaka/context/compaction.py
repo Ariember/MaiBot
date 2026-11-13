@@ -214,22 +214,10 @@ def _build_compaction_request(
     return request
 
 
-async def build_context_summary(
-    removed_messages: Sequence[LLMContextMessage],
-    *,
-    planner_snapshot: PlannerRequestSnapshot,
-    previous_summary: ContextSummaryMessage | None,
-    recent_messages: Sequence[LLMContextMessage],
-    session_id: str,
-    max_summary_chars: int,
-    source_context: str = "",
-) -> ContextSummaryMessage:
-    """保留 Planner 的完整请求前缀，仅追加未覆盖资料和压缩指令。"""
-    request = await asyncio.to_thread(
-        _build_compaction_request, removed_messages, planner_snapshot=planner_snapshot,
-        previous_summary=previous_summary, recent_messages=recent_messages,
-        max_summary_chars=max_summary_chars, source_context=source_context,
-    )
+async def _generate_compaction_summary(
+    request: ResponseRequest | ACPPlannerSnapshot, session_id: str, max_summary_chars: int,
+) -> str:
+    """请求并校验摘要，保存每次已收到的模型响应供排查。"""
     if isinstance(request, ACPPlannerSnapshot):
         result = await generate_planner_response(
             request.config, session_id, request.context_items, [], history_item_ids=request.history_item_ids,
@@ -253,4 +241,31 @@ async def build_context_summary(
         f"input={result.prompt_tokens} hit={result.prompt_cache_hit_tokens} "
         f"miss={result.prompt_cache_miss_tokens} reported={result.prompt_cache_reported}"
     )
+    return rendered
+
+
+async def build_context_summary(
+    removed_messages: Sequence[LLMContextMessage],
+    *,
+    planner_snapshot: PlannerRequestSnapshot,
+    previous_summary: ContextSummaryMessage | None,
+    recent_messages: Sequence[LLMContextMessage],
+    session_id: str,
+    max_summary_chars: int,
+    source_context: str = "",
+) -> ContextSummaryMessage:
+    """保留 Planner 请求前缀，摘要无效时追加纠正指令再生成一次。"""
+    request = await asyncio.to_thread(
+        _build_compaction_request, removed_messages, planner_snapshot=planner_snapshot,
+        previous_summary=previous_summary, recent_messages=recent_messages,
+        max_summary_chars=max_summary_chars, source_context=source_context,
+    )
+    try:
+        rendered = await _generate_compaction_summary(request, session_id, max_summary_chars)
+    except ValueError:
+        logger.warning("上下文压缩响应无效，追加摘要指令后重试一次: session=%s", session_id)
+        # 不回放失败响应中的工具调用，避免产生没有执行结果的上下文。
+        instruction = load_prompt("context_compaction_retry", max_summary_chars=max_summary_chars)
+        request.context_items.append(ContextItemBuilder().set_role(RoleType.User).add_text_content(instruction).build())
+        rendered = await _generate_compaction_summary(request, session_id, max_summary_chars)
     return ContextSummaryMessage(content=rendered, timestamp=removed_messages[-1].timestamp)
