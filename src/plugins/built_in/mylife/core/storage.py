@@ -241,10 +241,6 @@ class LifeStore:
               temperature REAL, weather_code INTEGER, description TEXT NOT NULL,
               raw_json TEXT NOT NULL
             );
-            CREATE TABLE IF NOT EXISTS conversation_continuity(
-              user_id TEXT PRIMARY KEY, intent TEXT NOT NULL DEFAULT '',
-              unresolved_topics TEXT NOT NULL DEFAULT '[]', updated_at REAL NOT NULL DEFAULT 0
-            );
             -- 模型统计和回复防重使用短期运行记录。
             CREATE TABLE IF NOT EXISTS llm_usage_events(
               id INTEGER PRIMARY KEY AUTOINCREMENT, created_at REAL NOT NULL,
@@ -1041,30 +1037,6 @@ class LifeStore:
                 (now,),
             ).fetchall()
             return {str(row[0]) for row in rows if str(row[0] or "")}
-
-    @_database_operation
-    def get_continuity(self, user_id: str) -> Dict[str, Any]:
-        with self._lock:
-            row = self.conn.execute("SELECT * FROM conversation_continuity WHERE user_id=?", (user_id,)).fetchone()
-            if not row:
-                return {"intent": "", "unresolved_topics": [], "updated_at": 0}
-            data = dict(row)
-            try:
-                data["unresolved_topics"] = json.loads(data.get("unresolved_topics") or "[]")
-            except (TypeError, json.JSONDecodeError):
-                data["unresolved_topics"] = []
-            return data
-
-    @_database_operation
-    def save_continuity(self, user_id: str, intent: str, topics: List[str], now: float) -> None:
-        clean_topics = [str(item).strip()[:180] for item in topics if str(item).strip()][:5]
-        with self._lock:
-            self.conn.execute(
-                """INSERT OR REPLACE INTO conversation_continuity
-                (user_id,intent,unresolved_topics,updated_at) VALUES(?,?,?,?)""",
-                (user_id, intent[:80], json.dumps(clean_topics, ensure_ascii=False), now),
-            )
-            self.conn.commit()
 
     @_database_operation
     def record_group_activity(

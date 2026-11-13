@@ -1,15 +1,9 @@
-"""私聊对话规则在裁剪、关系隔离和话题整理中的行为。"""
+"""私聊生活背景在裁剪和关系隔离中的行为。"""
 
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock
-
-import asyncio
-import importlib
-import json
 import pytest
 
 
-@pytest.mark.parametrize("stage", ["planner", "full", "compact"])
+@pytest.mark.parametrize("stage", ["planner", "replyer"])
 @pytest.mark.parametrize("role", ["owner", "friend"])
 @pytest.mark.parametrize("budget", [600, 2400, 8000])
 def test_conversation_rules_and_role_survive_long_background(plugin_module, stage, role, budget):
@@ -17,8 +11,6 @@ def test_conversation_rules_and_role_survive_long_background(plugin_module, stag
     builder = plugin_module.PromptBuilder()
 
     method = builder.planner if stage == "planner" else builder.replyer
-
-    options = {} if stage == "planner" else {"detail": stage}
 
     information = {
         "news": [{"title": "新见闻", "summary": "新闻内容" * 1000, "score": 0.9}],
@@ -30,9 +22,7 @@ def test_conversation_rules_and_role_survive_long_background(plugin_module, stag
         {},
         {"role": role, "temperature": 100},
         max_chars=budget,
-        continuity={"unresolved_topics": ["尚在讨论的话题" * 100]},
         information=information,
-        **options,
     )
 
     assert len(prompt) <= budget
@@ -50,6 +40,10 @@ def test_conversation_rules_and_role_survive_long_background(plugin_module, stag
     assert "不拿见闻或日程打断" in prompt
 
     assert "背景" in prompt
+
+    assert "未完话题" not in prompt
+
+    assert "连续话题" not in prompt
 
     if role == "owner":
         assert "该用户是唯一配置的主人" in prompt
@@ -72,61 +66,31 @@ def test_conversation_rules_and_role_survive_long_background(plugin_module, stag
         assert "解释、求助按需展开" in prompt
 
 
-@pytest.mark.parametrize(
-    "available,result",
-    [
-        (True, {"intent": "结束话题", "unresolved_topics": []}),
-        (True, None),
-        (False, None),
-    ],
-)
-def test_continuity_keeps_message_boundaries_and_model_fallback(plugin_module, available, result):
+@pytest.mark.parametrize("stage", ["planner", "replyer"])
+def test_life_background_keeps_local_intent_and_actual_information(plugin_module, stage):
 
-    module = importlib.import_module("src.plugins.built_in.mylife.life.continuity")
+    builder = plugin_module.PromptBuilder()
 
-    recent = ["如果我喜欢桃子汽水呢？", '引用："我们上次一起旅行"\n今天先不聊了']
+    method = builder.planner if stage == "planner" else builder.replyer
 
-    previous = {"unresolved_topics": ["旧话题"]}
-
-    store = SimpleNamespace(
-        clock=Mock(return_value=10000),
-        recent_interactions=AsyncMock(return_value=recent),
-        get_continuity=AsyncMock(return_value=previous),
-        save_continuity=AsyncMock(),
+    prompt = method(
+        {},
+        {"description": "晴天"},
+        {
+            "current": {"id": "task:read", "summary": "整理见闻", "location": "家"},
+            "scene": {"scene": "已读一篇植物养护文章"},
+        },
+        {"role": "friend", "temperature": 60},
+        {"time_period": "下午", "media": ["text"]},
+        current_intent="询问养花",
+        max_chars=8000,
+        memory={"upcoming_dates": [{"name": "生日", "date": "2026-11-14", "days": 1}]},
+        information={"news": [{"title": "秋季养护", "summary": "浇水方法", "score": 0.5}]},
     )
 
-    config = SimpleNamespace(context=SimpleNamespace(continuity_enabled=True, continuity_interval_minutes=5))
+    for text in ("询问养花", "已读一篇植物养护文章", "整理见闻", "晴天", "生日", "2026-11-14", "秋季养护"):
+        assert text in prompt
 
-    llm = SimpleNamespace(task_available=Mock(return_value=available), generate_json=AsyncMock(return_value=result))
+    assert "未完话题" not in prompt
 
-    service = module.ContinuityService(store, config, llm, Mock())
-
-    asyncio.run(service.refresh("user", "本轮意图"))
-
-    store.recent_interactions.assert_awaited_once_with("user", 8)
-
-    if available:
-        prompt = llm.generate_json.await_args.args[0]
-
-        assert json.loads(prompt.split("\n")[1]) == recent
-
-        assert "提问、假设、引用和角色扮演不当作已确认事实" in prompt
-
-        assert "单次选择不归纳为长期偏好" in prompt
-
-        assert "用户收束、拒绝继续或转场时不要强留旧话题" in prompt
-
-        assert "不能据此断言用户尚未得到回应" in prompt
-
-        assert llm.generate_json.await_args.kwargs["task_kind"] == "continuity"
-
-    else:
-        llm.generate_json.assert_not_awaited()
-
-    if result is None:
-        store.save_continuity.assert_awaited_once_with("user", "本轮意图", ["旧话题"], 10000)
-
-    else:
-        store.save_continuity.assert_awaited_once_with("user", "结束话题", [], 10000)
-
-    assert previous == {"unresolved_topics": ["旧话题"]}
+    assert "连续话题" not in prompt

@@ -20,7 +20,7 @@ import re
 
 PLUGIN_VERSION = "1.3.0"
 
-CONFIG_SCHEMA_VERSION = "1.20.0"
+CONFIG_SCHEMA_VERSION = "1.21.0"
 
 _TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
@@ -442,6 +442,18 @@ class UsersSettings(PluginConfigBase):
             0,
             label_en="Private User Profiles",
             hint_en="Schedules and life records are global while relationship, quota and quiet hours are per user.",
+        ),
+    )
+
+    owner_only_terms: List[str] = Field(
+        default_factory=lambda: ["主人", "老公", "老婆", "亲爱的主人"],
+        description="朋友回复中禁止出现的主人专属称呼。",
+        json_schema_extra=_ui(
+            "主人专属称呼",
+            "朋友回复命中后会重生成一次，仍命中则静默。请只填写明确专属词。",
+            1,
+            label_en="Owner-only Terms",
+            hint_en="Terms forbidden in friend replies.",
         ),
     )
 
@@ -1228,133 +1240,6 @@ class GroupChatSettings(PluginConfigBase):
         return self
 
 
-class ContextSettings(PluginConfigBase):
-    """被动回复增强与朋友边界。"""
-
-    __ui_label__: ClassVar[str] = "被动回复增强"
-
-    __ui_order__: ClassVar[int] = 7
-
-    enabled: bool = Field(
-        default=True,
-        description="向配置私聊注入生活与关系背景。",
-        json_schema_extra=_ui(
-            "启用被动回复增强",
-            "只处理配置的私聊用户，不影响群聊。",
-            0,
-            label_en="Enable Passive Context",
-            hint_en="Inject context only for configured private users.",
-        ),
-    )
-
-    continuity_enabled: bool = Field(
-        default=True,
-        description="维护轻量未完话题元数据。",
-        json_schema_extra=_ui(
-            "启用连续话题",
-            "异步整理意图与未完话题，不复制完整聊天记忆。",
-            1,
-            label_en="Enable Conversation Continuity",
-            hint_en="Maintain lightweight unfinished-topic metadata asynchronously.",
-        ),
-    )
-
-    continuity_interval_minutes: int = Field(
-        default=10,
-        ge=1,
-        le=180,
-        description="同一会话整理连续话题的最小间隔。",
-        json_schema_extra=_ui(
-            "话题整理间隔（分钟）",
-            "默认 10 分钟，不阻塞当前回复。",
-            2,
-            label_en="Continuity Update Interval",
-            hint_en="Minimum interval between continuity summaries.",
-        ),
-    )
-
-    owner_only_terms: List[str] = Field(
-        default_factory=lambda: ["主人", "老公", "老婆", "亲爱的主人"],
-        description="朋友回复中禁止出现的主人专属称呼。",
-        json_schema_extra=_ui(
-            "主人专属称呼",
-            "朋友回复命中后会重生成一次，仍命中则静默。请只填写明确专属词。",
-            3,
-            label_en="Owner-only Terms",
-            hint_en="Terms forbidden in friend replies.",
-        ),
-    )
-
-    background_cache_minutes: int = Field(
-        default=5,
-        ge=0,
-        le=60,
-        description="慢变背景块（生活记忆/外界见闻）的会话级缓存分钟数；0 表示每轮实时读取。",
-        json_schema_extra=_ui(
-            "背景缓存（分钟）",
-            "记忆/见闻按用户缓存指定分钟数，减少每轮重复读取与注入；0 关闭。",
-            5,
-            label_en="Background Cache (min)",
-            hint_en="Cache slow-changing background blocks per user; 0 disables.",
-        ),
-    )
-
-    replyer_detail: Literal["full", "compact"] = Field(
-        default="full",
-        description="Replyer 背景详略：full 完整背景；compact 精简（见闻预算减半）。",
-        json_schema_extra=_ui(
-            "回复背景详略",
-            "full=与 Planner 同源完整背景；compact=精简版（省 token，见闻摘要减半）。默认 full 不改行为。",
-            6,
-            label_en="Replyer Detail",
-            hint_en="full keeps parity with planner; compact slims replyer-only background to save tokens.",
-            enum_labels={"full": "full（完整）", "compact": "compact（精简）"},
-        ),
-    )
-
-    # v1.24.0：防抖移除后，轮次锁字段从 DebounceSettings 迁入此处。
-
-    outbound_turn_guard: bool = Field(
-        default=True,
-        description="阻止同一消息触发多次独立 Replyer 回复。",
-        json_schema_extra=_ui(
-            "启用同轮回复防重",
-            "同一轮用户消息只允许触发一次独立回复；不影响一次回复内部的正常分段。",
-            7,
-            label_en="Enable Reply Turn Guard",
-            hint_en="Prevent repeated independent Replyer responses for the same user message.",
-        ),
-    )
-
-    turn_expire_seconds: int = Field(
-        default=120,
-        ge=20,
-        le=600,
-        description="轮次锁过期时间。",
-        json_schema_extra=_ui(
-            "轮次锁过期（秒）",
-            "超时自动释放；发送失败时会提前释放。",
-            8,
-            label_en="Turn Lock Expiry",
-            hint_en="How long a reply turn lock remains valid.",
-        ),
-    )
-
-    prompt_max_chars: int = Field(
-        default=4000,
-        ge=600,
-        le=8000,
-        description="Planner 生活背景的最大字符数。",
-        json_schema_extra=_ui(
-            "上下文长度上限",
-            "限制额外 Prompt 大小，避免状态信息挤占正常聊天。",
-            4,
-            label_en="Context Character Limit",
-            hint_en="Maximum characters appended by Mai MyLife.",
-        ),
-    )
-
-
 class ModelRoutingSettings(PluginConfigBase):
     """MaiBot 任务路由名，而不是 Provider API Key。"""
 
@@ -1367,7 +1252,7 @@ class ModelRoutingSettings(PluginConfigBase):
         description="快速整理任务名。",
         json_schema_extra=_ui(
             "快速任务",
-            "默认 utils，用于连续话题等轻量任务。",
+            "默认 utils，用于日期分析、新闻整理等轻量任务。",
             0,
             label_en="Fast Task",
             hint_en="MaiBot task name for lightweight analysis.",
@@ -1383,18 +1268,6 @@ class ModelRoutingSettings(PluginConfigBase):
             1,
             label_en="Reasoning Task",
             hint_en="MaiBot task name for reasoning.",
-        ),
-    )
-
-    continuity_task: str = Field(
-        default="",
-        description="连续话题任务覆盖。",
-        json_schema_extra=_ui(
-            "话题整理任务覆盖",
-            "留空继承快速任务。",
-            6,
-            label_en="Continuity Override",
-            hint_en="Leave empty to inherit fast task.",
         ),
     )
 
@@ -1711,17 +1584,6 @@ class MaiLifeSettings(PluginConfigBase):
         ),
     )
 
-    context: ContextSettings = Field(
-        default_factory=ContextSettings,
-        json_schema_extra=_ui(
-            "被动回复增强",
-            "关系、状态、意图和连续话题。",
-            7,
-            label_en="Passive Reply Context",
-            hint_en="Relationship, state, intent and conversation continuity.",
-        ),
-    )
-
     proactive: ProactiveSettings = Field(
         default_factory=ProactiveSettings,
         json_schema_extra=_ui(
@@ -1777,6 +1639,15 @@ class MaiLifeSettings(PluginConfigBase):
             return data
 
         data = dict(data)
+
+        context = data.pop("context", None)
+
+        if isinstance(context, dict) and "owner_only_terms" in context:
+            users = dict(data.get("users") or {})
+
+            users.setdefault("owner_only_terms", context["owner_only_terms"])
+
+            data["users"] = users
 
         rest = data.pop("rest_gate", None)
 

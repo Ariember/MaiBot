@@ -26,7 +26,7 @@
 
 [plugin]
 # 配置结构版本，请勿手动修改。
-config_version = "1.20.0"
+config_version = "1.21.0"
 
 # 插件总开关。关闭后保留数据库，但停止任务执行、状态维护和主动消息。
 enabled = false
@@ -39,6 +39,9 @@ admin_user_ids = []
 
 
 [users]
+# 朋友回复中禁止出现的主人专属称呼；命中后重生成一次，仍命中则静默。
+owner_only_terms = ["主人", "老公", "老婆", "亲爱的主人"]
+
 # 下面是一个占位用户。首次使用时请填写 user_id，并把 enabled 改为 true。
 # 如果需要多个用户，请完整复制一份 [[users.profiles]] 配置块。
 
@@ -148,28 +151,6 @@ important_dates_enabled = true
 date_model_analysis_enabled = false
 date_candidate_retention_days = 90
 date_reminder_lead_days = [30, 7, 1, 0]
-
-
-[context]
-enabled = true
-continuity_enabled = true
-continuity_interval_minutes = 10
-owner_only_terms = ["主人", "老公", "老婆", "亲爱的主人"]
-prompt_max_chars = 4000
-
-# 同轮回复防重：阻止同一消息触发多次独立 Replyer 回复（不影响一次回复内部分段）。
-outbound_turn_guard = true
-
-# 轮次锁过期时间（秒）；发送失败时会提前释放。
-turn_expire_seconds = 120
-
-# 慢变背景（记忆/见闻）按用户缓存的分钟数；0 = 每轮实时读取。
-background_cache_minutes = 5
-
-# 回复层（Replyer）背景详略：full = 完整（默认，行为不变）；compact = 精简
-#（见闻摘要减半，更省 token）。
-replyer_detail = "full"
-
 
 
 [models]

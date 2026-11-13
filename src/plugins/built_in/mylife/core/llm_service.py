@@ -77,7 +77,6 @@ class LLMService:
         routes = {
             "fast": models.fast_task,
             "reasoning": models.reasoning_task,
-            "continuity": models.continuity_task or models.fast_task,
             "date_analysis": models.date_analysis_task or models.fast_task,
             "news": models.news_task or models.fast_task,
             "search": models.search_task or models.reasoning_task,
@@ -89,8 +88,6 @@ class LLMService:
     def _active_task_kinds(self) -> Set[str]:
         """只检查当前启用功能会实际调用的任务，fallback 不因此阻止插件启动。"""
         kinds: Set[str] = set()
-        if self.config.context.enabled and self.config.context.continuity_enabled:
-            kinds.add("continuity")
         if self.config.memory.enabled:
             if self.config.memory.date_model_analysis_enabled:
                 kinds.add("date_analysis")

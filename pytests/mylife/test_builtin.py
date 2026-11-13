@@ -36,6 +36,8 @@ def test_defaults_template_and_webui_contract():
     assert model_schema["$defs"]["PluginSettings"]["properties"]["enabled"]["hidden"] is True
     assert "reading" not in model_schema["properties"]
     assert "reading" not in template
+    assert "context" not in model_schema["properties"]
+    assert "context" not in template
     schema = json.dumps(model_schema, ensure_ascii=False).lower()
     assert "diary" not in schema
     assert "日记" not in schema
@@ -107,3 +109,120 @@ async def test_database_operations_leave_loop_free_and_finish_before_cancel(tmp_
         with pytest.raises(asyncio.CancelledError):
             await task
         await store.close()
+
+
+@pytest.fixture
+def configured_plugin(monkeypatch):
+    plugin = plugin_module.MaiLifePlugin()
+    plugin.set_plugin_config(MaiLifeSettings(
+        plugin={"enabled": True}, users={"owner_only_terms": ["专属称呼"]}
+    ).model_dump())
+    plugin._env = SimpleNamespace(now=lambda: NOW)
+    plugin._store = SimpleNamespace(
+        get_state=AsyncMock(return_value={}),
+        get_weather=AsyncMock(return_value={"description": "晴天"}),
+        proactive_for_task=AsyncMock(return_value={}),
+        reserve_reply_turn=AsyncMock(return_value=True),
+        save_state=AsyncMock(),
+    )
+    plugin._schedule = SimpleNamespace(
+        context=AsyncMock(return_value={}), ensure_day=AsyncMock(), record_activity=AsyncMock()
+    )
+    plugin._memory = SimpleNamespace(context_for_user=AsyncMock(return_value={}))
+    plugin._information = SimpleNamespace(
+        context=AsyncMock(return_value={}), tick=AsyncMock(return_value={})
+    )
+    plugin._user_by_session = AsyncMock(return_value={"user_id": "10001", "role": "friend"})
+    plugin._relay_for_session = AsyncMock(return_value={})
+    plugin._activate_planner_task = AsyncMock(return_value=None)
+    monkeypatch.setattr(type(plugin), "_ready", property(lambda self: True))
+    monkeypatch.setattr(plugin, "_get_logger", Mock(return_value=Mock()))
+    return plugin
+
+
+@pytest.mark.asyncio
+async def test_life_background_is_shared_without_a_separate_context_switch(configured_plugin):
+    plugin = configured_plugin
+    plugin._env.snapshot = Mock(return_value={})
+    planner = await plugin.on_planner(session_id="private", messages=[])
+    replyer = await plugin.on_replyer(session_id="private", reply_message_id="message")
+    planner_prompt = planner["modified_kwargs"]["messages"][0]["content"]
+    replyer_prompt = replyer["modified_kwargs"]["extra_prompt"]
+    for prompt in (planner_prompt, replyer_prompt):
+        assert "晴天" in prompt
+        assert "该用户是普通朋友" in prompt
+        assert "未完话题" not in prompt
+    plugin._memory.context_for_user.assert_awaited_once()
+    plugin._information.context.assert_awaited_once()
+    assert plugin._store.get_state.await_count == 2
+
+    plugin._group_turns[("group", "group-message")] = {"turn_scope": "group:100"}
+    group = await plugin.on_replyer(session_id="group", reply_message_id="group-message")
+    assert "该用户是普通朋友" not in group["modified_kwargs"]["extra_prompt"]
+    assert plugin._store.get_state.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_private_supplements_pass_but_group_turns_and_friend_terms_are_checked(configured_plugin):
+    plugin = configured_plugin
+    for response in ("回答正文", "补充说明"):
+        result = await plugin.on_replyer_after(
+            session_id="private", reply_message_id="message", response=response
+        )
+        assert result["modified_kwargs"]["response"] == response
+    plugin._store.reserve_reply_turn.assert_not_awaited()
+
+    retry = await plugin.on_replyer_after(
+        session_id="private", reply_message_id="message", response="专属称呼", max_retries=1
+    )
+    assert retry["modified_kwargs"]["retry"] is True
+    exhausted = await plugin.on_replyer_after(
+        session_id="private", reply_message_id="message", response="专属称呼", retry_count=1, max_retries=1
+    )
+    assert exhausted["modified_kwargs"]["response"] == ""
+
+    plugin._group_turns[("group", "group-message")] = {"turn_scope": "group:100"}
+    plugin._store.reserve_reply_turn.side_effect = [True, False]
+    await plugin.on_replyer_after(session_id="group", reply_message_id="group-message", response="群聊回复")
+    duplicate = await plugin.on_replyer_after(
+        session_id="group", reply_message_id="group-message", response="重复回复"
+    )
+    assert duplicate["modified_kwargs"]["mai_life_suppress_reason"] == "duplicate_turn"
+
+
+@pytest.mark.asyncio
+async def test_proactive_task_keeps_one_reply_and_its_confirmation_window(configured_plugin):
+    plugin = configured_plugin
+    task_id = plugin_module.HOST_TASK_PREFIX + "task"
+    active = SimpleNamespace(task_id=task_id, record_id="event", sent=False)
+    plugin._active_tasks.current = AsyncMock(return_value=active)
+    plugin._active_tasks.reserve_reply = AsyncMock(return_value=True)
+    plugin._store.proactive_for_task.return_value = {
+        "id": "event", "status": "pending", "expires_at": NOW.timestamp() + 120,
+    }
+    plugin.config.proactive.pending_expire_seconds = 180
+    await plugin.on_replyer_after(session_id="private", reply_message_id="message", response="主动分享")
+    plugin._store.reserve_reply_turn.assert_awaited_once_with(
+        "private", task_id, NOW.timestamp(), NOW.timestamp() + 180
+    )
+    plugin._active_tasks.reserve_reply.assert_awaited_once_with("private", task_id, "message", NOW.timestamp())
+
+    active.sent = True
+    repeated = await plugin.on_replyer_after(
+        session_id="private", reply_message_id="message", response="重复分享"
+    )
+    assert repeated["modified_kwargs"]["mai_life_suppress_reason"] == "active_task_already_sent"
+
+
+@pytest.mark.asyncio
+async def test_exploration_uses_owner_messages_without_separate_topic_analysis(configured_plugin):
+    plugin = configured_plugin
+    plugin._store.list_users = AsyncMock(return_value=[
+        {"user_id": "10001", "role": "owner"}, {"user_id": "10002", "role": "friend"}
+    ])
+    plugin._store.recent_interactions = AsyncMock(return_value=["天文观测", "普通主题" * 100])
+    plugin.config.network.enabled = True
+    plugin.config.network.search_include_chat_topics = True
+    await plugin._activity_tick()
+    plugin._store.recent_interactions.assert_awaited_once_with("10001", 5)
+    assert plugin._information.tick.await_args.args[-1] == ["天文观测", ("普通主题" * 100)[:120]]

@@ -23,7 +23,6 @@ from .core.environment import EnvironmentService
 from .core.llm_service import LLMService
 from .core.storage import LifeStore, RECORD_RETENTION_DAYS
 from .information.information_service import InformationService
-from .life.continuity import ContinuityService
 from .life.memory_service import MemoryService
 from .life.proactive import ProactiveEngine
 from .life.rest_gate import RestGate
@@ -307,13 +306,13 @@ def _hhmm_text(timestamp: Any, now: datetime) -> str | None:
 
 
 class _PayloadCache:
-    """慢变背景块的会话级 TTL 缓存；同轮 planner/replyer 复用同一份快照（P4）。
+    """慢变背景块的会话级 TTL 缓存；同轮 planner/replyer 复用同一份快照。
 
 
 
     只缓存分钟级变化的数据（memory/information）；
 
-    state/weather/context/continuity 保持每轮实时读取。
+    state/weather/context 保持每轮实时读取。
 
     """
 
@@ -386,17 +385,15 @@ class MaiLifePlugin(MaiBotPlugin):
 
         self._bot_name = "麦麦"
 
-        # 慢变背景块缓存（P4）：TTL 由 context.background_cache_minutes 控制，0=禁用。
+        # 记忆和见闻缓存五分钟，避免 Planner/Replyer 重复读取慢变背景。
 
-        self._payload_cache = _PayloadCache(0.0)
+        self._payload_cache = _PayloadCache(300.0)
 
         self._config_save_lock = asyncio.Lock()
 
         # WebUI 配置保存的落盘路径；空串=持久数据目录下 config.toml，测试指向临时文件。
 
         self._config_toml_path: str = ""
-
-        self._continuity: Optional[ContinuityService] = None
 
         self._memory: Optional[MemoryService] = None
 
@@ -457,7 +454,6 @@ class MaiLifePlugin(MaiBotPlugin):
                 self._schedule,
                 self._rest,
                 self._proactive,
-                self._continuity,
                 self._memory,
                 self._information,
                 self._group_observer,
@@ -508,7 +504,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
         self._stopping = False
 
-        self._active_tasks.update_retention(int(self.config.context.turn_expire_seconds))
+        self._active_tasks.update_retention(int(self.config.proactive.pending_expire_seconds))
 
         await self._active_tasks.reset()
 
@@ -539,8 +535,6 @@ class MaiLifePlugin(MaiBotPlugin):
         self._rest = RestGate(self.config)
 
         self._proactive = ProactiveEngine(self.ctx, self._store, self.config, self._env, self.ctx.logger)
-
-        self._continuity = ContinuityService(self._store, self.config, self._llm, self.ctx.logger)
 
         self._memory = MemoryService(self._store, self.config, self._llm, self.ctx.logger, bot_name=self._bot_name)
 
@@ -635,7 +629,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
         # 配置保存不得清空主动/转述任务注册表：WebUI 每次保存都重置会让进行中的任务失去归因。
 
-        self._active_tasks.update_retention(int(self.config.context.turn_expire_seconds))
+        self._active_tasks.update_retention(int(self.config.proactive.pending_expire_seconds))
 
         self._reply_confirmations.clear()
 
@@ -655,7 +649,6 @@ class MaiLifePlugin(MaiBotPlugin):
                 self._schedule,
                 self._rest,
                 self._proactive,
-                self._continuity,
                 self._memory,
                 self._information,
                 self._group_observer,
@@ -814,9 +807,9 @@ class MaiLifePlugin(MaiBotPlugin):
                         if str(user.get("role") or "friend") != "owner":
                             continue
 
-                        continuity = await self._store.get_continuity(str(user["user_id"]))
+                        recent = await self._store.recent_interactions(str(user["user_id"]), 5)
 
-                        topics.extend(str(item)[:120] for item in continuity.get("unresolved_topics") or [])
+                        topics.extend(item[:120] for item in recent)
 
                 result = await self._information.tick(
                     now, self._personality, await self._store.get_state(), schedule, topics
@@ -1280,7 +1273,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
     def _has_recent_group_turn(self, session_id: str) -> bool:
 
-        expiry = max(30, int(self.config.context.turn_expire_seconds))
+        expiry = max(30, int(self.config.proactive.pending_expire_seconds))
 
         now = self._now_ts()
 
@@ -1395,7 +1388,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
             return {"action": "abort"}
 
-        assert self._store and self._env and self._schedule and self._rest and self._continuity and self._memory
+        assert self._store and self._env and self._schedule and self._rest and self._memory
 
         if not private:
             return await self._process_group_message(kwargs, message, uid, session, mid)
@@ -1471,7 +1464,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
             await self._cancel_group_confirmations(turn_scope)
 
-            expiry = max(30, int(self.config.context.turn_expire_seconds))
+            expiry = max(30, int(self.config.proactive.pending_expire_seconds))
 
             current = self._now_ts()
 
@@ -1550,9 +1543,7 @@ class MaiLifePlugin(MaiBotPlugin):
                 source_message_id=mid,
             )
 
-        # 连续话题与日期提取不阻塞当前回复。
-
-        self._spawn_transient(self._continuity.refresh(uid, intent), f"mai-life-continuity-{uid}")
+        # 日期提取不阻塞当前回复。
 
         self._spawn_transient(
             self._memory.observe_message(uid, text, self._env.now(), source_message_id=mid),
@@ -1594,12 +1585,7 @@ class MaiLifePlugin(MaiBotPlugin):
         return session_id in self._group_sessions or any(key[0] == session_id for key in self._group_turns)
 
     async def _cached_block(self, kind: str, owner_key: str, now: Any, loader: Any, *args: Any) -> Any:
-        """慢变背景块的 TTL 缓存读取（P4）：0 TTL 或未命中时实时加载。"""
-
-        ttl = float(getattr(self.config.context, "background_cache_minutes", 0) or 0) * 60
-
-        if ttl <= 0:
-            return await loader(*args)
+        """慢变背景块缓存未命中时实时加载。"""
 
         key = (owner_key, kind)
 
@@ -1628,7 +1614,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
         if not user:
             self.ctx.logger.debug(
-                f"[MaiLife] 被动回复增强跳过：session={session_id} 未匹配到已启用私聊用户（请检查「私聊用户」配置）"
+                f"[MaiLife] 生活背景跳过：session={session_id} 未匹配到已启用私聊用户（请检查「私聊用户」配置）"
             )
 
             return None
@@ -1636,27 +1622,6 @@ class MaiLifePlugin(MaiBotPlugin):
         now = self._env.now()
 
         runtime = self._session_runtime.get(session_id) or {}
-
-        continuity = await self._store.get_continuity(user["user_id"])
-
-        # 连续话题有时效：超过 14 天未互动的话题视为已结束，不作为“未完话题”注入。
-
-        if continuity and now.timestamp() - float(continuity.get("updated_at") or 0) > 14 * 86400:
-            continuity = dict(continuity)
-
-            continuity["unresolved_topics"] = []
-
-        if proactive:
-            continuity = dict(continuity)
-
-            continuity["intent"] = ""
-
-            topic_time = min(float(user.get("last_user_message_at") or 0), float(continuity.get("updated_at") or 0))
-
-            # shortcut: 摘要没有逐话题时间，主动续聊统一限两小时；需跨时段续聊时再引入逐话题有效期。
-
-            if topic_time <= 0 or now.timestamp() - topic_time >= 2 * 3600:
-                continuity["unresolved_topics"] = []
 
         information = dict(
             await self._cached_block("information", user["user_id"], now, self._information.context, now)
@@ -1674,9 +1639,8 @@ class MaiLifePlugin(MaiBotPlugin):
                 chat_type="private",
                 media=runtime.get("media") or ["text"],
             ),
-            "continuity": continuity,
             "intent": "主动联系（当前没有新用户消息）" if proactive else str(runtime.get("intent") or ""),
-            # P4 慢变块缓存：context_for_user 带 user 和 now，information.context 只带 now，
+            # context_for_user 带 user 和 now，information.context 只带 now，
             # 键必须区分参数集，否则跨参数会误命中缓存。
             "memory": await self._cached_block(
                 "memory", user["user_id"], now, self._memory.context_for_user, user, now
@@ -1793,7 +1757,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
         payload: Dict[str, Any] | None = None
 
-        if self.config.context.enabled and not group_passive:
+        if not group_passive:
             payload = await self._prompt_payload(session, proactive=bool(active and active.kind == "proactive"))
 
             if payload:
@@ -1803,9 +1767,7 @@ class MaiLifePlugin(MaiBotPlugin):
                     payload["context"],
                     payload["user"],
                     payload["environment"],
-                    payload["continuity"],
-                    payload["intent"],
-                    int(self.config.context.prompt_max_chars),
+                    current_intent=payload["intent"],
                     memory=payload["memory"],
                     information=payload["information"],
                     bot_name=self._bot_name,
@@ -1879,7 +1841,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
         payload: Dict[str, Any] | None = None
 
-        if self.config.context.enabled and not group_turn:
+        if not group_turn:
             payload = await self._prompt_payload(session, proactive=bool(active and active.kind == "proactive"))
 
             if payload:
@@ -1889,13 +1851,10 @@ class MaiLifePlugin(MaiBotPlugin):
                     payload["context"],
                     payload["user"],
                     payload["environment"],
-                    payload["continuity"],
-                    payload["intent"],
-                    min(2400, int(self.config.context.prompt_max_chars)),
+                    current_intent=payload["intent"],
                     memory=payload["memory"],
                     information=payload["information"],
                     bot_name=self._bot_name,
-                    detail=str(self.config.context.replyer_detail),
                 )
 
         if active and active.kind == "relay" and self._relay and self.config.group.relay_enabled:
@@ -2098,7 +2057,7 @@ class MaiLifePlugin(MaiBotPlugin):
         # 朋友边界仅做一次本地词表复核：可重试则要求重生成，否则宁可静默。
 
         if user and str(user.get("role") or "friend") == "friend":
-            matched = next((term for term in self.config.context.owner_only_terms if term and term in response), "")
+            matched = next((term for term in self.config.users.owner_only_terms if term and term in response), "")
 
             if matched:
                 retry_count = int(kwargs.get("retry_count") or 0)
@@ -2132,7 +2091,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
                 return {"action": "continue", "modified_kwargs": kwargs}
 
-        # 持久层轮次锁负责跨热重载防重；活动任务锁再限制同一主动任务只产生一轮回复。
+        # 群轮次和主动任务跨热重载防重；普通私聊由宿主处理补充回复。
 
         turn_anchor = task_id if active else anchor
 
@@ -2140,12 +2099,12 @@ class MaiLifePlugin(MaiBotPlugin):
 
         turn_reserved = False
 
-        if self.config.context.outbound_turn_guard and turn_anchor and self._store:
+        if (group_turn or active) and turn_anchor and self._store:
             turn_reserved = await self._store.reserve_reply_turn(
                 turn_scope,
                 turn_anchor,
                 self._now_ts(),
-                self._now_ts() + int(self.config.context.turn_expire_seconds),
+                self._now_ts() + int(self.config.proactive.pending_expire_seconds),
             )
 
             if not turn_reserved:
@@ -2162,7 +2121,7 @@ class MaiLifePlugin(MaiBotPlugin):
                         turn_scope,
                         turn_anchor,
                         self._now_ts(),
-                        self._now_ts() + int(self.config.context.turn_expire_seconds),
+                        self._now_ts() + int(self.config.proactive.pending_expire_seconds),
                     )
 
                     self._get_logger().info(
@@ -2186,7 +2145,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
             return self._suppress_response(kwargs, "reply_reserve_failed")
 
-        expiry = max(20, int(self.config.context.turn_expire_seconds))
+        expiry = max(20, int(self.config.proactive.pending_expire_seconds))
 
         self._reply_confirmations = {
             key: value
@@ -3986,16 +3945,6 @@ class MaiLifePlugin(MaiBotPlugin):
                     "timezone": str(cfg.environment.timezone),
                     "city": str(cfg.environment.city),
                     "weather_refresh_minutes": int(cfg.environment.weather_refresh_minutes),
-                },
-                "context": {
-                    "enabled": _switch(cfg.context.enabled),
-                    "continuity_enabled": _switch(cfg.context.continuity_enabled),
-                    "continuity_interval_minutes": int(cfg.context.continuity_interval_minutes),
-                    "prompt_max_chars": int(cfg.context.prompt_max_chars),
-                    "outbound_turn_guard": _switch(cfg.context.outbound_turn_guard),
-                    "turn_expire_seconds": int(cfg.context.turn_expire_seconds),
-                    "background_cache_minutes": int(cfg.context.background_cache_minutes),
-                    "replyer_detail": str(cfg.context.replyer_detail),
                 },
                 "group": {
                     "profiles": len(cfg.group.profiles),
