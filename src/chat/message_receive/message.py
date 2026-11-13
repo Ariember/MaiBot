@@ -1,5 +1,5 @@
 from asyncio import Task
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple
 
 from rich.traceback import install
 from sqlmodel import select
@@ -23,6 +23,9 @@ from src.common.data_models.message_component_data_model import (
     VoiceComponent,
 )
 
+if TYPE_CHECKING:
+    from src.common.data_models.person_info_data_model import MaiPersonInfo
+
 
 install(extra_lines=3)
 
@@ -30,11 +33,12 @@ logger = get_logger("chat_message")
 
 
 class MsgIDMapping:
-    """回复消息内容缓存。"""
+    """单次消息处理中的回复内容与人物查询缓存。"""
 
     def __init__(self) -> None:
-        """初始化消息 ID 到内容的映射缓存。"""
+        """初始化消息 ID 到内容的映射与人物查询缓存。"""
         self.mapping: Dict[str, Tuple[str | Task[str], UserInfo]] = {}
+        self.person_info_tasks: Dict[Tuple[str, str], Task[Optional["MaiPersonInfo"]]] = {}
 
 
 class SessionMessage(MaiMessage):
@@ -203,7 +207,7 @@ class SessionMessage(MaiMessage):
 
         Args:
             component: 待处理的消息组件。
-            id_content_map: 回复消息解析缓存。
+            id_content_map: 消息解析缓存。
             recursion_depth: 当前递归深度。
             enable_heavy_media_analysis: 是否同步执行图片与表情包描述生成。
             enable_voice_transcription: 是否同步执行语音转写。
@@ -224,7 +228,7 @@ class SessionMessage(MaiMessage):
                 enable_heavy_media_analysis=enable_heavy_media_analysis,
             )
         elif isinstance(component, AtComponent):
-            return await self.process_at_component(component)
+            return await self.process_at_component(component, id_content_map)
         elif isinstance(component, VoiceComponent):
             return await self.process_voice_component(
                 component,
@@ -363,7 +367,7 @@ class SessionMessage(MaiMessage):
         component.binary_data = b""  # 处理完就丢掉二进制数据，节省内存
         return content
 
-    async def process_at_component(self, component: AtComponent) -> str:
+    async def process_at_component(self, component: AtComponent, id_content_map: Optional[MsgIDMapping] = None) -> str:
         # 如果已经有昵称或备注了，直接使用
         if component.target_user_cardname:
             return f"@{component.target_user_cardname}"
@@ -382,8 +386,18 @@ class SessionMessage(MaiMessage):
 
         from src.common.utils.utils_person import PersonUtils
 
-        # 查询用户信息
-        if person_info := PersonUtils.get_person_info_by_user_id_and_platform(component.target_user_id, self.platform):
+        # 缓存查询任务，让并发组件和嵌套转发复用同一份人物记录。
+        if id_content_map is None:
+            id_content_map = MsgIDMapping()
+        normalized_platform = self.platform.split("-", 1)[1] if "-" in self.platform else self.platform
+        person_key = (normalized_platform, component.target_user_id)
+        if person_key not in id_content_map.person_info_tasks:
+            id_content_map.person_info_tasks[person_key] = asyncio.create_task(
+                asyncio.to_thread(
+                    PersonUtils.get_person_info_by_user_id_and_platform, component.target_user_id, self.platform
+                )
+            )
+        if person_info := await id_content_map.person_info_tasks[person_key]:
             component.target_user_nickname = component.target_user_nickname or person_info.user_nickname
             if self.message_info.group_info and person_info.group_cardname_list:
                 for group_card in person_info.group_cardname_list:
@@ -488,7 +502,7 @@ class SessionMessage(MaiMessage):
 
         Args:
             component: 合并转发组件。
-            id_content_map: 回复消息解析缓存。
+            id_content_map: 消息解析缓存。
             recursion_depth: 当前递归深度。
             enable_heavy_media_analysis: 是否同步执行图片与表情包描述生成。
             enable_voice_transcription: 是否同步执行语音转写。
@@ -539,7 +553,7 @@ class SessionMessage(MaiMessage):
 
         Args:
             components: 待处理的组件序列。
-            id_content_map: 回复消息解析缓存。
+            id_content_map: 消息解析缓存。
             recursion_depth: 当前递归深度。
             enable_heavy_media_analysis: 是否同步执行图片与表情包描述生成。
             enable_voice_transcription: 是否同步执行语音转写。

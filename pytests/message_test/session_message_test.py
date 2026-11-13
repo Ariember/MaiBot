@@ -3,7 +3,8 @@ import asyncio
 import pytest
 import importlib
 import importlib.util
-from types import ModuleType
+from threading import Event, get_ident
+from types import ModuleType, SimpleNamespace
 from pathlib import Path
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -245,8 +246,7 @@ async def test_voice(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_at_component(monkeypatch):
-    load_message_via_file(monkeypatch)
+async def test_at_component(at_message_module):
     msg = SessionMessage("msg123", datetime.now(), platform="test_platform")
     msg.session_id = "session123"
     msg.platform = "test_platform"
@@ -254,6 +254,171 @@ async def test_at_component(monkeypatch):
     msg.raw_message.components = [AtComponent(target_user_id="114514"), TextComponent("Hello, world!")]
     await msg.process()
     assert msg.processed_plain_text == "@114514 Hello, world!"
+
+
+@pytest.fixture
+def at_message_module(monkeypatch):
+    module = load_message_via_file(monkeypatch)
+    config = ModuleType("src.config.config")
+    config.global_config = SimpleNamespace(bot=SimpleNamespace(nickname=" 小麦 "))
+    monkeypatch.setitem(sys.modules, config.__name__, config)
+    system_utils = ModuleType("src.common.utils.system_utils")
+    system_utils.is_bot_self = lambda platform, user_id: user_id == "bot"
+    monkeypatch.setitem(sys.modules, system_utils.__name__, system_utils)
+    return module
+
+
+def make_at_message(module, components, platform="instance-qq", group_id="group1"):
+    msg = module.SessionMessage("msg123", datetime.now(), platform=platform)
+    msg.message_info = SimpleNamespace(group_info=SimpleNamespace(group_id=group_id))
+    msg.raw_message = MessageSequence(components=components)
+    return msg
+
+
+@pytest.mark.asyncio
+async def test_at_queries_share_pending_work_off_event_loop(monkeypatch, at_message_module):
+    module = at_message_module
+    loop = asyncio.get_running_loop()
+    loop_thread = get_ident()
+    entered = asyncio.Event()
+    release = Event()
+    calls = []
+
+    def lookup(user_id, platform):
+        assert get_ident() != loop_thread
+        calls.append((platform, user_id))
+        loop.call_soon_threadsafe(entered.set)
+        assert release.wait(5)
+        return SimpleNamespace(
+            user_nickname=f"昵称{user_id}",
+            group_cardname_list=[
+                SimpleNamespace(group_id="other", group_cardname="别群名片"),
+                SimpleNamespace(group_id="group1", group_cardname=f"名片{user_id}"),
+            ],
+        )
+
+    monkeypatch.setattr(DummyPersonUtils, "get_person_info_by_user_id_and_platform", staticmethod(lookup))
+    components = [module.AtComponent(user_id) for user_id in ("1", "1", "2", "1")]
+    msg = make_at_message(module, components)
+    processing = asyncio.create_task(msg.process())
+    try:
+        await asyncio.wait_for(entered.wait(), timeout=5)
+        assert not processing.done()
+    finally:
+        release.set()
+        await processing
+
+    assert sorted(calls) == [("instance-qq", "1"), ("instance-qq", "2")]
+    assert msg.processed_plain_text == "@名片1 @名片1 @名片2 @名片1"
+    assert [(item.target_user_nickname, item.target_user_cardname) for item in components] == [
+        ("昵称1", "名片1"), ("昵称1", "名片1"), ("昵称2", "名片2"), ("昵称1", "名片1"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_at_missing_person_cache_spans_nested_forwards_and_resets(monkeypatch, at_message_module):
+    module = at_message_module
+    calls = []
+
+    def lookup(user_id, platform):
+        calls.append((platform, user_id))
+        return None
+
+    monkeypatch.setattr(DummyPersonUtils, "get_person_info_by_user_id_and_platform", staticmethod(lookup))
+    inner_at = module.AtComponent("missing")
+    nested = module.ForwardNodeComponent([
+        ForwardComponent("内层", "inner", [inner_at]),
+    ])
+    forwarded = module.ForwardNodeComponent([
+        ForwardComponent("外层", "outer", [module.AtComponent("missing"), nested]),
+    ])
+    msg = make_at_message(module, [module.AtComponent("missing"), forwarded])
+    await msg.process()
+
+    assert calls == [("instance-qq", "missing")]
+    assert msg.processed_plain_text == (
+        "@missing 【合并转发消息: \n"
+        "-- 【外层】: @missing 【合并转发消息: \n"
+        "------ 【内层】: @missing\n】\n】"
+    )
+    assert inner_at.target_user_nickname is None
+    assert inner_at.target_user_cardname is None
+    await msg.process()
+    assert calls == [("instance-qq", "missing"), ("instance-qq", "missing")]
+
+
+@pytest.mark.asyncio
+async def test_at_component_and_bot_names_keep_precedence(monkeypatch, at_message_module):
+    module = at_message_module
+
+    def lookup(user_id, platform):
+        pytest.fail("已有名字及机器人昵称不应查询人物信息")
+
+    monkeypatch.setattr(DummyPersonUtils, "get_person_info_by_user_id_and_platform", staticmethod(lookup))
+    components = [
+        module.AtComponent("1", "昵称", "名片甲"),
+        module.AtComponent("1", "昵称", "名片乙"),
+        module.AtComponent("1", "昵称"),
+        module.AtComponent("bot", "平台昵称"),
+        module.AtComponent("bot"),
+    ]
+    msg = make_at_message(module, components)
+    await msg.process()
+
+    assert msg.processed_plain_text == "@名片甲 @名片乙 @昵称 @平台昵称 @小麦"
+    assert [(item.target_user_nickname, item.target_user_cardname, item.uses_configured_bot_nickname)
+            for item in components] == [
+        ("昵称", "名片甲", False), ("昵称", "名片乙", False), ("昵称", None, False),
+        ("平台昵称", None, False), ("小麦", "小麦", True),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_at_cache_normalizes_platform_and_preserves_group_names(monkeypatch, at_message_module):
+    module = at_message_module
+    calls = []
+
+    def lookup(user_id, platform):
+        calls.append((platform, user_id))
+        return SimpleNamespace(
+            user_nickname=platform,
+            group_cardname_list=[SimpleNamespace(group_id="group1", group_cardname="群一名片")],
+        )
+
+    monkeypatch.setattr(DummyPersonUtils, "get_person_info_by_user_id_and_platform", staticmethod(lookup))
+    mapping = module.MsgIDMapping()
+    first = make_at_message(module, [], platform="a-qq")
+    alias = make_at_message(module, [], platform="b-qq", group_id="group2")
+    other = make_at_message(module, [], platform="discord", group_id="group2")
+    components = [module.AtComponent("1") for _ in range(3)]
+    result = await asyncio.gather(*[
+        msg.process_at_component(component, mapping)
+        for msg, component in zip((first, alias, other), components, strict=True)
+    ])
+
+    assert sorted(calls) == [("a-qq", "1"), ("discord", "1")]
+    assert result == ["@群一名片", "@a-qq", "@discord"]
+    assert [item.target_user_cardname for item in components] == ["群一名片", None, None]
+
+
+@pytest.mark.asyncio
+async def test_at_lookup_exception_keeps_component_error_handling(monkeypatch, at_message_module):
+    module = at_message_module
+    calls = []
+
+    def lookup(user_id, platform):
+        calls.append((platform, user_id))
+        raise RuntimeError("人物查询失败")
+
+    monkeypatch.setattr(DummyPersonUtils, "get_person_info_by_user_id_and_platform", staticmethod(lookup))
+    msg = make_at_message(module, [module.AtComponent("1"), module.AtComponent("1"), module.TextComponent("正文")])
+    await msg.process()
+
+    assert calls == [("instance-qq", "1")]
+    assert msg.processed_plain_text == "正文"
+    assert sum("人物查询失败" in entry for entry in module.logger.logging_record) == 2
+    with pytest.raises(RuntimeError, match="人物查询失败"):
+        await msg.process_at_component(module.AtComponent("1"))
 
 
 @pytest.mark.asyncio

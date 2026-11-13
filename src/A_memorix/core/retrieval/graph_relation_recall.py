@@ -271,7 +271,7 @@ class GraphRelationRecallService:
         relation = self.metadata_store.get_relation(relation_hash, include_inactive=False)
         if relation is None:
             return None
-        supporting_paragraphs = self.metadata_store.get_paragraphs_by_relation(relation_hash)
+        supporting_paragraph_count = self.metadata_store.count_paragraphs_by_relation(relation_hash)
         return GraphRelationCandidate(
             hash_value=relation_hash,
             subject=str(relation.get("subject", "")),
@@ -281,5 +281,5 @@ class GraphRelationRecallService:
             graph_seed_entities=[str(x) for x in graph_seed_entities],
             graph_hops=int(graph_hops),
             graph_candidate_type=str(candidate_type),
-            supporting_paragraph_count=len(supporting_paragraphs),
+            supporting_paragraph_count=supporting_paragraph_count,
         )

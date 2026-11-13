@@ -1300,6 +1300,20 @@ class MetadataStore(
 
         return [self._row_to_dict(row, "paragraph") for row in cursor.fetchall()]
 
+    def count_paragraphs_by_relation(self, relation_hash: str) -> int:
+        """统计支持指定关系的段落数，与单关系读取保持一致，包含软删除段落。"""
+        cursor = self._conn.cursor()
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM paragraphs p
+            JOIN paragraph_relations pr ON p.hash = pr.paragraph_hash
+            WHERE pr.relation_hash = ?
+            """,
+            (relation_hash,),
+        )
+        return cursor.fetchone()[0]
+
     def get_paragraphs_by_relation_hashes(
         self,
         relation_hashes: Sequence[str],
