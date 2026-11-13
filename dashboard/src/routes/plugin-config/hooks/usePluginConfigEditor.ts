@@ -23,6 +23,7 @@ import {
 } from '@/lib/plugin-api'
 import type { InstalledPlugin, PluginConfigSchema } from '@/lib/plugin-api'
 import { useToast } from '@/hooks/use-toast'
+import { refreshPluginWebUI } from '@/lib/plugin-webui'
 
 import { getPluginConfigRoutePath, setNestedField } from '../utils'
 
@@ -226,7 +227,8 @@ export function usePluginConfigEditor(options: UsePluginConfigEditorOptions) {
         title: toggleResult.message,
         description: toggleResult.note,
       })
-      loadConfig()
+      await loadConfig()
+      void refreshPluginWebUI(true)
     } catch (error) {
       toast({
         title: '切换状态失败',

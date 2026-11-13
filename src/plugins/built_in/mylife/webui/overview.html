@@ -1,0 +1,1124 @@
+<style>
+  .ml-root {
+    --ml-bg: var(--maibot-background, #f9f9f7);
+    --ml-surface: var(--maibot-surface, #fcfcfb);
+    --ml-fg: var(--maibot-foreground, #0b0b0b);
+    --ml-muted: var(--maibot-muted, #6e6d68);
+    --ml-soft: var(--maibot-soft, #f1f0ec);
+    --ml-border: var(--maibot-border, rgba(11, 11, 11, 0.10));
+    --ml-primary: var(--maibot-primary, #2a78d6);
+    --ml-primary-fg: var(--maibot-primary-foreground, #ffffff);
+    --ml-danger: var(--maibot-danger, #d03b3b);
+    --ml-radius: var(--maibot-radius, 12px);
+    --ml-font-body: var(--maibot-font-body, system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", sans-serif);
+    --ml-font-display: var(--maibot-font-display, var(--ml-font-body));
+    --ml-font-mono: var(--maibot-font-mono, ui-monospace, "JetBrains Mono", Consolas, monospace);
+
+    /* Validated dataviz categorical & status tokens (light) */
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
+    --series-6: #008300;
+    --series-7: #6250d6;
+    --series-8: #e34948;
+    --status-good: #0ca30c;
+    --status-good-ink: #006300;
+    --status-warn: #fab219;
+    --status-serious: #ec835a;
+    --status-crit: #d03b3b;
+    --chart-grid: #e1e0d9;
+    --chart-axis: #c3c2b7;
+
+    font-family: var(--ml-font-body);
+    color: var(--ml-fg);
+    padding: 20px 24px 40px;
+    max-width: 1440px;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+  :root.dark .ml-root,
+  html.dark .ml-root {
+    --ml-bg: var(--maibot-background, #0d0d0d);
+    --ml-surface: var(--maibot-surface, #1a1a19);
+    --ml-fg: var(--maibot-foreground, #f0efec);
+    --ml-muted: var(--maibot-muted, #9a9890);
+    --ml-soft: var(--maibot-soft, #252523);
+    --ml-border: var(--maibot-border, rgba(255, 255, 255, 0.10));
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --status-good-ink: #0ca30c;
+    --chart-grid: #2c2c2a;
+    --chart-axis: #383835;
+  }
+
+  .ml-root *, .ml-root *::before, .ml-root *::after {
+    box-sizing: border-box;
+  }
+
+  /* Top Navigation & Header */
+  .ml-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--ml-border);
+  }
+  .ml-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ml-brand-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--ml-primary);
+    color: var(--ml-primary-fg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  .ml-brand-title {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+  }
+  .ml-brand-sub {
+    font-size: 12px;
+    color: var(--ml-muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .ml-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .ml-btn {
+    padding: 7px 13px;
+    border-radius: var(--ml-radius);
+    border: 1px solid var(--ml-border);
+    background: var(--ml-surface);
+    color: var(--ml-fg);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.15s, background-color 0.15s, border-color 0.15s;
+  }
+  .ml-btn:hover:not(:disabled) {
+    background: var(--ml-soft);
+  }
+  .ml-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .ml-btn-primary {
+    background: var(--ml-primary);
+    color: var(--ml-primary-fg);
+    border-color: var(--ml-primary);
+  }
+  .ml-btn-primary:hover:not(:disabled) {
+    background: var(--ml-primary);
+    filter: brightness(0.95);
+  }
+
+  /* Alert / Error Banner */
+  .ml-error-banner {
+    display: none;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: var(--ml-radius);
+    border: 1px solid var(--status-crit);
+    background: rgba(208, 59, 59, 0.08);
+    color: var(--ml-fg);
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .ml-error-banner.active {
+    display: flex;
+  }
+
+  /* Hero Pod */
+  .ml-hero {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  @media (max-width: 960px) {
+    .ml-hero {
+      grid-template-columns: 1fr;
+    }
+  }
+  .ml-card {
+    background: var(--ml-surface);
+    border: 1px solid var(--ml-border);
+    border-radius: var(--ml-radius);
+    padding: 18px 20px;
+    position: relative;
+  }
+  .ml-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--ml-border);
+  }
+  .ml-card-title {
+    font-size: 15px;
+    font-weight: 650;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ml-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 999px;
+    border: 1px solid var(--ml-border);
+    background: var(--ml-soft);
+    color: var(--ml-fg);
+    white-space: nowrap;
+  }
+  .ml-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .ml-badge-good {
+    color: var(--status-good-ink);
+    border-color: rgba(12, 163, 12, 0.35);
+    background: rgba(12, 163, 12, 0.08);
+  }
+  .ml-badge-warn {
+    color: var(--ml-fg);
+    border-color: rgba(250, 178, 25, 0.55);
+    background: rgba(250, 178, 25, 0.14);
+  }
+  .ml-badge-crit {
+    color: var(--status-crit);
+    border-color: rgba(208, 59, 59, 0.45);
+    background: rgba(208, 59, 59, 0.10);
+  }
+
+  .ml-hero-main {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .ml-hero-status-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .ml-hero-botname {
+    font-size: 24px;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+  }
+  .ml-hero-activity {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ml-primary);
+  }
+  .ml-hero-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .ml-meta-box {
+    background: var(--ml-soft);
+    border-radius: calc(var(--ml-radius) - 4px);
+    padding: 10px 12px;
+    border: 1px solid var(--ml-border);
+  }
+  .ml-meta-label {
+    font-size: 11px;
+    color: var(--ml-muted);
+    margin-bottom: 4px;
+  }
+  .ml-meta-val {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  /* Scene Notebook Card */
+  .ml-scene-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: linear-gradient(135deg, var(--ml-surface) 0%, var(--ml-soft) 100%);
+  }
+  .ml-scene-quote {
+    font-size: 14px;
+    line-height: 1.65;
+    padding: 12px 14px;
+    border-left: 3px solid var(--ml-primary);
+    background: var(--ml-surface);
+    border-radius: 0 8px 8px 0;
+    margin: 4px 0 12px;
+    min-height: 68px;
+    white-space: pre-wrap;
+  }
+  .ml-scene-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ml-muted);
+  }
+
+  /* Chart Controls & Legend */
+  .ml-Section-gap {
+    margin-bottom: 18px;
+  }
+  .ml-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .ml-seg-group {
+    display: inline-flex;
+    background: var(--ml-soft);
+    padding: 3px;
+    border-radius: calc(var(--ml-radius) - 4px);
+    border: 1px solid var(--ml-border);
+    gap: 2px;
+  }
+  .ml-seg-btn {
+    border: none;
+    background: transparent;
+    color: var(--ml-muted);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: calc(var(--ml-radius) - 6px);
+    cursor: pointer;
+  }
+  .ml-seg-btn.active {
+    background: var(--ml-surface);
+    color: var(--ml-fg);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+  .ml-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--ml-fg);
+  }
+  .ml-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ml-legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+  .ml-svg-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .ml-svg-chart {
+    width: 100%;
+    height: auto;
+    display: block;
+    user-select: none;
+  }
+
+  /* 24h Schedule Gantt & Timeline */
+  .ml-gantt-track {
+    position: relative;
+    height: 30px;
+    width: 100%;
+    background: var(--ml-soft);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    border: 1px solid var(--ml-border);
+    margin-bottom: 6px;
+  }
+  .ml-gantt-seg {
+    height: 100%;
+    border-right: 2px solid var(--ml-surface);
+    position: relative;
+    transition: filter 0.15s;
+  }
+  .ml-gantt-seg:hover {
+    filter: brightness(1.08);
+  }
+  .ml-gantt-now {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: var(--status-crit);
+    z-index: 3;
+    pointer-events: none;
+  }
+  .ml-gantt-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--ml-muted);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 14px;
+  }
+  .ml-timeline-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .ml-node-card {
+    padding: 12px 14px;
+    border-radius: calc(var(--ml-radius) - 2px);
+    border: 1px solid var(--ml-border);
+    background: var(--ml-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ml-node-card.is-current {
+    border-color: var(--ml-primary);
+    background: var(--ml-surface);
+    box-shadow: 0 0 0 1px var(--ml-primary);
+  }
+  .ml-node-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .ml-node-time {
+    font-family: var(--ml-font-mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .ml-node-summary {
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .ml-node-scene {
+    font-size: 12px;
+    color: var(--ml-muted);
+    line-height: 1.5;
+    border-left: 2px solid var(--ml-border);
+    padding-left: 8px;
+    margin-top: 2px;
+  }
+  /* Usage & Services */
+  .ml-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .ml-kpi-tile {
+    padding: 12px 14px;
+    border-radius: calc(var(--ml-radius) - 2px);
+    border: 1px solid var(--ml-border);
+    background: var(--ml-soft);
+  }
+  .ml-kpi-label {
+    font-size: 12px;
+    color: var(--ml-muted);
+    margin-bottom: 4px;
+  }
+  .ml-kpi-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .ml-kpi-sub {
+    font-size: 11px;
+    color: var(--ml-muted);
+    margin-top: 4px;
+  }
+
+  .ml-usage-split {
+    display: grid;
+    grid-template-columns: 1.05fr 1.25fr;
+    gap: 16px;
+  }
+  @media (max-width: 980px) {
+    .ml-usage-split {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .ml-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .ml-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  .ml-table th,
+  .ml-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--ml-border);
+    text-align: left;
+  }
+  .ml-table th {
+    color: var(--ml-muted);
+    font-weight: 600;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .ml-table td.num,
+  .ml-table th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ml-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--ml-muted);
+    font-size: 13px;
+  }
+  .ml-hidden {
+    display: none !important;
+  }
+</style>
+
+<div class="maibot-page ml-root" id="ml-overview-root">
+  <!-- 顶部导航与操作栏 -->
+  <header class="ml-topbar">
+    <div class="ml-brand">
+      <div class="ml-brand-icon" aria-hidden="true">麦</div>
+      <div>
+        <h1 class="ml-brand-title" id="hdr-title">麦麦此刻 · 生活总览</h1>
+        <div class="ml-brand-sub">
+          <span id="hdr-version">版本加载中…</span>
+          <span>·</span>
+          <span id="hdr-generated">等待同步</span>
+          <span>·</span>
+          <span id="hdr-theme-pill">自适应皮肤</span>
+        </div>
+      </div>
+    </div>
+    <div class="ml-nav-actions">
+      <button type="button" class="ml-btn" id="btn-nav-life">记忆与牵挂 →</button>
+      <button type="button" class="ml-btn" id="btn-nav-system">系统与配置 →</button>
+      <button type="button" class="ml-btn ml-btn-primary" id="btn-refresh">刷新实况</button>
+    </div>
+  </header>
+
+  <!-- 错误横幅（仅在 query 失败或 not_ready 时显示，不造假数据） -->
+  <div class="ml-error-banner" id="error-banner" role="alert">
+    <div>
+      <strong>数据拉取异常：</strong>
+      <span id="error-text"></span>
+    </div>
+    <button type="button" class="ml-btn" id="btn-retry">立即重试</button>
+  </div>
+
+  <!-- 第一区：生活近况 + 实际执行记录 -->
+  <section class="ml-hero">
+    <div class="ml-card ml-hero-main">
+      <div>
+        <div class="ml-card-header">
+          <h2 class="ml-card-title">麦麦的日常近况</h2>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="hero-badges">
+            <span class="ml-badge">加载中…</span>
+          </div>
+        </div>
+        <div class="ml-hero-status-line">
+          <span class="ml-hero-botname" id="hero-botname">—</span>
+          <span class="ml-hero-activity" id="hero-activity">正在同步当前状态…</span>
+        </div>
+      </div>
+
+      <div class="ml-hero-meta-grid">
+        <div class="ml-meta-box">
+          <div class="ml-meta-label">任务环境</div>
+          <div class="ml-meta-val" id="hero-location">—</div>
+        </div>
+        <div class="ml-meta-box">
+          <div class="ml-meta-label">天气与历法</div>
+          <div class="ml-meta-val" id="hero-weather">—</div>
+        </div>
+        <div class="ml-meta-box">
+          <div class="ml-meta-label">当前任务时段</div>
+          <div class="ml-meta-val" id="hero-cur-node">—</div>
+        </div>
+        <div class="ml-meta-box">
+          <div class="ml-meta-label">下一待办计划</div>
+          <div class="ml-meta-val" id="hero-next-node">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ml-card ml-scene-box">
+      <div>
+        <div class="ml-card-header">
+          <h2 class="ml-card-title">实际活动执行记录</h2>
+          <span class="ml-badge" id="scene-status-badge">等待读取</span>
+        </div>
+        <div class="ml-scene-quote" id="scene-text">正在读取当前时段的执行结果…</div>
+      </div>
+      <div class="ml-scene-footer">
+        <span id="scene-narrative-note">仅记录实际执行结果 · 待办计划不代表完成</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 第二区：今日/明日日程 24h 甘特条与时间线 -->
+  <section class="ml-card ml-Section-gap">
+    <div class="ml-card-header">
+      <div>
+        <h2 class="ml-card-title" id="sched-title">今日任务时段与执行记录</h2>
+      </div>
+      <div class="ml-seg-group">
+        <button type="button" class="ml-seg-btn active" id="btn-sched-today">今日日程</button>
+        <button type="button" class="ml-seg-btn" id="btn-sched-tomorrow">明日预览</button>
+      </div>
+    </div>
+
+    <!-- 24h 甘特条 -->
+    <div class="ml-gantt-track" id="sched-gantt-track" title="00:00 - 24:00 全天日程分布"></div>
+    <div class="ml-gantt-ticks">
+      <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>24:00</span>
+    </div>
+
+    <div class="ml-timeline-grid" id="sched-nodes-grid">
+      <div class="ml-empty">正在加载日程时间线…</div>
+    </div>
+  </section>
+
+  <!-- 第三区：服务运行态 & Token / 搜索用量监控 -->
+  <section class="ml-card">
+    <div class="ml-card-header">
+      <h2 class="ml-card-title">服务运行态与 Token / 联网用量审计</h2>
+      <span class="ml-badge" id="usage-day-badge">—</span>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="ml-kpi-row">
+      <div class="ml-kpi-tile">
+        <div class="ml-kpi-label">今日 Token 总量</div>
+        <div class="ml-kpi-value" id="kpi-tokens-today">—</div>
+        <div class="ml-kpi-sub" id="kpi-calls-today">今日调用 — 次</div>
+      </div>
+      <div class="ml-kpi-tile">
+        <div class="ml-kpi-label">近 7 日累计 Token</div>
+        <div class="ml-kpi-value" id="kpi-tokens-7d">—</div>
+        <div class="ml-kpi-sub" id="kpi-calls-7d">7 日调用 — 次</div>
+      </div>
+      <div class="ml-kpi-tile">
+        <div class="ml-kpi-label">今日搜索 API 调用</div>
+        <div class="ml-kpi-value" id="kpi-search-today">—</div>
+        <div class="ml-kpi-sub" id="kpi-search-fail">最近失败：—</div>
+      </div>
+      <div class="ml-kpi-tile">
+        <div class="ml-kpi-label">JSON 解析失败告警</div>
+        <div class="ml-kpi-value" id="kpi-parse-fail">—</div>
+        <div class="ml-kpi-sub" id="kpi-llm-health">模型健康：—</div>
+      </div>
+      <div class="ml-kpi-tile">
+        <div class="ml-kpi-label">群观察</div>
+        <div class="ml-kpi-value" id="kpi-groups-active">—</div>
+        <div class="ml-kpi-sub" id="kpi-groups-obs">观察记录 — · 待写灵感 —</div>
+      </div>
+    </div>
+
+    <div class="ml-usage-split">
+      <!-- 左侧：近 7 日趋势柱状图（单轴切换 Token / 调用次数 + 表格视图） -->
+      <div class="ml-meta-box" style="background:var(--ml-surface);padding:14px;">
+        <div class="ml-toolbar" style="margin-bottom:8px;">
+          <strong style="font-size:13.5px;">近 7 日消耗趋势</strong>
+          <div class="ml-seg-group">
+            <button type="button" class="ml-seg-btn active" data-usage-metric="tokens">Token 量</button>
+            <button type="button" class="ml-seg-btn" data-usage-metric="calls">调用次数</button>
+            <button type="button" class="ml-seg-btn" data-usage-metric="table">表格</button>
+          </div>
+        </div>
+        <div id="usage-7d-chart-wrap"></div>
+        <div class="ml-table-wrap ml-hidden" id="usage-7d-table-wrap">
+          <table class="ml-table">
+            <thead>
+              <tr><th>日期</th><th class="num">Token 消耗</th><th class="num">调用次数</th></tr>
+            </thead>
+            <tbody id="usage-7d-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 右侧：今日各任务模型明细 + 搜索源统计 -->
+      <div class="ml-meta-box" style="background:var(--ml-surface);padding:14px;">
+        <div class="ml-toolbar" style="margin-bottom:8px;">
+          <strong style="font-size:13.5px;">今日按任务 Token 明细 &amp; 搜索源统计</strong>
+          <span style="font-size:11.5px;color:var(--ml-muted);" id="avail-tasks-text">可用任务：—</span>
+        </div>
+        <div class="ml-table-wrap">
+          <table class="ml-table">
+            <thead>
+              <tr>
+                <th>来源 / 任务</th>
+                <th class="num">调用 (成功)</th>
+                <th class="num">Prompt</th>
+                <th class="num">Completion</th>
+                <th class="num">总 Token</th>
+                <th class="num">平均耗时</th>
+              </tr>
+            </thead>
+            <tbody id="usage-tokens-tbody"></tbody>
+          </table>
+        </div>
+        <div class="ml-table-wrap" style="margin-top:12px;">
+          <table class="ml-table">
+            <thead>
+              <tr>
+                <th>搜索 Provider</th>
+                <th class="num">调用 (成功)</th>
+                <th class="num">命中结果数</th>
+                <th class="num">平均耗时</th>
+              </tr>
+            </thead>
+            <tbody id="usage-search-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const state = {
+    status: null,
+    schedule: null,
+    usage: null,
+    schedTab: 'today',
+    usageMetric: 'tokens',
+    loading: false,
+  };
+
+  const KIND_COLORS = {
+    用餐: 'var(--series-2)',
+    工作: 'var(--series-1)',
+    学习: 'var(--series-7)',
+    出行: 'var(--series-4)',
+    闲暇: 'var(--series-3)',
+    睡眠: 'var(--series-5)',
+    午休: 'var(--series-5)',
+    休息: 'var(--series-6)',
+  };
+
+  function esc(val) {
+    return String(val ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function fmtInt(n) {
+    const v = Number(n || 0);
+    return Number.isFinite(v) ? v.toLocaleString('zh-CN') : '0';
+  }
+
+  function parseHHMM(str) {
+    if (!str || typeof str !== 'string' || !str.includes(':')) return null;
+    const [h, m] = str.split(':').map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+  }
+
+  // Concurrency-guarded query runner: strictly <= 2 in-flight requests to respect host bridge limit
+  async function runQueriesWithLimit(tasks, concurrency = 2) {
+    await window.maibot.ready;
+    const errors = [];
+    let idx = 0;
+    async function worker() {
+      while (idx < tasks.length) {
+        const current = tasks[idx++];
+        try {
+          const res = await window.maibot.query(current.name, {});
+          if (res && res.success === false) {
+            throw new Error(res.error || `${current.name} 返回失败`);
+          }
+          current.onSuccess(res);
+        } catch (err) {
+          errors.push(`${current.label}: ${err?.message || String(err)}`);
+        }
+      }
+    }
+    const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker());
+    await Promise.all(workers);
+    return errors;
+  }
+
+  function updateThemePill(ctx) {
+    const pill = document.getElementById('hdr-theme-pill');
+    if (!pill || !ctx) return;
+    const mode = ctx.theme === 'dark' ? '暗色' : '亮色';
+    const style = ctx.dashboardStyle || 'modern';
+    pill.textContent = `${mode} · ${style}`;
+  }
+
+  function renderStatus() {
+    const d = state.status;
+    if (!d) return;
+
+    const st = d.state || {};
+    const sc = d.schedule || {};
+    const sv = d.services || {};
+
+    document.getElementById('hdr-version').textContent = `v${d.version || '—'}`;
+    document.getElementById('hdr-generated').textContent = `采样于 ${(d.generated_at || '').replace('T', ' ')}`;
+    document.getElementById('hero-botname').textContent = d.bot_name || '麦麦';
+    document.getElementById('hero-activity').textContent = st.current_activity || '当前无执行记录';
+    document.getElementById('hero-location').textContent = st.current_location || '未标记地点';
+
+    const weatherParts = [d.weather || '天气未知', d.day_type || '', d.upcoming_festival ? `临近${d.upcoming_festival}` : ''].filter(Boolean);
+    document.getElementById('hero-weather').textContent = weatherParts.join(' · ');
+
+    const curNode = sc.current || {};
+    document.getElementById('hero-cur-node').textContent = curNode.summary
+      ? `[${curNode.kind_zh || '日程'}] ${curNode.summary} (${curNode.window || ''})`
+      : '当前无匹配任务时段';
+
+    const nxtNode = sc.next || {};
+    document.getElementById('hero-next-node').textContent = nxtNode.summary
+      ? `${nxtNode.start || ''} [${nxtNode.kind_zh || ''}] ${nxtNode.summary}`
+      : '今日后续无节点';
+
+    // Top Hero Badges
+    const badgesEl = document.getElementById('hero-badges');
+    badgesEl.innerHTML = `
+      <span class="ml-badge ml-badge-good">
+        <span class="ml-badge-dot"></span>${esc(curNode.kind_zh || '日常生活')}
+      </span>
+      <span class="ml-badge">${esc(sv.users_summary || '用户未配置')}</span>
+    `;
+
+    // Scene Card
+    const sceneObj = sc.scene || {};
+    const hasScene = Boolean((sceneObj.scene || '').trim());
+    const sceneBadge = document.getElementById('scene-status-badge');
+    sceneBadge.textContent = hasScene ? '已有执行记录' : '尚无执行记录';
+    sceneBadge.className = `ml-badge ${hasScene ? 'ml-badge-good' : ''}`;
+    document.getElementById('scene-text').textContent = sceneObj.scene || '当前时段尚无成功执行记录；计划不代表任务已完成。';
+
+    const narEl = document.getElementById('scene-narrative-note');
+    narEl.textContent = `后台任务 ${sv.background_tasks ?? 0} 个`;
+    narEl.style.color = 'var(--ml-muted)';
+
+    // Service KPIs
+    document.getElementById('kpi-search-fail').textContent = `最近搜索失败分类：${sv.last_failure || '无'}`;
+    const llmOk = sv.llm_health === '正常';
+    document.getElementById('kpi-llm-health').textContent = `LLM 状态：${sv.llm_health || '未知'}`;
+    document.getElementById('kpi-llm-health').style.color = llmOk ? 'var(--ml-muted)' : 'var(--status-crit)';
+    document.getElementById('avail-tasks-text').textContent = `可用模型任务：${sv.available_tasks || '无'}`;
+
+    document.getElementById('kpi-groups-active').textContent = `${sv.active_groups ?? 0} 个活跃群`;
+    document.getElementById('kpi-groups-obs').textContent =
+      `群观察 ${sv.group_observations ?? 0} · 待写灵感 ${sv.pending_inspirations ?? 0}`;
+  }
+
+  // Render 24h Schedule Gantt & Timeline Cards
+  function renderSchedule() {
+    const sc = state.schedule;
+    if (!sc) return;
+
+    const isToday = state.schedTab === 'today';
+    const dayStr = isToday ? sc.day : (sc.tomorrow?.day || '明日');
+    const nodes = isToday ? (sc.nodes || []) : (sc.tomorrow?.nodes || []);
+    const curStart = sc.current?.start || '';
+    const curEnd = sc.current?.end || '';
+
+    document.getElementById('sched-title').textContent =
+      `${isToday ? '今日任务时段与执行记录' : '明日任务计划预览'} (${dayStr || '—'})`;
+
+    const ganttEl = document.getElementById('sched-gantt-track');
+    const gridEl = document.getElementById('sched-nodes-grid');
+
+    if (!nodes.length) {
+      ganttEl.innerHTML = '';
+      gridEl.innerHTML = `<div class="ml-empty">${isToday ? '今日暂无任务时段' : '明日任务计划尚未建立（切换日期后自动维护）'}</div>`;
+      return;
+    }
+
+    // Build 24h Gantt segments
+    let ganttHtml = '';
+    nodes.forEach((n) => {
+      const sMin = parseHHMM(n.start) ?? 0;
+      let eMin = parseHHMM(n.end) ?? sMin + 60;
+      if (eMin <= sMin) eMin = 1440;
+      const widthPct = Math.max(0.8, ((eMin - sMin) / 1440) * 100);
+      const color = KIND_COLORS[n.kind_zh] || 'var(--series-1)';
+      ganttHtml += `<div class="ml-gantt-seg" style="width:${widthPct.toFixed(2)}%;background:${color};" title="${esc(n.start)}-${esc(n.end)} [${esc(n.kind_zh)}] ${esc(n.summary)}"></div>`;
+    });
+
+    if (isToday && sc.generated_at && sc.generated_at.includes('T')) {
+      const timePart = sc.generated_at.split('T')[1]?.slice(0, 5);
+      const nowMin = parseHHMM(timePart);
+      if (nowMin !== null) {
+        const leftPct = Math.max(0, Math.min(100, (nowMin / 1440) * 100));
+        ganttHtml += `<div class="ml-gantt-now" style="left:${leftPct.toFixed(2)}%;" title="当前时间 ${esc(timePart)}"></div>`;
+      }
+    }
+    ganttEl.innerHTML = ganttHtml;
+
+    // Build Timeline Node Cards
+    gridEl.innerHTML = nodes.map((n) => {
+      const isCur = isToday && curStart && n.start === curStart && n.end === curEnd;
+      const color = KIND_COLORS[n.kind_zh] || 'var(--series-1)';
+      return `
+        <article class="ml-node-card ${isCur ? 'is-current' : ''}">
+          <div class="ml-node-top">
+            <span class="ml-node-time">${esc(n.start)} – ${esc(n.end)}</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              ${isCur ? '<span class="ml-badge ml-badge-good">进行中</span>' : ''}
+              <span class="ml-badge" style="border-left:3px solid ${color};">${esc(n.kind_zh || '日程')}</span>
+            </div>
+          </div>
+          <div class="ml-node-summary">${esc(n.summary || '未命名活动')}</div>
+          <div style="font-size:12px;color:var(--ml-muted);">地点：${esc(n.location || '未指定')}</div>
+          ${n.scene ? `<div class="ml-node-scene">${esc(n.scene)}</div>` : ''}
+        </article>
+      `;
+    }).join('');
+  }
+
+  // Render Usage KPIs, 7-day Single-Axis Bar Chart & Tables
+  function renderUsage() {
+    const u = state.usage;
+    if (!u) return;
+
+    const tot = u.totals || {};
+    document.getElementById('usage-day-badge').textContent = `统计日：${u.day || '—'}`;
+    document.getElementById('kpi-tokens-today').textContent = fmtInt(tot.tokens_today);
+    document.getElementById('kpi-calls-today').textContent = `今日 LLM 调用 ${fmtInt(tot.calls_today)} 次`;
+    document.getElementById('kpi-tokens-7d').textContent = fmtInt(tot.tokens_7d);
+    document.getElementById('kpi-calls-7d').textContent = `近 7 日调用 ${fmtInt(tot.calls_7d)} 次`;
+    document.getElementById('kpi-search-today').textContent = fmtInt(tot.search_calls_today);
+
+    const pf = Number(tot.parse_failures_today || 0);
+    const pfEl = document.getElementById('kpi-parse-fail');
+    pfEl.textContent = fmtInt(pf);
+    pfEl.style.color = pf > 0 ? 'var(--status-crit)' : 'var(--ml-fg)';
+
+    const daily = u.daily || [];
+    const chartWrap = document.getElementById('usage-7d-chart-wrap');
+    const tableWrap = document.getElementById('usage-7d-table-wrap');
+    const tableBody = document.getElementById('usage-7d-table-body');
+
+    tableBody.innerHTML = daily.map((r) => `
+      <tr>
+        <td>${esc(r.day)}</td>
+        <td class="num">${fmtInt(r.tokens)}</td>
+        <td class="num">${fmtInt(r.calls)}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="3" class="ml-empty">暂无 7 日数据</td></tr>';
+
+    if (state.usageMetric === 'table') {
+      chartWrap.classList.add('ml-hidden');
+      tableWrap.classList.remove('ml-hidden');
+    } else {
+      chartWrap.classList.remove('ml-hidden');
+      tableWrap.classList.add('ml-hidden');
+      const isTokens = state.usageMetric === 'tokens';
+      const field = isTokens ? 'tokens' : 'calls';
+      const barColor = isTokens ? 'var(--series-1)' : 'var(--series-2)';
+      const maxVal = Math.max(1, ...daily.map((d) => Number(d[field] || 0)));
+      const W = 440;
+      const H = 190;
+      const padL = 48;
+      const padR = 14;
+      const padT = 22;
+      const plotH = 132;
+      const plotW = W - padL - padR;
+      const slotW = daily.length ? plotW / daily.length : plotW;
+      const barW = Math.min(34, Math.max(12, slotW * 0.56));
+
+      chartWrap.innerHTML = `
+        <svg class="ml-svg-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="近7日${isTokens ? 'Token' : '调用'}柱状图">
+          ${[0, 0.5, 1].map((ratio) => {
+            const y = (padT + (1 - ratio) * plotH).toFixed(1);
+            const val = Math.round(maxVal * ratio);
+            return `
+              <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="${ratio === 0 ? 'var(--chart-axis)' : 'var(--chart-grid)'}" stroke-width="1"/>
+              <text x="${padL - 6}" y="${Number(y) + 3.5}" text-anchor="end" fill="var(--ml-muted)" font-size="10">${val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val}</text>
+            `;
+          }).join('')}
+          ${daily.map((d, i) => {
+            const val = Number(d[field] || 0);
+            const bh = Math.max(val > 0 ? 3 : 0, (val / maxVal) * plotH);
+            const x = padL + i * slotW + (slotW - barW) / 2;
+            const y = padT + plotH - bh;
+            const shortDay = String(d.day || '').slice(5);
+            return `
+              <g>
+                <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${barColor}">
+                  <title>${esc(d.day)}: ${fmtInt(val)}</title>
+                </rect>
+                ${val > 0 ? `<text x="${(x + barW / 2).toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" fill="var(--ml-fg)" font-size="9.5">${val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val}</text>` : ''}
+                <text x="${(x + barW / 2).toFixed(1)}" y="${H - 12}" text-anchor="middle" fill="var(--ml-muted)" font-size="10">${esc(shortDay)}</text>
+              </g>
+            `;
+          }).join('')}
+        </svg>
+      `;
+    }
+
+    // Tokens Table
+    const tokensTbody = document.getElementById('usage-tokens-tbody');
+    const tokenRows = u.tokens || [];
+    tokensTbody.innerHTML = tokenRows.length ? tokenRows.map((r) => `
+      <tr>
+        <td><strong>${esc(r.label || `${r.source}/${r.task_name}`)}</strong></td>
+        <td class="num">${fmtInt(r.calls)} (${fmtInt(r.successes)})</td>
+        <td class="num">${fmtInt(r.prompt_tokens)}</td>
+        <td class="num">${fmtInt(r.completion_tokens)}</td>
+        <td class="num"><strong>${fmtInt(r.total_tokens)}</strong></td>
+        <td class="num">${Number(r.avg_latency_ms || 0).toFixed(0)} ms</td>
+      </tr>
+    `).join('') : '<tr><td colspan="6" class="ml-empty">今日暂无 LLM 调用记录</td></tr>';
+
+    // Searches Table
+    const searchTbody = document.getElementById('usage-search-tbody');
+    const searchRows = u.searches || [];
+    searchTbody.innerHTML = searchRows.length ? searchRows.map((r) => `
+      <tr>
+        <td><strong>${esc(r.provider_type || '默认')}</strong></td>
+        <td class="num">${fmtInt(r.calls)} (${fmtInt(r.successes)})</td>
+        <td class="num">${fmtInt(r.results)}</td>
+        <td class="num">${Number(r.average_latency_ms || 0).toFixed(0)} ms</td>
+      </tr>
+    `).join('') : '<tr><td colspan="4" class="ml-empty">今日暂无联网搜索 API 调用</td></tr>';
+  }
+
+  async function loadAll() {
+    if (state.loading) return;
+    state.loading = true;
+    const refreshBtn = document.getElementById('btn-refresh');
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '同步中…';
+    const banner = document.getElementById('error-banner');
+    banner.classList.remove('active');
+
+    const errors = await runQueriesWithLimit([
+      {
+        name: 'status',
+        label: '日常近况',
+        onSuccess: (res) => { state.status = res; renderStatus(); },
+      },
+      {
+        name: 'schedule',
+        label: '今日日程',
+        onSuccess: (res) => { state.schedule = res; renderSchedule(); },
+      },
+      {
+        name: 'usage',
+        label: 'Token统计',
+        onSuccess: (res) => { state.usage = res; renderUsage(); },
+      },
+    ], 2);
+
+    if (errors.length) {
+      document.getElementById('error-text').textContent = errors.join('；');
+      banner.classList.add('active');
+    }
+
+    state.loading = false;
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '刷新实况';
+  }
+
+  // Bind UI interactions
+  document.getElementById('btn-refresh').addEventListener('click', loadAll);
+  document.getElementById('btn-retry').addEventListener('click', loadAll);
+  document.getElementById('btn-nav-life').addEventListener('click', () => {
+    window.maibot.navigate('life', { tab: 'users' });
+  });
+  document.getElementById('btn-nav-system').addEventListener('click', () => {
+    window.maibot.navigate('system', { section: 'admin' });
+  });
+
+  // Schedule Today / Tomorrow toggle
+  document.getElementById('btn-sched-today').addEventListener('click', (e) => {
+    e.currentTarget.classList.add('active');
+    document.getElementById('btn-sched-tomorrow').classList.remove('active');
+    state.schedTab = 'today';
+    renderSchedule();
+  });
+  document.getElementById('btn-sched-tomorrow').addEventListener('click', (e) => {
+    e.currentTarget.classList.add('active');
+    document.getElementById('btn-sched-today').classList.remove('active');
+    state.schedTab = 'tomorrow';
+    renderSchedule();
+  });
+
+  // Usage 7d metric toggle
+  document.querySelectorAll('[data-usage-metric]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-usage-metric]').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.usageMetric = btn.getAttribute('data-usage-metric');
+      renderUsage();
+    });
+  });
+
+  window.addEventListener('maibot:context', (ev) => {
+    updateThemePill(ev.detail);
+  });
+
+  // Initial boot
+  window.maibot.ready.then((ctx) => {
+    updateThemePill(ctx);
+    loadAll();
+  });
+})();
+</script>

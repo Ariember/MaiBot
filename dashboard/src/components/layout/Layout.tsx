@@ -16,6 +16,7 @@ import { useBackground } from '@/hooks/use-background'
 import { TitleBar } from '@/components/electron/TitleBar'
 import { SelfUpdateResultNotifier } from '@/components/self-update-result-notifier'
 import { matchesShortcut } from '@/lib/keyboard'
+import { MYLIFE_PLUGIN_ID } from '@/lib/mylife'
 import { isElectron } from '@/lib/runtime'
 import { cn } from '@/lib/utils'
 import {
@@ -119,11 +120,29 @@ export function Layout({ children }: LayoutProps) {
     null
   )
   const { theme, setTheme } = useTheme()
-  const builtInMenuSections = useMenuSections()
+  const baseMenuSections = useMenuSections()
+  const builtInMenuSections = useMemo(() => {
+    const mylife = extensions.find((extension) => extension.plugin_id === MYLIFE_PLUGIN_ID)
+    return baseMenuSections.map((section) => section.title === 'sidebar.groups.mylife'
+      ? {
+          ...section,
+          items: [
+            ...section.items,
+            ...(mylife?.pages ?? []).map((page) => ({
+              icon: extensionIcons[page.icon],
+              label: page.title,
+              literalLabel: true,
+              path: extensionPath(MYLIFE_PLUGIN_ID, page.id),
+            })),
+          ],
+        }
+      : section)
+  }, [baseMenuSections, extensions])
   // 日志工作区在移动端保留麦麦导航，顶栏菜单按钮与其它页面保持一致。
   const sidebarWorkspaceMode = workspaceMode === 'logs' ? 'settings' : workspaceMode
   const menuSections = useMemo(() => {
     const pluginMenuSections: MenuSection[] = extensions.flatMap((extension) => {
+      if (extension.plugin_id === MYLIFE_PLUGIN_ID) return []
       const pages = extension.pages.filter((page) =>
         page.placement === 'sidebar'
           ? sidebarWorkspaceMode === 'settings'
@@ -352,7 +371,7 @@ export function Layout({ children }: LayoutProps) {
   // 手机没有桌面工作区顶栏，管理入口必须包含插件的全部页面。
   const mobileMenuSections = useMemo<MenuSection[]>(() => [
     ...builtInMenuSections,
-    ...extensions.filter((extension) => extension.pages.length > 0).map((extension) => ({
+    ...extensions.filter((extension) => extension.plugin_id !== MYLIFE_PLUGIN_ID && extension.pages.length > 0).map((extension) => ({
       title: extension.workspace_title ?? extension.plugin_id,
       literalTitle: true,
       items: extension.pages.map((page) => ({

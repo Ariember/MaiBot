@@ -18,12 +18,14 @@ let installedPluginsRequest: Promise<InstalledPlugin[]> | null = null
  *
  * 请求失败向上抛出，只有成功读取的列表才会进入缓存。
  */
-async function fetchInstalledPluginsUncached(): Promise<InstalledPlugin[]> {
+async function fetchInstalledPluginsUncached(includeBuiltin = false): Promise<InstalledPlugin[]> {
   const data = await backendApi.get<{
     success: boolean
     plugins?: InstalledPlugin[]
     message?: string
-  }>('/api/webui/plugins/installed', { errorMessage: '获取已安装插件列表失败' })
+  }>(`/api/webui/plugins/installed${includeBuiltin ? '?include_builtin=true' : ''}`, {
+    errorMessage: '获取已安装插件列表失败',
+  })
 
   if (!data.success) {
     throw new ApiError(data.message || '获取已安装插件列表失败', { detail: data })
@@ -36,8 +38,9 @@ async function fetchInstalledPluginsUncached(): Promise<InstalledPlugin[]> {
 }
 
 export async function getInstalledPlugins(
-  options: { forceRefresh?: boolean } = {}
+  options: { forceRefresh?: boolean; includeBuiltin?: boolean } = {}
 ): Promise<InstalledPlugin[]> {
+  if (options.includeBuiltin) return fetchInstalledPluginsUncached(true)
   if (
     !options.forceRefresh &&
     installedPluginsCache &&

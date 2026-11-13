@@ -55,6 +55,7 @@ from src.plugin_runtime.host.hook_spec_registry import HookSpec, HookSpecRegistr
 from src.plugin_runtime.protocol.envelope import InspectPluginConfigResultPayload
 from src.plugin_runtime.runner.manifest_validator import ManifestValidator, is_reserved_plugin_directory
 from src.plugin_runtime.runner.plugin_enabled import is_plugin_disabled
+from src.plugin_runtime.runner.plugin_paths import get_plugin_config_path, is_builtin_plugin_path
 from src.plugin_runtime.usage_tracker import PluginUsageTracker
 
 if TYPE_CHECKING:
@@ -1863,8 +1864,15 @@ class PluginRuntimeManager(
         if not watch_paths:
             return
 
+        config_dirs = await asyncio.to_thread(lambda: {
+            get_plugin_config_path(plugin_path, plugin_id).parent
+            for plugin_id, plugin_path in self._iter_watchable_plugin_paths()
+            if is_builtin_plugin_path(plugin_path)
+        })
+        for config_dir in config_dirs:
+            await asyncio.to_thread(config_dir.mkdir, parents=True, exist_ok=True)
         watcher = FileWatcher(
-            paths=watch_paths,
+            paths=[*watch_paths, *config_dirs],
             debounce_ms=600,
             callback_timeout_s=15.0,
             callback_failure_threshold=3,
@@ -2067,7 +2075,7 @@ class PluginRuntimeManager(
 
     @staticmethod
     def _resolve_plugin_config_path(plugin_id: str, plugin_path: Path) -> Path:
-        return plugin_path / "config.toml"
+        return get_plugin_config_path(plugin_path, plugin_id)
 
     async def _handle_plugin_config_changes(self, plugin_id: str, changes: Sequence[FileChange]) -> None:
         """处理单个插件配置文件变化，并定向派发自配置热更新。

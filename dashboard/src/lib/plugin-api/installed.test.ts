@@ -52,6 +52,22 @@ function makeInstalledPlugin(id: string, version: string): InstalledPlugin {
 }
 
 describe('getInstalledPlugins', () => {
+  it('内置查询不读取或污染普通插件列表缓存', async () => {
+    const { getMock, getInstalledPlugins } = await loadInstalledModule()
+    const plugins = [makeInstalledPlugin('demo', '1.2.0')]
+    const builtin = { ...makeInstalledPlugin('fraternity-z.mai-mylife', '1.0.0'), builtin: true }
+    getMock.mockResolvedValueOnce({ success: true, plugins })
+    getMock.mockResolvedValueOnce({ success: true, plugins: [...plugins, builtin] })
+
+    await expect(getInstalledPlugins()).resolves.toEqual(plugins)
+    await expect(getInstalledPlugins({ includeBuiltin: true })).resolves.toEqual([...plugins, builtin])
+    await expect(getInstalledPlugins()).resolves.toEqual(plugins)
+    expect(getMock).toHaveBeenCalledTimes(2)
+    expect(getMock).toHaveBeenLastCalledWith('/api/webui/plugins/installed?include_builtin=true', {
+      errorMessage: '获取已安装插件列表失败',
+    })
+  })
+
   it('成功时请求已安装插件接口并返回插件列表', async () => {
     const { getMock, getInstalledPlugins } = await loadInstalledModule()
     const plugins = [makeInstalledPlugin('demo', '1.2.0')]

@@ -1163,7 +1163,7 @@ interface PluginConfigEditorProps {
   initialTab?: string
 }
 
-function PluginConfigEditor({ plugin, onBack, initialTab }: PluginConfigEditorProps) {
+export function PluginConfigEditor({ plugin, onBack, initialTab }: PluginConfigEditorProps) {
   const { i18n } = useTranslation()
   const isMobile = useMediaQuery('(max-width: 639px)')
   const language = i18n.resolvedLanguage || i18n.language || 'zh'

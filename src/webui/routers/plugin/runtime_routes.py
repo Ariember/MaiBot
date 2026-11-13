@@ -24,7 +24,7 @@ def _ensure_installed_plugin(plugin_id: str) -> None:
     """确认插件 ID 合法且本地已安装。"""
 
     validate_plugin_id(plugin_id)
-    if find_plugin_path_by_id(plugin_id) is None:
+    if find_plugin_path_by_id(plugin_id, include_builtin=True) is None:
         raise HTTPException(status_code=404, detail=f"未找到插件: {plugin_id}")
 
 

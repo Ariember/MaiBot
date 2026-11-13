@@ -4,6 +4,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Layout } from './Layout'
+import type { WebUIExtension } from '@/lib/plugin-webui'
+import { MYLIFE_PLUGIN_ID } from '@/lib/mylife'
 
 const routerMocks = vi.hoisted(() => ({
   navigate: vi.fn(() => Promise.resolve()),
@@ -24,6 +26,7 @@ const layoutMocks = vi.hoisted(() => {
     theme: 'light' as 'light' | 'dark' | 'system',
     pageBgType: 'none' as string,
     matchesShortcut: vi.fn(() => false),
+    extensions: [] as WebUIExtension[],
     menuSections: [] as Array<{
       title: string
       items: Array<{ path: string; label: string }>
@@ -196,7 +199,7 @@ vi.mock('./Sidebar', () => ({
     onSidebarFix,
     sidebarOpen,
   }: {
-    menuSections: Array<{ title: string }>
+    menuSections: Array<{ title: string; items: Array<{ path: string }> }>
     onSidebarFix: () => void
     sidebarOpen: boolean
   }) => (
@@ -204,6 +207,7 @@ vi.mock('./Sidebar', () => ({
       data-testid="sidebar"
       data-sidebar-open={String(sidebarOpen)}
       data-section-titles={menuSections.map((section) => section.title).join(',')}
+      data-menu-paths={menuSections.flatMap((section) => section.items.map((item) => item.path)).join(',')}
     >
       <button type="button" onClick={onSidebarFix}>
         切换为固定模式
@@ -213,6 +217,15 @@ vi.mock('./Sidebar', () => ({
 }))
 vi.mock('./use-menu-sections', () => ({
   useMenuSections: () => layoutMocks.menuSections,
+}))
+vi.mock('@/lib/plugin-webui', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/plugin-webui')>(),
+  usePluginWebUI: () => ({
+    extensions: layoutMocks.extensions,
+    preferences: { hidden: [], order: [] },
+    loading: false,
+    error: null,
+  }),
 }))
 
 function getHeader() {
@@ -246,6 +259,7 @@ describe('Layout 工作区切换', () => {
     layoutMocks.theme = 'light'
     layoutMocks.pageBgType = 'none'
     layoutMocks.menuSections = []
+    layoutMocks.extensions = []
     layoutMocks.matchesShortcut.mockReturnValue(false)
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
       return window.setTimeout(() => callback(0), 0)
@@ -258,6 +272,24 @@ describe('Layout 工作区切换', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+  })
+
+  it('麦日常运行页面归入独立组且不重复出现在插件扩展中', async () => {
+    layoutMocks.menuSections = [{ title: 'sidebar.groups.mylife', items: [{ path: '/mylife', label: '日常配置' }] }]
+    layoutMocks.extensions = [{
+      schema_version: 2,
+      plugin_id: MYLIFE_PLUGIN_ID,
+      workspace_title: '麦日常',
+      pages: [{
+        id: 'overview', title: '麦麦此刻', description: '', placement: 'sidebar', icon: 'chart',
+        mode: 'declarative', content: [], queries: {}, actions: {},
+      }],
+    }]
+    render(<Layout><div>麦日常</div></Layout>)
+    await flushMicrotasks()
+    const sidebar = screen.getByTestId('sidebar')
+    expect(sidebar).toHaveAttribute('data-section-titles', 'sidebar.groups.mylife')
+    expect(sidebar).toHaveAttribute('data-menu-paths', `/mylife,/extensions/${MYLIFE_PLUGIN_ID}/overview`)
   })
 
   it('目标 workspace 提交新 Outlet 前保持隐藏，避免旧首页闪现', async () => {

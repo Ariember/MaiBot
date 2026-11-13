@@ -11,8 +11,11 @@ import shutil
 import stat
 
 from src.common.logger import get_logger
+from src.common.paths import PACKAGE_ROOT
 from src.core.config_types import ConfigField
 from src.plugin_runtime.runner.manifest_validator import is_reserved_plugin_directory
+from src.plugin_runtime.runner.plugin_paths import get_plugin_config_path as resolve_config_path
+from src.plugin_runtime.runner.plugin_paths import is_builtin_plugin_path
 from src.webui.core import get_token_manager
 
 logger = get_logger("webui.plugin_routes")
@@ -203,6 +206,8 @@ def get_plugins_dir() -> Path:
     return plugins_dir
 
 def get_plugin_config_path(plugin_id: str, plugin_path: Path) -> Path:
+    if is_builtin_plugin_path(plugin_path):
+        return resolve_config_path(plugin_path, plugin_id)
     return resolve_plugin_file_path(plugin_path, "config.toml")
 
 
@@ -278,11 +283,21 @@ def iter_plugin_directories() -> List[Path]:
     return plugin_directories
 
 
-def find_plugin_path_by_id(plugin_id: str) -> Optional[Path]:
+def iter_builtin_plugin_directories() -> List[Path]:
+    plugins_dir = PACKAGE_ROOT / "plugins" / "built_in"
+    if not plugins_dir.is_dir():
+        return []
+    return [path for path in sorted(plugins_dir.iterdir()) if path.is_dir() and not is_reserved_plugin_directory(path)]
+
+
+def find_plugin_path_by_id(plugin_id: str, *, include_builtin: bool = False) -> Optional[Path]:
     casefold_matched_path: Optional[Path] = None
     normalized_plugin_id = plugin_id.casefold()
 
-    for plugin_path in iter_plugin_directories():
+    paths = iter_plugin_directories()
+    if include_builtin:
+        paths = iter_builtin_plugin_directories() + paths
+    for plugin_path in paths:
         manifest_path = resolve_plugin_file_path(plugin_path, "_manifest.json")
         manifest = load_manifest_json(manifest_path)
         if manifest is None:

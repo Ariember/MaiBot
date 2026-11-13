@@ -1,0 +1,262 @@
+# =============================================================================
+# Mai_mylife「麦日常」配置模板（config.toml.example）
+# =============================================================================
+# 本文件只是模板：仓库不跟踪实际生效的 config.toml（已被 .gitignore 忽略）。
+# config.toml 由 MaiBot Runner 在插件首次加载时按配置模型自动生成，之后由
+# WebUI 维护；手动编辑 config.toml 时请遵守以下规范：
+#
+# 1. 不要修改 config_version，它由插件负责升级和迁移。
+# 2. 字符串必须放在英文双引号中，例如 city = "Shanghai"。
+# 3. 布尔值只能写小写 true 或 false，不能写 True、False、开、关。
+# 4. 数字不要加引号，例如 daily_proactive_max = 2。
+# 5. 时间统一使用 24 小时 HH:MM 格式，例如 "00:00"、"08:30"。
+# 6. 列表使用英文方括号和英文逗号，例如 ["sleep", "nap"]。
+# 7. 不要填写 null、None 或留下一半的 TOML 语句，TOML 不支持空值对象。
+# 8. QQ 号建议作为字符串填写，避免平台或编辑器处理大整数时发生精度问题。
+# 9. 多个私聊用户需要重复添加 [[users.profiles]] 配置块。
+# 10. 手动修改后请在 WebUI 重新加载插件，或重启 MaiBot。
+#
+# 升级插件时 config.toml 不会被 git 覆盖，本地修改不会与仓库产生冲突。
+#
+# 首次使用至少需要修改：
+# - [[users.profiles]].user_id：填写你的 QQ 号
+# - [[users.profiles]].enabled：改为 true
+# - environment.city：填写麦日常所在地的城市
+# =============================================================================
+
+[plugin]
+# 配置结构版本，请勿手动修改。
+config_version = "1.19.0"
+
+# 插件总开关。关闭后保留数据库，但停止任务执行、状态维护和主动消息。
+enabled = false
+
+
+# 管理员无需同时创建用户档案即可使用菜单和管理诊断；关系和重要日期仍需启用用户档案。
+# 留空时，第一个有效私聊用户自动成为管理员。
+# 示例：admin_user_ids = ["123456789", "987654321"]
+admin_user_ids = []
+
+
+[users]
+# 下面是一个占位用户。首次使用时请填写 user_id，并把 enabled 改为 true。
+# 如果需要多个用户，请完整复制一份 [[users.profiles]] 配置块。
+
+[[users.profiles]]
+# 必填：QQ 号，必须使用字符串格式。
+user_id = ""
+
+# 是否启用该用户的关系档案和生活上下文。
+enabled = false
+
+# 是否允许麦麦主动向该用户发送私聊消息。
+proactive_enabled = false
+
+# 关系角色：friend / owner。最多只能有一个 owner。
+role = "friend"
+
+# 改为 true 可取消该用户的每日主动次数上限，由 Planner 自主决定是否开口。
+# 仅取消日额度，仍遵守冷却、工作时段和免打扰；可能增加宿主模型调用。
+daily_proactive_unlimited = false
+
+# 未开启不限次数时生效，填写 0～20；0 禁止主动，朋友通常为 1，主人通常为 2。
+daily_proactive_max = 1
+
+# 首次创建档案时的关系温度，范围 0～100。推荐保持 30。
+initial_temperature = 30
+
+# 该用户的主动消息免打扰时段，支持跨午夜。
+quiet_start = "00:00"
+quiet_end = "08:00"
+
+# 是否允许把白名单群聊中的公开话题低频转述到该用户私聊。朋友默认关闭。
+group_to_private_enabled = false
+
+# 主人示例：取消下面注释后填写。最多只能有一个 owner。
+# [[users.profiles]]
+# user_id = "987654321"
+# enabled = true
+# proactive_enabled = true
+# role = "owner"
+# daily_proactive_unlimited = false
+# daily_proactive_max = 2
+# initial_temperature = 30
+# quiet_start = "00:00"
+# quiet_end = "08:00"
+
+
+[group]
+# ===== 群聊设置（独立于私聊）=====
+# 开启后所有群使用同一概率回复策略；关闭则交回 MaiBot 原有群聊触发逻辑。
+gate_enabled = true
+
+# 每条非命令消息只采样一次；0=不回复，1=每条放行，关键词/@/图片不加权。
+reply_probability = 0.18
+
+# 工作时间按 environment.timezone，开始含、结束不含，支持跨午夜。
+# 起止相同表示全天；例如 "08:00" 到 "23:00" 表示每天8点至23点工作。
+work_start = "00:00"
+work_end = "00:00"
+
+# 群聊回复轮次注册：防止同一条群消息触发多次回复，按群号和发送者隔离。
+turn_enabled = true
+
+# ===== 观察与转述（原「社交转述」节并入）=====
+# 只处理白名单里开了「观察」的群；话题经观察判定后低频转述到白名单用户私聊。
+relay_enabled = false
+observation_wait_seconds = 3.0
+max_buffer_messages = 20
+interesting_threshold = 0.65
+summary_retention_hours = 72
+relay_pending_seconds = 120
+owner_group_to_private_enabled = true
+inactivity_hours = 6.0
+group_share_daily_max = 1
+group_share_min_interval_minutes = 360
+
+# ===== 群聊白名单（逐群开关，放在节尾的子表）=====
+# 启用=参与观察与转述；观察=收集公开话题；转述=可被转述到私聊。
+# 只填真实 QQ 群号，群名由 MaiBot 会话自动读取。需要多个群就整块复制。
+[[group.profiles]]
+group_id = ""
+enabled = false
+observe_enabled = false
+relay_target_enabled = false
+
+
+[environment]
+# IANA 时区。中国大陆一般使用 Asia/Shanghai，不跟随服务器本地时区。
+# 插件自动使用 NTP 联网校时，UDP 不通时尝试 HTTPS 时间，每小时刷新。
+# 全部时间源不可达时延续上次校准；从未成功校准则回退系统 UTC 并告警。
+timezone = "Asia/Shanghai"
+
+# 天气城市。插件会自动把城市名解析成天气坐标，无需填写经纬度。
+# 推荐填写常见城市名，例如 "Shanghai"、"Beijing"、"Hangzhou"。
+# 如果城市无法识别，请尝试英文名或更完整的城市名称。
+city = "Shanghai"
+
+# 天气后台刷新间隔，范围 10～360 分钟。
+weather_refresh_minutes = 30
+
+
+[memory]
+# 重要日期默认开启，按用户分别记录提醒。
+enabled = true
+important_dates_enabled = true
+
+# 本地规则不能识别日期时是否额外调用快速模型。默认关闭以控制成本。
+date_model_analysis_enabled = false
+date_candidate_retention_days = 90
+date_reminder_lead_days = [30, 7, 1, 0]
+
+
+[context]
+enabled = true
+continuity_enabled = true
+continuity_interval_minutes = 10
+owner_only_terms = ["主人", "老公", "老婆", "亲爱的主人"]
+prompt_max_chars = 4000
+
+# 同轮回复防重：阻止同一消息触发多次独立 Replyer 回复（不影响一次回复内部分段）。
+outbound_turn_guard = true
+
+# 轮次锁过期时间（秒）；发送失败时会提前释放。
+turn_expire_seconds = 120
+
+# 慢变背景（记忆/见闻/书柜）按用户缓存的分钟数；0 = 每轮实时读取。
+background_cache_minutes = 5
+
+# 回复层（Replyer）背景详略：full = 完整（默认，行为不变）；compact = 精简
+#（见闻/书柜摘要减半，更省 token）。
+replyer_detail = "full"
+
+
+
+[models]
+reading_annotation_task = ""
+# 模型输出 token 上限；0=不限制，由服务商决定（推荐）。
+# 推理模型的思考链占用输出预算，写死小上限（如 300/900）会把正文挤成空响应。
+max_output_tokens = 0
+
+
+[usage]
+# 只统计，不设置每日 Token 限额。
+enabled = true
+retention_days = 30
+
+
+[reading]
+# 在固定阅读时段读取真实小说。
+# 将 UTF-8 .txt 文件放入data/plugins/fraternity-z.mai-mylife/novels 文件夹，按文件名排序逐段阅读。
+# 原文片段和批注存入私人书柜，朋友无权读取；学习结果供上下文使用，不训练模型权重。
+enabled = true
+directory = "novels"
+chunk_chars = 4000
+daily_max = 4
+interval_minutes = 60
+
+
+[proactive]
+# 主动私聊总开关。关闭后仍会维护日程和生活记忆。
+enabled = true
+
+# 只限制主动判断与发送；普通私聊全天放行。起止相同表示全天，支持跨午夜。
+# 按 environment.timezone 计算，同时遵守每位用户的免打扰时间。
+work_start = "00:00"
+work_end = "00:00"
+
+# 主动判断与发送统一间隔，默认 180，范围 1～1440 分钟；每位用户分别计时。
+# 每轮最多选择一位符合约束且到期的用户，优先最久未判断者，多用户时可能延后。
+# 无生活契机或契机分数未达标时也可自主考虑，Planner 可以沉默，不得虚构事件。
+# 判断（包括沉默）或实际发送后都至少等待此间隔；判断时间持久保存，重启不会立即补判断。
+# 旧配置的判断间隔与最小发送间隔合并时取较长值，保存后只保留此键。
+patrol_interval_minutes = 180
+
+# 用户刚发言后多久不再主动开新话题，单位分钟。
+recent_user_silence_minutes = 30
+
+# 主动触发与 Replyer 实际回复的确认窗口，单位秒。通常无需修改。
+pending_expire_seconds = 120
+
+# 生活契机作为 Planner 参考所需的最低综合分；未达标仍可自主判断是否联系。
+score_threshold = 0.45
+
+
+[network]
+# ===== 联网（总开关 → 搜索工具 → 搜索历史 → 见闻关联 → 新闻 → 主动搜索）=====
+# 内置新闻源直接读取公开 RSS；搜索和文章正文使用宿主 ctx.web.search / ctx.web.fetch。
+# 搜索服务在主程序「模型设置→功能分配→联网搜索」配置并启用；内置源摘要无需搜索 API Key。
+enabled = false
+tool_enabled = true
+max_results = 5
+max_attempts = 3
+
+# 本地搜索历史：记录联网工具、主动搜索和新闻阅读的查询词与结果摘要。
+# 查询词已做隐私清洗（QQ 号、昵称、群名），原始 Key 永不入库。
+history_enabled = true
+history_retention_days = 30
+
+# 见闻与关联：新闻与探索笔记的自我关联、主动分享。
+association_enabled = true
+association_threshold = 0.65
+proactive_share_enabled = true
+context_item_limit = 3
+
+# 新闻阅读：开启 enabled 和 news_enabled 后，优先读取以下公开订阅。
+# 可选 ithome（IT之家）、solidot（Solidot）、sspai（少数派）；[] 表示只用宿主搜索。
+# 所有订阅源失败或无近期条目时回退宿主搜索；失败和空结果也计入每日次数。
+news_enabled = false
+news_sources = ["ithome", "solidot", "sspai"]
+news_daily_max = 1
+news_full_text_count = 3
+news_max_concurrency = 2
+news_max_article_chars = 8000
+news_retention_days = 7
+news_allowed_schedule_types = ["leisure", "rest"]
+
+# 主动搜索：空闲日程中自主探索（走宿主联网）。
+search_enabled = false
+search_daily_max = 1
+search_include_chat_topics = false
+search_allowed_schedule_types = ["leisure", "rest"]
+search_note_retention_days = 30

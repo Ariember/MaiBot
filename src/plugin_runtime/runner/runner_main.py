@@ -77,7 +77,7 @@ from src.plugin_runtime.protocol.envelope import (
 )
 from src.plugin_runtime.protocol.errors import ErrorCode
 from src.plugin_runtime.runner.log_handler import RunnerIPCLogHandler
-from src.plugin_runtime.runner.plugin_paths import PluginPaths, build_plugin_paths
+from src.plugin_runtime.runner.plugin_paths import PluginPaths, build_plugin_paths, get_plugin_config_path
 from src.plugin_runtime.runner.plugin_loader import PluginCandidate, PluginLoader, PluginMeta
 from src.plugin_runtime.runner.rpc_client import RPCClient
 from src.plugin_runtime.config_widgets import ConfigWidgetProvider, invoke_widget_action, read_widget_snapshot
@@ -976,7 +976,7 @@ class PluginRunner:
             enforce_version=True,
         )
         plugin_config = normalization_result.normalized_config
-        config_path = Path(meta.plugin_dir) / "config.toml"
+        config_path = get_plugin_config_path(Path(meta.plugin_dir), meta.plugin_id)
         should_initialize_file = not config_path.exists() and bool(default_config)
         if normalization_result.should_persist or should_initialize_file:
             self._save_plugin_config(meta.plugin_dir, plugin_config)
@@ -1185,7 +1185,7 @@ class PluginRunner:
             config_data: 需要写回的配置字典。
         """
 
-        config_path = Path(plugin_dir) / "config.toml"
+        config_path = get_plugin_config_path(Path(plugin_dir))
         config_path.parent.mkdir(parents=True, exist_ok=True)
         if config_path.exists():
             try:
@@ -1206,8 +1206,7 @@ class PluginRunner:
     @staticmethod
     def _load_plugin_config(plugin_dir: str, plugin_id: str = "") -> Dict[str, Any]:
         """从插件目录读取 config.toml。"""
-        _ = plugin_id
-        config_path = Path(plugin_dir) / "config.toml"
+        config_path = get_plugin_config_path(Path(plugin_dir), plugin_id)
         if not config_path.exists():
             return {}
 

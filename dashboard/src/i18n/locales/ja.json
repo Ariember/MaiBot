@@ -1,4 +1,7 @@
 {
+  "mylife": {
+    "unavailable": "内蔵の麦日常が見つかりません。アプリを更新してから再読み込みしてください。"
+  },
   "pluginWebUI": {
     "settingsTitle": "プラグインページ",
     "settingsHint": "上部に表示するプラグインページと順序を設定します。このブラウザーにのみ保存され、プラグインの権限には影響しません。",
@@ -73,6 +76,7 @@
   },
   "sidebar": {
     "groups": {
+      "mylife": "麦日常",
       "overview": "概要",
       "botConfig": "ボット設定",
       "botResources": "ボットリソース",
@@ -81,6 +85,7 @@
       "system": "システム"
     },
     "menu": {
+      "mylifeSettings": "日常設定",
       "home": "ホーム",
       "botMainConfig": "ボットメイン設定",
       "aiModelProvider": "AIモデルプロバイダー",
@@ -1162,6 +1167,7 @@
       "homeDesc": "ダッシュボード概要を表示",
       "botConfig": "ボットメイン設定",
       "botConfigDesc": "ボットの詳細設定と共有グループを設定",
+      "mylifeDesc": "日常生活、予定、交流、自発的なメッセージを設定",
       "model": "モデル設定",
       "modelDesc": "モデルパラメーターを設定",
       "emoji": "絵文字管理",

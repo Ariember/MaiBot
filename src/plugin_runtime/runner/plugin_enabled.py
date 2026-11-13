@@ -8,13 +8,15 @@ from pydantic import TypeAdapter, ValidationError
 
 from src.common.logger import get_logger
 
+from .plugin_paths import get_plugin_config_path
+
 logger = get_logger("plugin_runtime.plugin_enabled")
 _ENABLED_VALIDATOR = TypeAdapter(bool)
 
 
 def is_plugin_disabled(plugin_dir: Path) -> bool:
     """只跳过明确禁用的插件；配置错误交由 Runner 原有配置管理流程报告。"""
-    config_path = plugin_dir / "config.toml"
+    config_path = get_plugin_config_path(plugin_dir)
     try:
         with config_path.open("rb") as config_file:
             config = tomllib.load(config_file)

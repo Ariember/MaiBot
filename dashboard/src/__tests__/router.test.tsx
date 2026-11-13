@@ -66,6 +66,7 @@ vi.mock('@/routes/plugin-config-embed', () => ({ PluginConfigEmbedPage: StubPage
 vi.mock('@/routes/plugin-mirrors-embed', () => ({ PluginMirrorsEmbedPage: StubPage }))
 vi.mock('@/routes/plugin-mirrors', () => ({ PluginMirrorsPage: StubPage }))
 vi.mock('@/routes/mcp-settings', () => ({ MCPSettingsPage: StubPage }))
+vi.mock('@/routes/mylife', () => ({ MyLifePage: StubPage }))
 vi.mock('@/routes/data-transfer', () => ({ DataTransferPage: StubPage }))
 vi.mock('@/routes/settings/index.tsx', () => ({ SettingsPage: StubPage }))
 vi.mock('@/routes/config/pack-market', () => ({ default: StubPage }))
@@ -84,6 +85,7 @@ const expectedPaths = [
   '/',
   '/statistics',
   '/config/bot',
+  '/mylife',
   '/config/model',
   '/config/prompts',
   '/resource/emoji',

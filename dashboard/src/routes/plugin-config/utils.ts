@@ -12,6 +12,7 @@ export function isAdapterManagementPath(pathname = window.location.pathname): bo
 }
 
 export function getPluginConfigRoutePath(pathname = window.location.pathname): string {
+  if (pathname === '/mylife') return '/mylife'
   if (isAdapterManagementPath(pathname)) {
     return '/adapter-management'
   }

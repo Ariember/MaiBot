@@ -1,4 +1,7 @@
 {
+  "mylife": {
+    "unavailable": "未找到内置麦日常，请确认主程序已更新后刷新。"
+  },
   "pluginWebUI": {
     "settingsTitle": "插件页面",
     "settingsHint": "决定哪些插件页面出现在顶栏、按什么顺序。只保存在当前浏览器，不影响插件权限。",
@@ -73,6 +76,7 @@
   },
   "sidebar": {
     "groups": {
+      "mylife": "麦日常",
       "overview": "概览",
       "botConfig": "配置管理",
       "botResources": "资源管理",
@@ -81,6 +85,7 @@
       "system": "系统"
     },
     "menu": {
+      "mylifeSettings": "日常配置",
       "home": "首页",
       "botMainConfig": "麦麦设置",
       "aiModelProvider": "模型厂商设置",
@@ -1228,6 +1233,7 @@
       "homeDesc": "查看仪表板概览",
       "botConfig": "麦麦设置",
       "botConfigDesc": "配置麦麦的详细设置和共享组",
+      "mylifeDesc": "配置麦麦的日常生活、日程、社交与主动消息",
       "model": "麦麦模型配置",
       "modelDesc": "配置模型参数",
       "emoji": "表情包",

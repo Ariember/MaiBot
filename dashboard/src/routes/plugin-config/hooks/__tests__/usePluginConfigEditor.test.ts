@@ -9,6 +9,7 @@ import {
   updatePluginConfigRaw,
 } from '@/lib/plugin-api'
 import type { InstalledPlugin, PluginConfigBundle } from '@/lib/plugin-api'
+import { refreshPluginWebUI } from '@/lib/plugin-webui'
 
 import { usePluginConfigEditor } from '../usePluginConfigEditor'
 
@@ -29,6 +30,7 @@ const { toastMock, blockerState } = vi.hoisted(() => {
 })
 
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: toastMock }) }))
+vi.mock('@/lib/plugin-webui', () => ({ refreshPluginWebUI: vi.fn() }))
 
 vi.mock('@tanstack/react-router', () => ({
   useBlocker: (options: {
@@ -147,6 +149,27 @@ afterEach(() => {
 })
 
 describe('usePluginConfigEditor 缺口', () => {
+  it('启用麦日常后重取配置状态并刷新运行页面', async () => {
+    vi.mocked(getPluginConfigBundle)
+      .mockResolvedValueOnce(makeBundle({ config: { plugin: { enabled: false } } }))
+      .mockResolvedValueOnce(makeBundle({ config: { plugin: { enabled: true } } }))
+    const { result } = await renderEditor(makePlugin('fraternity-z.mai-mylife', { enabled: false }))
+    expect(result.current.config.plugin).toEqual({ enabled: false })
+    await act(async () => result.current.handleToggle())
+    expect(togglePlugin).toHaveBeenCalledWith('fraternity-z.mai-mylife')
+    expect(result.current.config.plugin).toEqual({ enabled: true })
+    expect(result.current.hasChanges).toBe(false)
+    expect(refreshPluginWebUI).toHaveBeenCalledWith(true)
+  })
+
+  it('麦日常配置切换分组后保持独立路由', async () => {
+    window.history.replaceState(null, '', '/mylife')
+    const { result } = await renderEditor(makePlugin('fraternity-z.mai-mylife'))
+    act(() => result.current.handleConfigTabChange('schedule'))
+    expect(window.location.pathname).toBe('/mylife')
+    expect(new URLSearchParams(window.location.search).get('tab')).toBe('schedule')
+  })
+
   it('配置错误时打开原始 TOML，修正保存后清除错误并恢复定义', async () => {
     vi.mocked(getPluginConfigBundle).mockResolvedValueOnce(makeBundle({
       schema: null, config: {}, configError: 'invalid group target', rawConfig: 'target = "123"\n',

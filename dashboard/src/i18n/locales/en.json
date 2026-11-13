@@ -1,4 +1,7 @@
 {
+  "mylife": {
+    "unavailable": "Built-in Mai Life was not found. Update the application, then refresh."
+  },
   "pluginWebUI": {
     "settingsTitle": "Plugin pages",
     "settingsHint": "Choose which plugin pages appear in the top bar and in what order. Saved only in this browser; plugin permissions are unchanged.",
@@ -73,6 +76,7 @@
   },
   "sidebar": {
     "groups": {
+      "mylife": "Mai Life",
       "overview": "Overview",
       "botConfig": "Bot Configuration",
       "botResources": "Bot Resources",
@@ -81,6 +85,7 @@
       "system": "System"
     },
     "menu": {
+      "mylifeSettings": "Daily Life Settings",
       "home": "Home",
       "botMainConfig": "Bot Main Config",
       "aiModelProvider": "AI Model Providers",
@@ -1229,6 +1234,7 @@
       "homeDesc": "View dashboard overview",
       "botConfig": "Bot Main Config",
       "botConfigDesc": "Configure bot settings and shared groups",
+      "mylifeDesc": "Configure daily life, schedules, relationships and proactive messages",
       "model": "Model Config",
       "modelDesc": "Configure model parameters",
       "emoji": "Emoji Management",

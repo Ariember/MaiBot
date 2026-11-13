@@ -27,6 +27,7 @@ from .support import (
     get_plugin_candidate_paths,
     get_plugin_config_path,
     is_plugin_install_residue,
+    iter_builtin_plugin_directories,
     iter_plugin_directories,
     load_manifest_json,
     parse_repository_url,
@@ -785,12 +786,14 @@ async def _perform_update_plugin(request: UpdatePluginRequest, maibot_session: O
 
 
 @router.get("/installed")
-async def get_installed_plugins(maibot_session: Optional[str] = Cookie(None)) -> Dict[str, Any]:
+async def get_installed_plugins(
+    maibot_session: Optional[str] = Cookie(None), include_builtin: bool = False,
+) -> Dict[str, Any]:
     require_plugin_token(maibot_session)
     from src.plugin_runtime.integration import get_plugin_runtime_manager
 
     snapshot = await run_on_main_loop(get_plugin_runtime_manager().get_plugin_state_snapshot())
-    return await asyncio.to_thread(_collect_installed_plugins, snapshot)
+    return await asyncio.to_thread(_collect_installed_plugins, snapshot, include_builtin)
 
 
 @router.get("/usage")
@@ -805,7 +808,7 @@ async def get_plugin_usage(maibot_session: Optional[str] = Cookie(None)) -> Dict
     return {"usage_seconds": await run_on_main_loop(read_usage())}
 
 
-def _collect_installed_plugins(snapshot: Dict[str, Any]) -> Dict[str, Any]:
+def _collect_installed_plugins(snapshot: Dict[str, Any], include_builtin: bool = False) -> Dict[str, Any]:
     """在线程池读取磁盘元数据；运行状态只使用管理器提供的同一份快照。"""
     logger.info("收到获取已安装插件列表请求")
 
@@ -815,7 +818,8 @@ def _collect_installed_plugins(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         runtime_failure_reasons = snapshot["failure_reasons"]
         usage_seconds = snapshot["usage_seconds"]
         circuit_statuses = snapshot["circuit_statuses"]
-        for plugin_path in iter_plugin_directories():
+        builtin_paths = iter_builtin_plugin_directories() if include_builtin else []
+        for plugin_path in builtin_paths + iter_plugin_directories():
             folder_name = plugin_path.name
             if folder_name.startswith(".") or folder_name.startswith("__"):
                 continue
@@ -859,6 +863,7 @@ def _collect_installed_plugins(snapshot: Dict[str, Any]) -> Dict[str, Any]:
                 installed_plugins.append(
                     {
                         "id": plugin_id,
+                        "builtin": plugin_path in builtin_paths,
                         "manifest": manifest,
                         "path": str(plugin_path.absolute()),
                         "enabled": enabled,

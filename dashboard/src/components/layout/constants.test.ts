@@ -9,10 +9,11 @@ import type { MenuItem } from './types'
 const allItems: MenuItem[] = menuSections.flatMap((section) => section.items)
 
 describe('menuSections 菜单结构', () => {
-  it('包含概览/机器人配置/资源/扩展与集成/高级工具五个分组且顺序固定', () => {
+  it('包含概览/机器人配置/麦日常/资源/扩展与集成/高级工具分组且顺序固定', () => {
     expect(menuSections.map((section) => section.title)).toEqual([
       'sidebar.groups.overview',
       'sidebar.groups.botConfig',
+      'sidebar.groups.mylife',
       'sidebar.groups.botResources',
       'sidebar.groups.extensionsMonitor',
       'sidebar.groups.advancedTools',

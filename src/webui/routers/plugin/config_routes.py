@@ -245,11 +245,11 @@ async def get_plugin_config_bundle(plugin_id: str, maibot_session: Optional[str]
     logger.info(f"获取插件配置初始化数据: {plugin_id}")
 
     try:
-        plugin_path = find_plugin_path_by_id(plugin_id)
+        plugin_path = await asyncio.to_thread(find_plugin_path_by_id, plugin_id, include_builtin=True)
         if plugin_path is None:
             raise HTTPException(status_code=404, detail=f"未找到插件: {plugin_id}")
 
-        config_path = get_plugin_config_path(plugin_id, plugin_path)
+        config_path = await asyncio.to_thread(get_plugin_config_path, plugin_id, plugin_path)
         runtime_snapshot = await _inspect_plugin_config_via_runtime(plugin_id)
         raw_config = await asyncio.to_thread(_load_plugin_raw_config_from_disk, plugin_id, plugin_path)
         if runtime_snapshot.config_error:
@@ -264,7 +264,7 @@ async def get_plugin_config_bundle(plugin_id: str, maibot_session: Optional[str]
         schema = dict(runtime_snapshot.config_schema)
         if not schema:
             raise HTTPException(status_code=500, detail="插件未提供配置定义")
-        message = "配置文件不存在，已返回默认配置" if not config_path.exists() else ""
+        message = "配置文件不存在，已返回默认配置" if not await asyncio.to_thread(config_path.exists) else ""
 
         return {
             "success": True,
@@ -296,7 +296,7 @@ async def get_plugin_config_schema(plugin_id: str, maibot_session: Optional[str]
     logger.info(f"获取插件配置 Schema: {plugin_id}")
 
     try:
-        plugin_path = find_plugin_path_by_id(plugin_id)
+        plugin_path = await asyncio.to_thread(find_plugin_path_by_id, plugin_id, include_builtin=True)
         if plugin_path is None:
             raise HTTPException(status_code=404, detail=f"未找到插件: {plugin_id}")
 
@@ -329,7 +329,7 @@ def get_plugin_config_raw(plugin_id: str, maibot_session: Optional[str] = Cookie
     logger.info(f"获取插件原始配置: {plugin_id}")
 
     try:
-        plugin_path = find_plugin_path_by_id(plugin_id)
+        plugin_path = find_plugin_path_by_id(plugin_id, include_builtin=True)
         if plugin_path is None:
             raise HTTPException(status_code=404, detail=f"未找到插件: {plugin_id}")
 
@@ -367,11 +367,11 @@ async def update_plugin_config_raw(
     logger.info(f"更新插件原始配置: {plugin_id}")
 
     try:
-        plugin_path = await asyncio.to_thread(find_plugin_path_by_id, plugin_id)
+        plugin_path = await asyncio.to_thread(find_plugin_path_by_id, plugin_id, include_builtin=True)
         if plugin_path is None:
             raise HTTPException(status_code=404, detail=f"未找到插件: {plugin_id}")
 
-        config_path = get_plugin_config_path(plugin_id, plugin_path)
+        config_path = await asyncio.to_thread(get_plugin_config_path, plugin_id, plugin_path)
         try:
             await asyncio.to_thread(tomlkit.loads, request.config)
         except Exception as e:
@@ -424,7 +424,7 @@ async def get_plugin_config(plugin_id: str, maibot_session: Optional[str] = Cook
     logger.info(f"获取插件配置: {plugin_id}")
 
     try:
-        plugin_path = find_plugin_path_by_id(plugin_id)
+        plugin_path = await asyncio.to_thread(find_plugin_path_by_id, plugin_id, include_builtin=True)
         if plugin_path is None:
             raise HTTPException(status_code=404, detail=f"未找到插件: {plugin_id}")
 
@@ -460,7 +460,7 @@ async def update_plugin_config(
     logger.info(f"更新插件配置: {plugin_id}")
 
     try:
-        plugin_path = find_plugin_path_by_id(plugin_id)
+        plugin_path = await asyncio.to_thread(find_plugin_path_by_id, plugin_id, include_builtin=True)
         if plugin_path is None:
             raise HTTPException(status_code=404, detail=f"未找到插件: {plugin_id}")
 
@@ -476,13 +476,16 @@ async def update_plugin_config(
             config_data = _merge_plugin_config_patch(dict(runtime_snapshot.normalized_config), config_patch)
             config_data = await _validate_plugin_config_via_runtime(plugin_id, config_data)
 
-        config_path = get_plugin_config_path(plugin_id, plugin_path)
-        backup_path = backup_file(config_path, "backup")
-        if backup_path is not None:
-            logger.info(f"已备份配置文件: {backup_path}")
+        def save() -> None:
+            config_path = get_plugin_config_path(plugin_id, plugin_path)
+            backup_path = backup_file(config_path, "backup")
+            if backup_path is not None:
+                logger.info(f"已备份配置文件: {backup_path}")
 
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        save_toml_with_format(config_data, str(config_path))
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            save_toml_with_format(config_data, str(config_path))
+
+        await asyncio.to_thread(save)
         logger.info(f"已更新插件配置: {plugin_id}")
         return {"success": True, "message": "配置已保存", "note": "配置更改将自动热更新到对应插件"}
     except ValueError as exc:
@@ -510,7 +513,7 @@ def reset_plugin_config(plugin_id: str, maibot_session: Optional[str] = Cookie(N
     logger.info(f"重置插件配置: {plugin_id}")
 
     try:
-        plugin_path = find_plugin_path_by_id(plugin_id)
+        plugin_path = find_plugin_path_by_id(plugin_id, include_builtin=True)
         if plugin_path is None:
             raise HTTPException(status_code=404, detail=f"未找到插件: {plugin_id}")
 
@@ -550,10 +553,10 @@ async def toggle_plugin(plugin_id: str, maibot_session: Optional[str] = Cookie(N
 
         async def write_config() -> None:
             nonlocal new_enabled
-            plugin_path = await asyncio.to_thread(find_plugin_path_by_id, plugin_id)
+            plugin_path = await asyncio.to_thread(find_plugin_path_by_id, plugin_id, include_builtin=True)
             if plugin_path is None:
                 raise HTTPException(status_code=404, detail=f"未找到插件: {plugin_id}")
-            config_path = get_plugin_config_path(plugin_id, plugin_path)
+            config_path = await asyncio.to_thread(get_plugin_config_path, plugin_id, plugin_path)
             # 开关是宿主保留配置，直接读写磁盘，避免启用缺包插件前先冷导入其代码。
             raw_config = await asyncio.to_thread(_load_plugin_raw_config_from_disk, plugin_id, plugin_path)
             config = await asyncio.to_thread(tomlkit.parse, raw_config)

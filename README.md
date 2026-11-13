@@ -13,6 +13,7 @@ MaiBot（麦麦）是一个基于大语言模型的可交互智能体，可通�
 - **聊天与人设**：支持群聊、私聊和网页本地对话，可配置与切换人设。
 - **记忆与学习**：管理聊天记忆、人物关系、表达方式和黑话学习。
 - **WebUI 管理**：配置模型提供商、分配模型任务，查看实时日志、调用统计和资源。
+- **麦日常**：内置日程、天气、关系与重要日期、阅读、联网见闻和主动私聊，可在侧边栏独立配置。
 - **插件与适配器**：通过插件市场和 SDK 扩展能力、接入聊天平台，支持安装和更新插件。
 - **扩展能力**：按需启用聊天文件收发、外接 Agent，以及 Windows 内置桌宠；各功能的要求见下方文档。
 
@@ -112,6 +113,7 @@ bun run dev
 | [表情包与图库](docs/image-gallery.md) | 图库导入、标签识别、聊天收图与发图 |
 | [Agent 连接](docs/agent-connections.md) | DSH / ACP 本机与远程连接 |
 | [内置桌宠](docs/desktop-pet.md) | Windows 桌宠、皮肤与插件接口 |
+| [麦日常](docs/mylife.md) | 日常功能、可视化配置与数据保存 |
 | [内部聊天](docs/internal-chat.md) | 网页聊天室与桌宠的共享身份 |
 | [人设导入](docs/personality-import.md) | 人设 JSON 与导入链接 |
 | [插件开发指南](https://github.com/Mai-with-u/maibot-plugin-sdk/blob/main/docs/guide.md) | 插件 SDK 与开发说明 |

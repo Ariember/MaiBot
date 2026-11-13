@@ -11,6 +11,7 @@ import {
   Puzzle,
   Settings,
   Store,
+  Sun,
   Wifi,
 } from 'lucide-react'
 
@@ -64,6 +65,17 @@ export const menuSections: MenuSection[] = [
         icon: AdapterManagementIcon,
         label: 'sidebar.menu.adapterManagement',
         path: '/adapter-management',
+      },
+    ],
+  },
+  {
+    title: 'sidebar.groups.mylife',
+    items: [
+      {
+        icon: Sun,
+        label: 'sidebar.menu.mylifeSettings',
+        path: '/mylife',
+        searchDescription: 'search.items.mylifeDesc',
       },
     ],
   },

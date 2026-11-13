@@ -6,7 +6,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+import json
 import re
+import shutil
+
+from src.common.paths import PACKAGE_ROOT, get_instance_root
 
 
 _PLUGIN_ID_PATTERN = re.compile(r"^[A-Za-z0-9_]+(?:[.-][A-Za-z0-9_]+)+$")
@@ -18,6 +22,26 @@ class PluginPaths:
 
     data_dir: Path
     runtime_dir: Path
+
+
+def is_builtin_plugin_path(plugin_dir: Path) -> bool:
+    return plugin_dir.resolve().is_relative_to(PACKAGE_ROOT / "plugins" / "built_in")
+
+
+def get_plugin_config_path(plugin_dir: Path, plugin_id: str = "") -> Path:
+    """内置配置保存在实例数据目录，第三方插件继续使用自己的 config.toml。"""
+    source_path = plugin_dir / "config.toml"
+    if not is_builtin_plugin_path(plugin_dir):
+        return source_path
+    if not plugin_id:
+        plugin_id = json.loads((plugin_dir / "_manifest.json").read_text(encoding="utf-8"))["id"]
+    safe_plugin_id = validate_plugin_id_for_path(plugin_id)
+    config_path = get_instance_root() / "data" / "plugins" / safe_plugin_id / "config.toml"
+    if not config_path.exists() and source_path.is_file():
+        # 保留已有内置插件的配置，后续升级只替换程序文件。
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(source_path), str(config_path))
+    return config_path
 
 
 def ensure_child_path(path: Path, root: Path) -> Path:

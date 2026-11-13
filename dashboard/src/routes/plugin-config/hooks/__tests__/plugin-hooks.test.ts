@@ -76,6 +76,7 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('@/lib/plugin-progress-client', () => ({
   pluginProgressClient: { subscribe: progressClient.subscribe },
 }))
+vi.mock('@/lib/plugin-webui', () => ({ refreshPluginWebUI: vi.fn() }))
 
 vi.mock('@/lib/plugin-api', () => ({
   fetchPluginList: vi.fn(),

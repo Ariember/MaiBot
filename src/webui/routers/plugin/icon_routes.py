@@ -87,7 +87,7 @@ def get_plugin_icon(plugin_id: str, maibot_session: Optional[str] = Cookie(None)
     """读取已安装插件在 manifest 中声明的本地图标。"""
     require_plugin_token(maibot_session)
 
-    plugin_path = find_plugin_path_by_id(plugin_id)
+    plugin_path = find_plugin_path_by_id(plugin_id, include_builtin=True)
     if plugin_path is None:
         raise HTTPException(status_code=404, detail="插件未安装")
 

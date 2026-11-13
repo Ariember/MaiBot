@@ -337,6 +337,12 @@ const pluginMirrorsRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/plugin-mirrors'), 'PluginMirrorsPage'),
 })
 
+const mylifeRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/mylife',
+  component: lazyRouteComponent(() => import('./routes/mylife'), 'MyLifePage'),
+})
+
 // 旧 MCP 地址统一进入插件扩展。
 const mcpSettingsRoute = createRoute({
   getParentRoute: () => protectedRoute,
@@ -432,6 +438,7 @@ const routeTree = rootRoute.addChildren([
     adapterManagementRoute,
     pluginMirrorsRoute,
     mcpSettingsRoute,
+    mylifeRoute,
     dataTransferRoute,
     logsRoute,
     reasoningProcessRoute,

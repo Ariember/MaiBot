@@ -332,6 +332,30 @@ async def test_startup_distinguishes_self_disable_from_transitive_dependency_blo
 
 
 @pytest.mark.asyncio
+async def test_default_disabled_plugin_does_not_activate_on_first_start(activation_runtime) -> None:
+    runner, transport, paths = activation_runtime
+    plugin_dir = _write_config_model_plugin(paths[_UNRELATED].parent)
+    paths[_CONFIG_MODEL] = plugin_dir
+    source = _CONFIG_MODEL_PLUGIN_SOURCE.replace(
+        '    config_version: str = Field(default="1.0.0")',
+        '    enabled: bool = False\n    config_version: str = Field(default="1.0.0")',
+    ).replace(
+        "    async def on_load(self):\n        pass",
+        '    async def on_load(self):\n        raise AssertionError("disabled plugin must not start")',
+    )
+    (plugin_dir / "plugin.py").write_text(source, encoding="utf-8")
+    assert not (plugin_dir / "config.toml").exists()
+
+    await runner.run()
+
+    assert transport.ready is not None
+    assert _CONFIG_MODEL in transport.ready.inactive_plugins
+    assert _CONFIG_MODEL not in transport.ready.failed_plugins
+    assert _CONFIG_MODEL not in transport.registered
+    assert _read_config(plugin_dir)["plugin"]["enabled"] is False
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_toml", ['[greeting]\nmessage = []\n', '[greeting\nmessage = "hi"\n'])
 async def test_config_error_loads_management_only_and_repair_activates_business(
     activation_runtime, invalid_toml: str,
