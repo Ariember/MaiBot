@@ -26,7 +26,7 @@
 
 [plugin]
 # 配置结构版本，请勿手动修改。
-config_version = "1.22.0"
+config_version = "1.23.0"
 
 # 插件总开关。关闭后保留数据库，但停止任务执行、状态维护和主动消息。
 enabled = false
@@ -52,9 +52,6 @@ user_id = ""
 # 是否启用该用户的关系档案和生活上下文。
 enabled = false
 
-# 是否允许麦麦主动向该用户发送私聊消息。
-proactive_enabled = false
-
 # 关系角色：friend / owner。最多只能有一个 owner。
 role = "friend"
 
@@ -79,7 +76,6 @@ group_to_private_enabled = false
 # [[users.profiles]]
 # user_id = "987654321"
 # enabled = true
-# proactive_enabled = true
 # role = "owner"
 # daily_proactive_unlimited = false
 # daily_proactive_max = 2

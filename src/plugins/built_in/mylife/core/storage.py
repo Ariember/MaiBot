@@ -650,8 +650,8 @@ class LifeStore:
             self.conn.commit()
 
     @_database_operation
-    def sync_users(self, profiles: Iterable[Any]) -> None:
-        """将 WebUI 用户列表同步到运行库；QQ 号与角色配置是身份判断的唯一来源。"""
+    def sync_users(self, profiles: Iterable[Any], *, proactive_enabled: bool) -> None:
+        """同步用户列表与全局主动开关；QQ 号与角色配置是身份判断的唯一来源。"""
         with self._lock:
             with self._tx() as conn:
                 seen = []
@@ -672,7 +672,7 @@ class LifeStore:
                         (
                             uid,
                             int(p.enabled),
-                            int(p.proactive_enabled),
+                            int(p.enabled and proactive_enabled),
                             "",
                             float(p.initial_temperature),
                             role,

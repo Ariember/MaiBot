@@ -106,6 +106,8 @@ export interface ItemFieldDefinition {
   label?: string
   placeholder?: string
   default?: unknown
+  depends_on?: string
+  depends_value?: unknown
   multiple?: boolean
   choices?: unknown[]
   min?: number

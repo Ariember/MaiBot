@@ -569,7 +569,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
         # 完成配置、会话和模型健康同步后，消息 Hook 才会通过 _ready 进入增强主链。
 
-        await self._store.sync_users(self.config.users.profiles)
+        await self._store.sync_users(self.config.users.profiles, proactive_enabled=self.config.proactive.enabled)
 
         await self._refresh_personality()
 
@@ -669,7 +669,7 @@ class MaiLifePlugin(MaiBotPlugin):
                     service.update_config(self.config)
 
             if self._store:
-                await self._store.sync_users(self.config.users.profiles)
+                await self._store.sync_users(self.config.users.profiles, proactive_enabled=self.config.proactive.enabled)
 
             enabled_ids = {str(profile.user_id) for profile in self.config.users.profiles if profile.enabled}
 

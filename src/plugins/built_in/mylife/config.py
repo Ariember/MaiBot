@@ -20,7 +20,7 @@ import re
 
 PLUGIN_VERSION = "1.3.0"
 
-CONFIG_SCHEMA_VERSION = "1.22.0"
+CONFIG_SCHEMA_VERSION = "1.23.0"
 
 _TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
@@ -248,18 +248,6 @@ class UserProfile(PluginConfigBase):
             1,
             label_en="Enable User Profile",
             hint_en="Disable to stop relationship tracking and context injection for this user.",
-        ),
-    )
-
-    proactive_enabled: bool = Field(
-        default=False,
-        description="是否允许麦麦向该用户主动发起私聊。",
-        json_schema_extra=_ui(
-            "允许主动私聊",
-            "关闭后仍可正常被动聊天，但麦麦不会主动找这个用户。",
-            2,
-            label_en="Allow Proactive Chat",
-            hint_en="Passive chat remains available, but Mai will not proactively message this user.",
         ),
     )
 

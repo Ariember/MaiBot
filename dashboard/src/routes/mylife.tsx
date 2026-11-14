@@ -116,7 +116,21 @@ function MyLifeSection({
           )}
         >
           <SchemaConfigField
-            field={field}
+            field={
+              name === 'users' && key === 'profiles' && field.item_fields
+                ? {
+                    ...field,
+                    item_fields: {
+                      ...field.item_fields,
+                      daily_proactive_max: {
+                        ...field.item_fields.daily_proactive_max,
+                        depends_on: 'daily_proactive_unlimited',
+                        depends_value: false,
+                      },
+                    },
+                  }
+                : field
+            }
             value={values[key]}
             onChange={(value) => onChange(key, value)}
           />

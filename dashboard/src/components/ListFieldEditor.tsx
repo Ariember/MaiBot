@@ -53,6 +53,8 @@ export interface ItemFieldDefinition {
   label?: string
   placeholder?: string
   default?: unknown
+  depends_on?: string
+  depends_value?: unknown
   /** select 是否允许多选 */
   multiple?: boolean
   /** 当字段本身仍是数组时，描述其元素类型 */
@@ -396,11 +398,17 @@ function ObjectItemEditor({
 
   return (
     <Card className="p-3 space-y-2 bg-muted/30">
-      {Object.entries(fields).map(([fieldName, fieldDef]) => (
-        <div key={fieldName}>
-          {renderField(fieldName, fieldDef)}
-        </div>
-      ))}
+      {Object.entries(fields)
+        .filter(
+          ([, fieldDef]) =>
+            !fieldDef.depends_on ||
+            (value?.[fieldDef.depends_on] ?? fields[fieldDef.depends_on]?.default) === fieldDef.depends_value
+        )
+        .map(([fieldName, fieldDef]) => (
+          <div key={fieldName}>
+            {renderField(fieldName, fieldDef)}
+          </div>
+        ))}
     </Card>
   )
 }

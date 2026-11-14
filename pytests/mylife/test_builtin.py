@@ -99,6 +99,7 @@ def test_defaults_template_and_webui_contract():
     assert set(model_schema["$defs"]["EnvironmentSettings"]["properties"]) == {"weather_refresh_minutes"}
     assert set(template["environment"]) == {"weather_refresh_minutes"}
     assert model_schema["$defs"]["PluginSettings"]["properties"]["enabled"]["hidden"] is True
+    assert "proactive_enabled" not in model_schema["$defs"]["UserProfile"]["properties"]
     assert "reading" not in model_schema["properties"]
     assert "reading" not in template
     assert "context" not in model_schema["properties"]
@@ -122,6 +123,30 @@ def test_defaults_template_and_webui_contract():
         assert bound_ids <= ids, bound_ids - ids
 
 
+@pytest.mark.parametrize("proactive_enabled", [False, True])
+@pytest.mark.asyncio
+async def test_user_proactive_state_follows_global_config(tmp_path, proactive_enabled):
+    config = MaiLifeSettings(
+        proactive={"enabled": proactive_enabled},
+        users={"profiles": [
+            {"user_id": "10001", "proactive_enabled": not proactive_enabled},
+            {"user_id": "10002", "enabled": False, "proactive_enabled": True},
+        ]},
+    )
+    store = LifeStore(str(tmp_path))
+    await store.initialize()
+    try:
+        await store.sync_users(config.users.profiles, proactive_enabled=not proactive_enabled)
+        await store.sync_users(config.users.profiles, proactive_enabled=config.proactive.enabled)
+        users = {user["user_id"]: user for user in await store.list_users(include_disabled=True)}
+        assert bool(users["10001"]["proactive_enabled"]) is proactive_enabled
+        assert users["10002"]["proactive_enabled"] == 0
+        candidates = await store.list_users(proactive_only=True)
+        assert [user["user_id"] for user in candidates] == (["10001"] if proactive_enabled else [])
+    finally:
+        await store.close()
+
+
 @pytest.mark.asyncio
 async def test_important_dates_still_remind_before_two_am(tmp_path):
     store = LifeStore(str(tmp_path), clock=lambda: NOW.timestamp())
@@ -130,7 +155,7 @@ async def test_important_dates_still_remind_before_two_am(tmp_path):
     llm = SimpleNamespace(task_available=Mock(return_value=False), generate_json=AsyncMock())
     memory = MemoryService(store, config, llm, Mock())
     try:
-        await store.sync_users(config.users.profiles)
+        await store.sync_users(config.users.profiles, proactive_enabled=config.proactive.enabled)
         await memory.observe_message("10001", "11月13日是我的生日", NOW)
         await store.add_important_date("10002", "朋友考试", "2026-11-14", "none", "manual", NOW.timestamp())
         await memory.ensure_daily(NOW)
