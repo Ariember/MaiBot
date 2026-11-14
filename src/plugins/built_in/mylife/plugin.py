@@ -4229,7 +4229,7 @@ class MaiLifePlugin(MaiBotPlugin):
             {"type": "key_value", "entries": {"版本": PLUGIN_VERSION, "诊断指令": "/麦麦状态", "私密 API": "不公开"}},
             {"type": "list", "items": ["用户角色与主动额度", "QQ群与日期候选", "联网服务与 Token 聚合"]},
         ],
-        link_url="/plugin-config?plugin=fraternity-z.mai-mylife",
+        link_url="/mylife",
         link_label="打开麦日常配置",
         icon="heart-pulse",
         width="medium",

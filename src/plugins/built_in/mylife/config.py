@@ -563,7 +563,7 @@ class EnvironmentSettings(PluginConfigBase):
         description="Open-Meteo 查询天气时使用的城市。",
         json_schema_extra=_ui(
             "天气城市",
-            "填写麦日常所在地的城市名，插件会自动查询天气坐标。",
+            "填写麦日常所在地的城市名，将自动查询天气坐标。",
             1,
             label_en="Weather City",
             hint_en="City name used to automatically resolve weather coordinates.",
@@ -1038,7 +1038,7 @@ class GroupChatSettings(PluginConfigBase):
         description="工作时段内每条群消息的放行概率。",
         json_schema_extra=_ui(
             "群聊回复概率",
-            "0.18 表示 18%；关键词、提及和媒体不改变插件概率。宿主仍可能选择不回复。",
+            "0.18 表示 18%；关键词、提及和媒体不改变此概率。麦麦仍可能选择不回复。",
             2,
             label_en="Group Reply Probability",
             hint_en="Fixed admission probability; the host can still decide not to reply.",
