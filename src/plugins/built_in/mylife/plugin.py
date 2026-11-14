@@ -18,6 +18,8 @@ import re
 import time
 import uuid
 
+from src.config.official_configs import EnvironmentConfig
+
 from .config import MaiLifeSettings, PLUGIN_VERSION, PluginConfigBase
 from .core.environment import EnvironmentService
 from .core.llm_service import LLMService
@@ -377,6 +379,8 @@ class MaiLifePlugin(MaiBotPlugin):
 
         self._env: Optional[EnvironmentService] = None
 
+        self._environment = EnvironmentConfig()
+
         self._llm: Optional[LLMService] = None
 
         self._schedule: Optional[ScheduleService] = None
@@ -478,7 +482,7 @@ class MaiLifePlugin(MaiBotPlugin):
         now = self._env.now()
 
         return (
-            f"\n【当前时间基准】{now.isoformat(timespec='seconds')}（{self.config.environment.timezone}）。"
+            f"\n【当前时间基准】{now.isoformat(timespec='seconds')}（{self._environment.timezone}）。"
             "涉及今天、日期、几点及日程时统一使用此时间；其他上下文中的服务器本地当前时间不作为依据。\n"
         )
 
@@ -522,7 +526,9 @@ class MaiLifePlugin(MaiBotPlugin):
 
         # 服务共享同一 Store 和强类型配置；LLM 路由先于所有会调用模型的服务创建。
 
-        self._env = EnvironmentService(self._store, self.config, self.ctx.logger)
+        await self._refresh_environment()
+
+        self._env = EnvironmentService(self._store, self.config, self.ctx.logger, environment=self._environment)
 
         await self._env.refresh_time()
 
@@ -530,7 +536,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
         await self._store.initialize()
 
-        self._llm = LLMService(self.ctx, self.config, self._store, now=self._env.now)
+        self._llm = LLMService(self.ctx, self.config, self._store, now=self._env.now, environment=self._environment)
 
         self._schedule = ScheduleService(
             self._store, self.config, self._llm, root, self.ctx.logger, bot_name=self._bot_name
@@ -644,7 +650,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
         # 热更新按 scope 分发到各服务：只有 self 会替换插件配置实例，此时才全量下发；
 
-        # bot 只重载人格，model 只刷新模型健康，其他服务继续持有同一个已校验实例。
+        # bot 重载人格与全局环境，model 只刷新模型健康，其他服务继续持有同一个已校验实例。
 
         if scope == "self":
             for service in (
@@ -674,6 +680,8 @@ class MaiLifePlugin(MaiBotPlugin):
             }
 
         if scope == "bot":
+            await self._refresh_environment()
+
             await self._refresh_personality()
 
         if self._llm and scope in {"self", "model"}:
@@ -686,7 +694,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
             self._start_tasks()
 
-            if self._env and scope not in {"bot", "model"}:
+            if self._env and scope != "model":
                 self._spawn_transient(self._env.refresh_weather(force=True), "mai-life-weather-config")
 
         self.ctx.logger.info(f"[MaiLife] 配置热更新完成 scope={scope}")
@@ -950,6 +958,14 @@ class MaiLifePlugin(MaiBotPlugin):
             )
 
             current += timedelta(days=1)
+
+    async def _refresh_environment(self) -> None:
+        """通过宿主配置接口读取全局时区和地区，并同步到已初始化服务。"""
+        self._environment = EnvironmentConfig.model_validate(await self.ctx.config.get("environment", {}))
+        if self._env:
+            self._env.update_environment(self._environment)
+        if self._llm:
+            self._llm.environment = self._environment
 
     async def _refresh_personality(self) -> None:
 
@@ -2952,7 +2968,7 @@ class MaiLifePlugin(MaiBotPlugin):
             f"主动私聊：{_switch(self.config.proactive.enabled)}，允许时段 {self.config.proactive.work_start}-{self.config.proactive.work_end}\n"
             f"群聊概率回复：{_switch(self.config.group.gate_enabled)}，概率 {self.config.group.reply_probability:.0%}，"
             f"工作时间 {self.config.group.work_start}-{self.config.group.work_end}\n"
-            f"工作时间按 {self.config.environment.timezone}；起止相同表示全天。\n"
+            f"工作时间按 {self._environment.timezone}；起止相同表示全天。\n"
             f"生活记忆：{'开启' if self.config.memory.enabled else '关闭'}\n"
             f"联网见闻：{'开启' if self.config.network.enabled else '关闭'}（新闻 {'开' if self.config.network.news_enabled else '关'} / 搜索 {'开' if self.config.network.search_enabled else '关'}）\n"
             f"社交转述：{'开启' if self.config.group.relay_enabled else '关闭'}（白名单群 {len(self.config.group.profiles)}）\n"
@@ -3018,7 +3034,7 @@ class MaiLifePlugin(MaiBotPlugin):
         group = self.config.group
 
         text = (
-            f"当前时间：{now.isoformat(timespec='seconds')}（{self.config.environment.timezone}）\n"
+            f"当前时间：{now.isoformat(timespec='seconds')}（{self._environment.timezone}）\n"
             f"计时来源：{self._env.clock.source}\n"
             f"私聊：全天必回\n"
             f"主动私聊：{_switch(proactive.enabled)} / {proactive.work_start}-{proactive.work_end}\n"
@@ -3108,14 +3124,14 @@ class MaiLifePlugin(MaiBotPlugin):
         """日程接口统一时区：读配置 IANA 名，解析失败回退 UTC+8（与 EnvironmentService 同款回退）。"""
 
         try:
-            return ZoneInfo(str(self.config.environment.timezone or "Asia/Shanghai"))
+            return ZoneInfo(self._environment.timezone)
 
         except Exception:
             return timezone(timedelta(hours=8))
 
     def _schedule_tz_name(self) -> str:
 
-        return str(self.config.environment.timezone or "Asia/Shanghai")
+        return self._environment.timezone
 
     def _schedule_activity(self, node: Dict[str, Any], day: str, tz: Any, scene: str = "") -> Dict[str, Any]:
         """节点 → maibot.schedule 活动结构：分钟换算当日时刻（配置时区 aware ISO），保留原始起止。"""
@@ -3980,8 +3996,8 @@ class MaiLifePlugin(MaiBotPlugin):
                     ),
                 },
                 "environment": {
-                    "timezone": str(cfg.environment.timezone),
-                    "city": str(cfg.environment.city),
+                    "timezone": self._environment.timezone,
+                    "city": self._environment.city,
                     "weather_refresh_minutes": int(cfg.environment.weather_refresh_minutes),
                 },
                 "group": {

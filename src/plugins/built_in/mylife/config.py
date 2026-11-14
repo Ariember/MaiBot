@@ -20,7 +20,7 @@ import re
 
 PLUGIN_VERSION = "1.3.0"
 
-CONFIG_SCHEMA_VERSION = "1.21.0"
+CONFIG_SCHEMA_VERSION = "1.22.0"
 
 _TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
@@ -535,41 +535,15 @@ class SocialGroupProfile(PluginConfigBase):
 
 
 class EnvironmentSettings(PluginConfigBase):
-    """时间与现实天气背景配置。"""
+    """现实天气刷新配置。"""
 
-    __ui_label__: ClassVar[str] = "环境与天气"
+    __ui_label__: ClassVar[str] = "天气"
 
     __ui_order__: ClassVar[int] = 3
 
     __ui_i18n__: ClassVar[Dict[str, Dict[str, str]]] = {
-        "en_US": {"title": "Environment and Weather", "description": "Timezone and Open-Meteo weather location."}
+        "en_US": {"title": "Weather", "description": "Weather refresh; timezone and location use global settings."}
     }
-
-    timezone: str = Field(
-        default="Asia/Shanghai",
-        description="IANA 时区名称。",
-        json_schema_extra=_ui(
-            "时区",
-            "影响日程日期、免打扰和每日结算。中国大陆通常使用 Asia/Shanghai。",
-            0,
-            label_en="Timezone",
-            hint_en="IANA timezone used for schedules, quiet hours and daily settlement.",
-            placeholder="Asia/Shanghai",
-        ),
-    )
-
-    city: str = Field(
-        default="Shanghai",
-        description="Open-Meteo 查询天气时使用的城市。",
-        json_schema_extra=_ui(
-            "天气城市",
-            "填写麦日常所在地的城市名，将自动查询天气坐标。",
-            1,
-            label_en="Weather City",
-            hint_en="City name used to automatically resolve weather coordinates.",
-            placeholder="Shanghai",
-        ),
-    )
 
     weather_refresh_minutes: int = Field(
         default=30,
@@ -1050,10 +1024,10 @@ class GroupChatSettings(PluginConfigBase):
         description="群聊工作开始时间。",
         json_schema_extra=_ui(
             "群聊工作开始",
-            "HH:MM，按环境时区；支持跨午夜，与结束相同表示全天。",
+            "HH:MM，按全局时区；支持跨午夜，与结束相同表示全天。",
             3,
             label_en="Group Work Start",
-            hint_en="HH:MM in the configured timezone; equal endpoints mean all day.",
+            hint_en="HH:MM in the global timezone; equal endpoints mean all day.",
         ),
     )
 
@@ -1480,10 +1454,10 @@ class ProactiveSettings(PluginConfigBase):
         description="主动私聊允许开始的时间。",
         json_schema_extra=_ui(
             "主动开始时间",
-            "HH:MM，按环境时区；支持跨午夜，与结束相同表示全天。普通私聊回复不受影响。",
+            "HH:MM，按全局时区；支持跨午夜，与结束相同表示全天。普通私聊回复不受影响。",
             7,
             label_en="Proactive Start",
-            hint_en="HH:MM in the configured timezone; equal endpoints mean all day. Passive private replies are unaffected.",
+            hint_en="HH:MM in the global timezone; equal endpoints mean all day. Passive private replies are unaffected.",
         ),
     )
 
@@ -1569,11 +1543,11 @@ class MaiLifeSettings(PluginConfigBase):
     environment: EnvironmentSettings = Field(
         default_factory=EnvironmentSettings,
         json_schema_extra=_ui(
-            "环境与天气",
-            "时区、城市和天气刷新。",
+            "天气",
+            "天气刷新；时区和地区使用主程序全局配置。",
             3,
-            label_en="Environment and Weather",
-            hint_en="Timezone, location and weather refresh.",
+            label_en="Weather",
+            hint_en="Weather refresh; timezone and location use global settings.",
         ),
     )
 

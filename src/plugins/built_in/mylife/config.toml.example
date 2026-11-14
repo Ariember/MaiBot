@@ -21,12 +21,12 @@
 # 首次使用至少需要修改：
 # - [[users.profiles]].user_id：填写你的 QQ 号
 # - [[users.profiles]].enabled：改为 true
-# - environment.city：填写麦日常所在地的城市
+# - 时区和地区：在主程序全局配置中选择
 # =============================================================================
 
 [plugin]
 # 配置结构版本，请勿手动修改。
-config_version = "1.21.0"
+config_version = "1.22.0"
 
 # 插件总开关。关闭后保留数据库，但停止任务执行、状态维护和主动消息。
 enabled = false
@@ -96,7 +96,7 @@ gate_enabled = true
 # 每条非命令消息只采样一次；0=不回复，1=每条放行，关键词/@/图片不加权。
 reply_probability = 0.18
 
-# 工作时间按 environment.timezone，开始含、结束不含，支持跨午夜。
+# 工作时间按主程序全局 environment.timezone，开始含、结束不含，支持跨午夜。
 # 起止相同表示全天；例如 "08:00" 到 "23:00" 表示每天8点至23点工作。
 work_start = "00:00"
 work_end = "00:00"
@@ -128,15 +128,9 @@ relay_target_enabled = false
 
 
 [environment]
-# IANA 时区。中国大陆一般使用 Asia/Shanghai，不跟随服务器本地时区。
+# 时区和地区使用主程序全局 [environment] 配置。
 # 插件自动使用 NTP 联网校时，UDP 不通时尝试 HTTPS 时间，每小时刷新。
 # 全部时间源不可达时延续上次校准；从未成功校准则回退系统 UTC 并告警。
-timezone = "Asia/Shanghai"
-
-# 天气城市。插件会自动把城市名解析成天气坐标，无需填写经纬度。
-# 推荐填写常见城市名，例如 "Shanghai"、"Beijing"、"Hangzhou"。
-# 如果城市无法识别，请尝试英文名或更完整的城市名称。
-city = "Shanghai"
 
 # 天气后台刷新间隔，范围 10～360 分钟。
 weather_refresh_minutes = 30
@@ -170,7 +164,7 @@ retention_days = 30
 enabled = true
 
 # 只限制主动判断与发送；普通私聊全天放行。起止相同表示全天，支持跨午夜。
-# 按 environment.timezone 计算，同时遵守每位用户的免打扰时间。
+# 按主程序全局 environment.timezone 计算，同时遵守每位用户的免打扰时间。
 work_start = "00:00"
 work_end = "00:00"
 

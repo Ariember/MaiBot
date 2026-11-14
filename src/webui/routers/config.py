@@ -4,6 +4,7 @@
 
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Tuple, Union, get_args, get_origin
+from zoneinfo import available_timezones
 import asyncio
 import copy
 import json
@@ -16,8 +17,10 @@ import types
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, ValidationError
+import httpx
 import tomlkit
 
+from src.common.http_client import get_shared_ssl_context_async
 from src.common.logger import get_logger
 from src.common.prompt_i18n import clear_prompt_cache, extract_prompt_placeholders, list_prompt_templates
 from src.common.paths import resource_path
@@ -36,6 +39,7 @@ from src.config.official_configs import (
     ChineseTypoConfig,
     DebugConfig,
     EmojiConfig,
+    EnvironmentConfig,
     ExpressionConfig,
     JargonConfig,
     KeywordReactionConfig,
@@ -1251,6 +1255,51 @@ def _validate_retro_prompt_setting(config_data: Dict[str, Any]) -> None:
         raise HTTPException(status_code=400, detail="当前 replyer 模型需要复古回复提示词，解除对应模型的 replyer 分配后才能关闭")
 
 
+class EnvironmentCity(BaseModel):
+    """地区选择所需的城市信息。"""
+
+    id: int
+    name: str
+    admin1: str | None = None
+    admin2: str | None = None
+    country: str | None = None
+    timezone: str | None = None
+    latitude: float
+    longitude: float
+
+
+@router.get("/environment/timezones")
+def get_environment_timezones() -> Dict[str, List[str]]:
+    """列出可用的 IANA 时区。"""
+    return {"timezones": sorted(available_timezones() | {"UTC"})}
+
+
+@router.get("/environment/cities")
+async def search_environment_cities(name: Annotated[str, Query(min_length=2, max_length=100)]) -> Dict[str, Any]:
+    """查询城市及其地区、时区和天气坐标。"""
+    name = name.strip()
+    if len(name) < 2:
+        raise HTTPException(status_code=422, detail="城市名称至少需要 2 个字符")
+    try:
+        async with httpx.AsyncClient(verify=await get_shared_ssl_context_async(), timeout=10.0) as client:
+            response = await client.get(
+                "https://geocoding-api.open-meteo.com/v1/search",
+                params={"name": name, "count": 10, "language": "zh", "format": "json"},
+            )
+            response.raise_for_status()
+            data = response.json()
+        if not isinstance(data, dict) or data.get("error"):
+            raise ValueError("城市查询响应无效")
+        results = data.get("results", [])
+        if not isinstance(results, list):
+            raise ValueError("城市查询结果无效")
+        cities = [EnvironmentCity.model_validate(city).model_dump(exclude_none=True) for city in results]
+    except (httpx.HTTPError, ValueError) as exc:
+        logger.warning(f"搜索城市失败: {type(exc).__name__}")
+        raise HTTPException(status_code=502, detail="城市查询服务暂时不可用，请稍后重试") from exc
+    return {"cities": cities}
+
+
 @router.get("/schema/bot")
 def get_bot_config_schema():
     """获取麦麦主程序配置架构"""
@@ -1297,6 +1346,7 @@ def get_config_section_schema(section_name: str):
 
     支持的section_name:
     - bot: BotConfig
+    - environment: EnvironmentConfig
     - personality: PersonalityConfig
     - chat: ChatConfig
     - visual: VisualConfig
@@ -1324,6 +1374,7 @@ def get_config_section_schema(section_name: str):
     """
     section_map = {
         "bot": BotConfig,
+        "environment": EnvironmentConfig,
         "personality": PersonalityConfig,
         "chat": ChatConfig,
         "visual": VisualConfig,

@@ -38,6 +38,26 @@ def test_config_tracks_latest_injection():
     assert plugin.config.plugin.enabled is False
 
 
+@pytest.mark.asyncio
+async def test_global_environment_refresh_updates_clock_schedule_and_services(monkeypatch):
+    plugin = plugin_module.MaiLifePlugin()
+    host_config = SimpleNamespace(
+        get=AsyncMock(return_value={"timezone": "Europe/Berlin", "city": "Berlin", "city_id": 2950159})
+    )
+    monkeypatch.setattr(type(plugin), "ctx", property(lambda self: SimpleNamespace(config=host_config)))
+    plugin._env = SimpleNamespace(update_environment=Mock())
+    plugin._llm = SimpleNamespace(environment=None)
+
+    await plugin._refresh_environment()
+
+    host_config.get.assert_awaited_once_with("environment", {})
+    assert plugin._environment.city_id == 2950159
+    assert plugin._schedule_tz_name() == "Europe/Berlin"
+    assert plugin._schedule_tz().key == "Europe/Berlin"
+    plugin._env.update_environment.assert_called_once_with(plugin._environment)
+    assert plugin._llm.environment is plugin._environment
+
+
 @pytest.mark.parametrize(
     "initial_toml",
     [
@@ -76,6 +96,8 @@ def test_defaults_template_and_webui_contract():
     assert manifest["version"] == PLUGIN_VERSION
     assert manifest["id"] == "fraternity-z.mai-mylife"
     model_schema = MaiLifeSettings.model_json_schema()
+    assert set(model_schema["$defs"]["EnvironmentSettings"]["properties"]) == {"weather_refresh_minutes"}
+    assert set(template["environment"]) == {"weather_refresh_minutes"}
     assert model_schema["$defs"]["PluginSettings"]["properties"]["enabled"]["hidden"] is True
     assert "reading" not in model_schema["properties"]
     assert "reading" not in template

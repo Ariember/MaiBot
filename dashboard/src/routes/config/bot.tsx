@@ -76,6 +76,7 @@ import {
   ChatTalkValueRulesHook,
   ExpressionGroupsHook,
   ExpressionLearningListHook,
+  EnvironmentSettingsHook,
   LearningBlacklistHook,
   FocusWhitelistHook,
   JargonGroupsHook,
@@ -346,6 +347,7 @@ function BotConfigPageContent() {
   useEffect(() => {
     const hookEntries = [
       ['desktop_pet.skin_id', DesktopPetSkinField],
+      ['environment', EnvironmentSettingsHook],
       ['agent.connection', AgentConnectionSettings, 'wrapper'],
       ['agent.desktop_manifest', AgentDesktopField, 'wrapper'],
       ['agent.acp_args', AgentCustomArgs, 'wrapper'],
@@ -1648,7 +1650,7 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
           }}
           hooks={fieldHooks}
           advancedVisible={advancedVisible}
-          sectionColumns={2}
+          sectionColumns={tab.id === 'bot' ? 1 : 2}
           sectionLeadingContent={sectionLeadingContent}
           sectionTrailingContent={sectionTrailingContent}
           fieldTrailingContent={fieldTrailingContent}

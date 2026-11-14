@@ -40,6 +40,7 @@ from .official_configs import (
     ChineseTypoConfig,
     DebugConfig,
     EmojiConfig,
+    EnvironmentConfig,
     ExperimentalConfig,
     ExpressionConfig,
     JargonConfig,
@@ -74,7 +75,7 @@ BOT_CONFIG_PATH: Path = (CONFIG_DIR / "bot_config.toml").resolve().absolute()
 MODEL_CONFIG_PATH: Path = (CONFIG_DIR / "model_config.toml").resolve().absolute()
 LEGACY_ENV_PATH: Path = (PROJECT_ROOT / ".env").resolve().absolute()
 MMC_VERSION: str = read_project_version(PROJECT_ROOT)
-CONFIG_VERSION: str = "8.15.72"
+CONFIG_VERSION: str = "8.15.73"
 MODEL_CONFIG_VERSION: str = "1.17.25"
 
 logger = get_logger("config")
@@ -117,6 +118,9 @@ class Config(ConfigBase):
 
     bot: BotConfig = Field(default_factory=BotConfig)
     """机器人配置类"""
+
+    environment: EnvironmentConfig = Field(default_factory=EnvironmentConfig)
+    """全局地区与时间配置"""
 
     personality: PersonalityConfig = Field(default_factory=PersonalityConfig)
     """人格配置类"""

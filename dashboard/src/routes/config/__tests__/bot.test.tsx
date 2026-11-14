@@ -229,6 +229,7 @@ function createDeferred<T>() {
 /** 页面挂载时应注册的字段 hook 路径与类型（replace 为缺省） */
 const EXPECTED_FIELD_HOOKS: Array<[string, 'replace' | 'wrapper' | 'hidden']> = [
   ['desktop_pet.skin_id', 'replace'],
+  ['environment', 'replace'],
   ['agent.connection', 'wrapper'],
   ['agent.desktop_manifest', 'wrapper'],
   ['agent.acp_args', 'wrapper'],

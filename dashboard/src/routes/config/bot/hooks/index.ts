@@ -25,4 +25,5 @@ export {
 } from './complexFieldHooks'
 export { AMemorixRetrievalChatsHook } from './AMemorixRetrievalChatsHook'
 export { LearningBlacklistHook } from './LearningBlacklistHook'
+export { EnvironmentSettingsHook } from './EnvironmentSettingsHook'
 export { AMemorixRetrievalFilterGroupHook } from './AMemorixRetrievalFilterGroupHook'

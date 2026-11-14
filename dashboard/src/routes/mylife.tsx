@@ -61,7 +61,7 @@ const settingGroups = [
 
 const commonFields: Record<string, string[]> = {
   plugin: ['admin_user_ids'],
-  environment: ['timezone', 'city', 'weather_refresh_minutes'],
+  environment: ['weather_refresh_minutes'],
   users: ['profiles'],
   proactive: ['enabled', 'work_start', 'work_end', 'recent_user_silence_minutes'],
   group: [

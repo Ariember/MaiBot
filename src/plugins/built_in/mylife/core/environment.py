@@ -1,6 +1,6 @@
 """时间与天气环境服务。
 
-天气只使用配置中的城市名。城市会先通过 Open-Meteo 地理编码转换为坐标，
+天气使用全局配置中的城市。城市会先通过 Open-Meteo 地理编码转换为坐标，
 坐标仅作为运行时缓存，不暴露给用户配置。
 """
 
@@ -13,6 +13,8 @@ from zoneinfo import ZoneInfo
 
 import asyncio
 import time
+
+from src.config.official_configs import EnvironmentConfig
 
 from ..information.http_client import HttpClient
 from .network_clock import NetworkClock
@@ -77,13 +79,22 @@ _FESTIVAL_LOOKAHEAD_DAYS = 30
 class EnvironmentService:
     """提供带时区的当前时间和后台天气缓存。"""
 
-    def __init__(self, store: Any, config: Any, logger: Any, http: HttpClient | None = None) -> None:
+    def __init__(
+        self,
+        store: Any,
+        config: Any,
+        logger: Any,
+        http: HttpClient | None = None,
+        *,
+        environment: EnvironmentConfig | None = None,
+    ) -> None:
         self.store = store
         self.config = config
+        self.environment = environment if environment is not None else EnvironmentConfig()
         self.logger = logger
         self.http = http or HttpClient(logger)
         self.clock = NetworkClock(logger, self.http)
-        self._resolved_city_key = ""
+        self._resolved_city_key: Tuple[str, int] = ("", 0)
         self._resolved_location_name = ""
         self._resolved_latitude: float | None = None
         self._resolved_longitude: float | None = None
@@ -97,16 +108,19 @@ class EnvironmentService:
         self._festival_cache: Tuple[str, str] = ("", "")
 
     def update_config(self, config: Any) -> None:
-        """更新配置；城市变化时清除内存中的地理编码结果。"""
-        old_city = str(self.config.environment.city or "").strip().casefold()
-        new_city = str(config.environment.city or "").strip().casefold()
         self.config = config
+
+    def update_environment(self, environment: EnvironmentConfig) -> None:
+        """更新全局环境；城市变化时清除内存中的地理编码结果。"""
+        old_city = (self.environment.city.strip().casefold(), self.environment.city_id)
+        new_city = (environment.city.strip().casefold(), environment.city_id)
+        self.environment = environment
         if old_city != new_city:
             self._clear_resolved_location()
             self._weather_city_changed = True
 
     def _clear_resolved_location(self) -> None:
-        self._resolved_city_key = ""
+        self._resolved_city_key = ("", 0)
         self._resolved_location_name = ""
         self._resolved_latitude = None
         self._resolved_longitude = None
@@ -114,7 +128,7 @@ class EnvironmentService:
     def now(self) -> datetime:
         """读取联网校准时间并转换到配置时区，不依赖服务器本地时区。"""
         try:
-            tz = ZoneInfo(self.config.environment.timezone)
+            tz = ZoneInfo(self.environment.timezone)
         except Exception:
             # 静默回退会让“时间差 8 小时”难以定位；只告警一次，之后仍保持可用。
             if not self._tz_warned:
@@ -128,8 +142,9 @@ class EnvironmentService:
         return await self.clock.refresh(force=force)
 
     async def _resolve_city(self, city: str) -> Tuple[str, float, float]:
-        """把城市名解析为坐标，并在 Runner 生命周期内复用结果。"""
-        city_key = city.casefold()
+        """把选定城市解析为坐标，并在 Runner 生命周期内复用结果。"""
+        city_id = self.environment.city_id
+        city_key = (city.casefold(), city_id)
         if (
             self._resolved_city_key == city_key
             and self._resolved_latitude is not None
@@ -141,15 +156,20 @@ class EnvironmentService:
                 self._resolved_longitude,
             )
 
-        geo_url = "https://geocoding-api.open-meteo.com/v1/search?" + urlencode(
-            {"name": city, "count": 1, "language": "zh", "format": "json"},
-        )
-        geo = (await self.http.get(geo_url, timeout=8)).json()
-        results = geo.get("results") or []
-        if not results:
-            raise ValueError(f"找不到天气城市：{city}")
-
-        result = results[0]
+        if city_id:
+            geo_url = "https://geocoding-api.open-meteo.com/v1/get?" + urlencode(
+                {"id": city_id, "language": "zh", "format": "json"},
+            )
+            result = (await self.http.get(geo_url, timeout=8)).json()
+        else:
+            geo_url = "https://geocoding-api.open-meteo.com/v1/search?" + urlencode(
+                {"name": city, "count": 1, "language": "zh", "format": "json"},
+            )
+            geo = (await self.http.get(geo_url, timeout=8)).json()
+            results = geo.get("results") or []
+            if not results:
+                raise ValueError(f"找不到天气城市：{city}")
+            result = results[0]
         location_name = str(result.get("name") or city)
         latitude = float(result["latitude"])
         longitude = float(result["longitude"])
@@ -167,10 +187,15 @@ class EnvironmentService:
     async def _refresh_weather_locked(self, force: bool = False, *, allow_network: bool = True) -> Dict[str, Any]:
         """串行刷新并在落库前复核城市，防止旧请求晚到后覆盖新配置。"""
         cached = await self.store.get_weather()
-        city = str(self.config.environment.city or "").strip()
+        city = self.environment.city.strip()
+        city_id = self.environment.city_id
         raw_cache = cached.get("raw_json") if isinstance(cached.get("raw_json"), dict) else {}
         cached_city = str(raw_cache.get("_mai_life_query_city") or "").strip().casefold()
-        if cached and (not cached_city or cached_city != city.casefold()):
+        if cached and (
+            not cached_city
+            or cached_city != city.casefold()
+            or raw_cache.get("_mai_life_query_city_id", 0) != city_id
+        ):
             # 旧版未标记城市的缓存无法可靠归属；宁可显示未知，也不把旧城市天气冒充为当前环境。
             await self.store.clear_weather()
             cached = {}
@@ -183,7 +208,7 @@ class EnvironmentService:
         if not allow_network:
             return cached or {
                 "description": "天气未知",
-                "location_name": str(self.config.environment.city or ""),
+                "location_name": city,
                 "fetched_at": 0,
             }
         if not force and cached and 0 <= self.clock.timestamp() - float(cached.get("fetched_at", 0)) < refresh_seconds:
@@ -204,7 +229,7 @@ class EnvironmentService:
                     "latitude": latitude,
                     "longitude": longitude,
                     "current": "temperature_2m,weather_code",
-                    "timezone": self.config.environment.timezone,
+                    "timezone": self.environment.timezone,
                 },
             )
             raw = (await self.http.get(forecast_url, timeout=8)).json()
@@ -220,10 +245,10 @@ class EnvironmentService:
                 "temperature": current.get("temperature_2m"),
                 "weather_code": code,
                 "description": _WEATHER_CODES.get(code, "天气状况未知"),
-                "raw_json": {**raw, "_mai_life_query_city": city},
+                "raw_json": {**raw, "_mai_life_query_city": city, "_mai_life_query_city_id": city_id},
             }
-            current_city = str(self.config.environment.city or "").strip()
-            if current_city.casefold() != city.casefold():
+            current_city = self.environment.city.strip()
+            if (current_city.casefold(), self.environment.city_id) != (city.casefold(), city_id):
                 self.logger.info(f"[MaiLife] 天气请求完成时城市已变化，丢弃旧结果: {city}")
                 return {"description": "天气未知", "location_name": current_city, "fetched_at": 0}
             await self.store.save_weather(data)
@@ -361,7 +386,7 @@ class EnvironmentService:
         upcoming = self._upcoming_festival(day)
         return {
             "iso_time": current.isoformat(timespec="seconds"),
-            "timezone": str(self.config.environment.timezone),
+            "timezone": self.environment.timezone,
             "time_source": self.clock.source,
             "date": day.isoformat(),
             "weekday": weekday,

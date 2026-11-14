@@ -145,6 +145,35 @@ class BotConfig(ConfigBase):
     """别人可能用来称呼麦麦的名字，用于辅助识别提及。"""
 
 
+class EnvironmentConfig(ConfigBase):
+    """全局地区与时间配置。"""
+
+    __ui_parent__ = "bot"
+    __ui_label__ = "地区与时间"
+
+    timezone: str = Field(
+        default="Asia/Shanghai",
+        min_length=1,
+        json_schema_extra={
+            "label": {"zh_CN": "时区", "en_US": "Timezone", "ja_JP": "タイムゾーン"},
+            "x-widget": "input",
+        },
+    )
+    """全局 IANA 时区，用于日程、免打扰时段和自然日统计；不跟随服务器本地时区。"""
+
+    city: str = Field(
+        default="Shanghai",
+        json_schema_extra={
+            "label": {"zh_CN": "城市 / 地区", "en_US": "City / Region", "ja_JP": "都市・地域"},
+            "x-widget": "input",
+        },
+    )
+    """麦麦所在的城市或地区，用于天气等位置相关服务。"""
+
+    city_id: int = Field(default=0, ge=0, json_schema_extra={"advanced": True})
+    """Open-Meteo 城市编号，由可视化选择保存以区分同名城市；0 表示按城市名查询。"""
+
+
 class PersonalityProfile(ConfigBase):
     """可手动切换的人设快照。"""
 

@@ -10,13 +10,24 @@ import inspect
 import json
 import time
 
+from src.config.official_configs import EnvironmentConfig
+
 
 class LLMService:
     """只接受 MaiBot 的任务路由名，不直接保存 Provider 凭据。"""
 
-    def __init__(self, ctx: Any, config: Any, store: Any | None = None, *, now: Any = None) -> None:
+    def __init__(
+        self,
+        ctx: Any,
+        config: Any,
+        store: Any | None = None,
+        *,
+        now: Any = None,
+        environment: EnvironmentConfig | None = None,
+    ) -> None:
         self.ctx = ctx
         self.config = config
+        self.environment = environment if environment is not None else EnvironmentConfig()
         self.store = store
         self._now = now
         self.available_tasks: Set[str] = set()
@@ -35,7 +46,7 @@ class LLMService:
         if self._now is not None:
             return self._now()
         try:
-            tz = ZoneInfo(str(self.config.environment.timezone or "Asia/Shanghai"))
+            tz = ZoneInfo(self.environment.timezone)
         except (ZoneInfoNotFoundError, ValueError):
             tz = timezone(timedelta(hours=8))
         return datetime.now(tz)

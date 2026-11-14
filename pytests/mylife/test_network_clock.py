@@ -8,6 +8,7 @@ import asyncio
 import struct
 import unittest
 
+from src.config.official_configs import EnvironmentConfig
 from src.plugins.built_in.mylife.core import environment as environment_module
 from src.plugins.built_in.mylife.core import network_clock as clock_module
 
@@ -198,11 +199,15 @@ class NetworkClockTests(unittest.IsolatedAsyncioTestCase):
 class EnvironmentTimeTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
 
-        self.config = SimpleNamespace(environment=SimpleNamespace(timezone="Asia/Shanghai", city="Shanghai"))
+        self.config = SimpleNamespace(environment=SimpleNamespace(weather_refresh_minutes=30))
+
+        self.environment = EnvironmentConfig()
 
         self.logger = Mock()
 
-        self.env = environment_module.EnvironmentService(Mock(), self.config, self.logger, http=Mock())
+        self.env = environment_module.EnvironmentService(
+            Mock(), self.config, self.logger, http=Mock(), environment=self.environment
+        )
 
     async def test_network_utc_is_converted_to_shanghai_across_midnight(self):
 
@@ -213,9 +218,38 @@ class EnvironmentTimeTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(self.env.snapshot()["date"], "2026-11-06")
 
-            self.config.environment.timezone = "UTC"
+            self.env.update_environment(EnvironmentConfig(timezone="UTC"))
 
             self.assertEqual(self.env.now().isoformat(), "2026-11-05T20:30:00+00:00")
+
+            self.assertEqual(self.env.snapshot()["timezone"], "UTC")
+
+    async def test_selected_city_id_resolves_exact_location_and_invalidates_same_name_cache(self):
+        self.env.update_environment(EnvironmentConfig(city="Springfield", city_id=4250542))
+        result = {"name": "Springfield", "latitude": 39.8, "longitude": -89.6}
+        self.env.http = Mock(get=AsyncMock(return_value=SimpleNamespace(json=lambda: result)))
+
+        self.assertEqual(await self.env._resolve_city("Springfield"), ("Springfield", 39.8, -89.6))
+        self.env.http.get.assert_awaited_once_with(
+            "https://geocoding-api.open-meteo.com/v1/get?id=4250542&language=zh&format=json", timeout=8
+        )
+        await self.env._resolve_city("Springfield")
+        self.env.http.get.assert_awaited_once()
+
+        self.env.update_environment(EnvironmentConfig(city="Springfield", city_id=4951788))
+        self.assertIsNone(self.env._resolved_latitude)
+        self.env.store = Mock(
+            get_weather=AsyncMock(
+                return_value={
+                    "description": "old",
+                    "raw_json": {"_mai_life_query_city": "Springfield", "_mai_life_query_city_id": 4250542},
+                }
+            ),
+            clear_weather=AsyncMock(),
+        )
+        weather = await self.env.refresh_weather(allow_network=False)
+        self.assertEqual(weather["description"], "天气未知")
+        self.env.store.clear_weather.assert_awaited()
 
     async def test_missing_timezone_data_warns_once_and_preserves_network_time(self):
 
