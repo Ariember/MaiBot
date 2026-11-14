@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from maibot_sdk import API, Command, HomeCard, HookHandler, MaiBotPlugin, Tool
 from maibot_sdk.types import HookMode, HookOrder, ToolParameterInfo, ToolParamType
-from typing import Any, ClassVar, Dict, get_args, get_origin, Iterable, List, Literal, Optional, Set, Tuple
+from typing import Any, ClassVar, Dict, Iterable, List, Literal, Optional, Set, Tuple, cast, get_args, get_origin
 from zoneinfo import ZoneInfo
 
 import asyncio
@@ -353,6 +353,10 @@ class MaiLifePlugin(MaiBotPlugin):
     config_model = MaiLifeSettings
 
     config_reload_subscriptions: ClassVar[Iterable[str]] = ("bot", "model")
+
+    @property
+    def config(self) -> MaiLifeSettings:
+        return cast(MaiLifeSettings, super().config)
 
     # WebUI 不可编辑的汇总键（计数/派生串/列表字段），其余与配置模型字段同名的标量键都可回写。
 
@@ -981,7 +985,9 @@ class MaiLifePlugin(MaiBotPlugin):
             if not isinstance(value, dict):
                 continue
 
-            nested = value.get("user_info") if isinstance(value.get("user_info"), dict) else {}
+            nested = value.get("user_info")
+
+            nested = nested if isinstance(nested, dict) else {}
 
             for source in (value, nested):
                 name = str(
@@ -1000,7 +1006,9 @@ class MaiLifePlugin(MaiBotPlugin):
             info = await self.ctx.chat.get_stream_by_user_id(user_id=user_id)
 
             if isinstance(info, dict):
-                stream = info.get("stream") if isinstance(info.get("stream"), dict) else info
+                stream = info.get("stream")
+
+                stream = stream if isinstance(stream, dict) else info
 
                 if stream.get("stream_id"):
                     name = self._stream_display_name(stream, info)
@@ -1332,13 +1340,17 @@ class MaiLifePlugin(MaiBotPlugin):
 
         """
 
-        message = kwargs.get("message") if isinstance(kwargs.get("message"), dict) else {}
+        message = kwargs.get("message")
+
+        message = message if isinstance(message, dict) else {}
 
         if not message:
             return {"action": "continue"}
 
         if self._stopping or self._reloading or not self.config.plugin.enabled or not self._ready:
             return {"action": "continue"}
+
+        assert self._store and self._env and self._schedule and self._rest and self._memory
 
         if message.get("is_notify"):
             uid, session, mid, private = message_identity(message)
@@ -1388,8 +1400,6 @@ class MaiLifePlugin(MaiBotPlugin):
 
             return {"action": "abort"}
 
-        assert self._store and self._env and self._schedule and self._rest and self._memory
-
         if not private:
             return await self._process_group_message(kwargs, message, uid, session, mid)
 
@@ -1426,6 +1436,8 @@ class MaiLifePlugin(MaiBotPlugin):
         self, kwargs: Dict[str, Any], message: Dict[str, Any], uid: str, session: str, mid: str
     ) -> Dict[str, Any]:
         """群聊管线：目录登记、群轮次登记和后台公共话题观察（不注入私聊关系或生活隐私）。"""
+
+        assert self._store and self._env
 
         if session:
             self._group_sessions.add(session)
@@ -1502,6 +1514,8 @@ class MaiLifePlugin(MaiBotPlugin):
 
         if not uid or is_command(message):
             return {"action": "continue"}
+
+        assert self._store and self._env and self._memory
 
         user = await self._store.get_user(uid)
 
@@ -2039,11 +2053,15 @@ class MaiLifePlugin(MaiBotPlugin):
         )
 
         if cancel_proactive:
+            assert self._store
+
             await self._store.set_proactive_event_status(str(proactive["id"]), "cancelled")
 
             await self._store.release_opportunity(str(proactive["opportunity_id"]))
 
         if cancel_relay:
+            assert self._store
+
             await self._store.set_relay_status(str(relay_task["id"]), "cancelled", now, "plugin_disabled")
 
         if cancel_proactive or cancel_relay:
@@ -2171,7 +2189,9 @@ class MaiLifePlugin(MaiBotPlugin):
     async def on_send_before(self, **kwargs: Any) -> Dict[str, Any]:
         """平台发送前复核候选有效性和任务发送权，并附加可结算元数据。"""
 
-        message = kwargs.get("message") if isinstance(kwargs.get("message"), dict) else {}
+        message = kwargs.get("message")
+
+        message = message if isinstance(message, dict) else {}
 
         if not message:
             return {"action": "continue"}
@@ -2206,7 +2226,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
             cfg = self.config.group if group else self.config.proactive
 
-            enabled = cfg.gate_enabled if group else cfg.enabled
+            enabled = self.config.group.gate_enabled if group else self.config.proactive.enabled
 
             return enabled and not RestGate.in_work_window(
                 cfg.work_start, cfg.work_end, self._env.now().strftime("%H:%M")
@@ -2245,6 +2265,8 @@ class MaiLifePlugin(MaiBotPlugin):
         modified = False
 
         if proactive_task:
+            assert self._store
+
             if bool(kwargs.get("set_reply")) and (anchor == task_id or anchor.startswith(HOST_TASK_PREFIX)):
                 # proactive:* 是 Host 内部锚点，不是 QQ 消息号；禁止 NapCat 将其编码成无效 reply 段。
 
@@ -2380,7 +2402,9 @@ class MaiLifePlugin(MaiBotPlugin):
     async def on_send_after(self, **kwargs: Any) -> None:
         """以平台实际发送结果提交或释放轮次锁、主动额度和转述候选。"""
 
-        message = kwargs.get("message") if isinstance(kwargs.get("message"), dict) else {}
+        message = kwargs.get("message")
+
+        message = message if isinstance(message, dict) else {}
 
         sent = bool(kwargs.get("sent"))
 
@@ -2395,9 +2419,13 @@ class MaiLifePlugin(MaiBotPlugin):
 
         anchor = str(kwargs.get("reply_message_id") or "")
 
-        info = message.get("message_info") if isinstance(message.get("message_info"), dict) else {}
+        info = message.get("message_info")
 
-        additional = info.get("additional_config") if isinstance(info.get("additional_config"), dict) else {}
+        info = info if isinstance(info, dict) else {}
+
+        additional = info.get("additional_config")
+
+        additional = additional if isinstance(additional, dict) else {}
 
         tagged_task_id = str(additional.get("mai_life_active_task_id") or "")
 
@@ -2742,7 +2770,9 @@ class MaiLifePlugin(MaiBotPlugin):
         if not await self._command_access(kwargs):
             return await self._send_command(kwargs, PRIVATE_COMMAND_ACCESS_DENIED)
 
-        groups = kwargs.get("matched_groups") if isinstance(kwargs.get("matched_groups"), dict) else {}
+        groups = kwargs.get("matched_groups")
+
+        groups = groups if isinstance(groups, dict) else {}
 
         payload = " ".join(str(groups.get("content") or "").replace("\x00", "").split())
 
@@ -2772,7 +2802,9 @@ class MaiLifePlugin(MaiBotPlugin):
 
         uid = str(kwargs.get("user_id") or "")
 
-        groups = kwargs.get("matched_groups") if isinstance(kwargs.get("matched_groups"), dict) else {}
+        groups = kwargs.get("matched_groups")
+
+        groups = groups if isinstance(groups, dict) else {}
 
         if not await self._command_user(kwargs):
             return await self._send_command(kwargs, self._profile_required_notice(uid))
@@ -2824,7 +2856,9 @@ class MaiLifePlugin(MaiBotPlugin):
 
         uid = str(kwargs.get("user_id") or "")
 
-        groups = kwargs.get("matched_groups") if isinstance(kwargs.get("matched_groups"), dict) else {}
+        groups = kwargs.get("matched_groups")
+
+        groups = groups if isinstance(groups, dict) else {}
 
         if not await self._command_user(kwargs):
             return await self._send_command(kwargs, self._profile_required_notice(uid))
@@ -2844,7 +2878,9 @@ class MaiLifePlugin(MaiBotPlugin):
 
         uid = str(kwargs.get("user_id") or "")
 
-        groups = kwargs.get("matched_groups") if isinstance(kwargs.get("matched_groups"), dict) else {}
+        groups = kwargs.get("matched_groups")
+
+        groups = groups if isinstance(groups, dict) else {}
 
         if not await self._command_user(kwargs):
             return await self._send_command(kwargs, self._profile_required_notice(uid))
@@ -2885,7 +2921,9 @@ class MaiLifePlugin(MaiBotPlugin):
         if not await self._command_access(kwargs) or not await self._is_owner_or_admin(uid):
             return await self._send_command(kwargs, "该指令只允许主人或管理员在私聊中使用。")
 
-        groups = kwargs.get("matched_groups") if isinstance(kwargs.get("matched_groups"), dict) else {}
+        groups = kwargs.get("matched_groups")
+
+        groups = groups if isinstance(groups, dict) else {}
 
         group_id = str(groups.get("group_id") or "").strip()
 
@@ -4068,6 +4106,8 @@ class MaiLifePlugin(MaiBotPlugin):
         }
 
         try:
+            from tomlkit.items import Table
+
             import tomlkit
 
         except ImportError:
@@ -4082,7 +4122,7 @@ class MaiLifePlugin(MaiBotPlugin):
 
         table = document.get(section)
 
-        if not isinstance(table, tomlkit.items.Table):
+        if not isinstance(table, Table):
             table = tomlkit.table()
 
             document[section] = table

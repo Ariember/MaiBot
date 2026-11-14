@@ -22,6 +22,49 @@ ROOT = Path(plugin_module.__file__).parent
 NOW = datetime(2026, 11, 13, 1, tzinfo=timezone.utc)
 
 
+def test_config_tracks_latest_injection():
+    plugin = plugin_module.MaiLifePlugin()
+    with pytest.raises(RuntimeError, match="配置尚未完成注入"):
+        _ = plugin.config
+
+    plugin.set_plugin_config(MaiLifeSettings(plugin={"enabled": True}).model_dump())
+    previous = plugin.config
+    assert isinstance(previous, MaiLifeSettings)
+    assert previous.plugin.enabled is True
+
+    plugin.set_plugin_config(MaiLifeSettings(plugin={"enabled": False}).model_dump())
+    assert isinstance(plugin.config, MaiLifeSettings)
+    assert plugin.config is not previous
+    assert plugin.config.plugin.enabled is False
+
+
+@pytest.mark.parametrize(
+    "initial_toml",
+    [
+        None,
+        "# settings\n[plugin]\nenabled = true\n",
+        "# settings\n[plugin]\nenabled = true\n[proactive]\nenabled = true # keep comment\n",
+    ],
+)
+def test_persist_config_preserves_other_sections_and_comments(tmp_path, initial_toml):
+    path = tmp_path / "config.toml"
+    if initial_toml is not None:
+        path.write_text(initial_toml, encoding="utf-8")
+    plugin = plugin_module.MaiLifePlugin()
+    plugin._config_toml_path = str(path)
+
+    plugin._persist_config_toml("proactive", MaiLifeSettings(proactive={"enabled": False}))
+
+    content = path.read_text(encoding="utf-8")
+    saved = tomllib.loads(content)
+    assert saved["proactive"]["enabled"] is False
+    if initial_toml is not None:
+        assert saved["plugin"] == {"enabled": True}
+        assert content.startswith("# settings\n")
+        if "# keep comment" in initial_toml:
+            assert "# keep comment" in content
+
+
 def test_defaults_template_and_webui_contract():
     plugin = plugin_module.MaiLifePlugin()
     plugin.set_plugin_config({})

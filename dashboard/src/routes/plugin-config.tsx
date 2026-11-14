@@ -313,7 +313,7 @@ function PluginRuntimeComponentsPanel({ pluginId }: { pluginId: string }) {
                           <div key={`${component.component_type}-${component.name}`} className="rounded-md border p-3">
                             <div className="mb-2 flex items-start justify-between gap-2">
                               <div className="min-w-0">
-                                <div className="break-words text-sm font-medium">{component.name}</div>
+                                <div className="wrap-break-word text-sm font-medium">{component.name}</div>
                                 {component.description && (
                                   <p className="text-muted-foreground mt-1 line-clamp-3 text-xs">
                                     {component.description}
@@ -481,7 +481,7 @@ function PluginDetailsPanel({
                 {detailItems.map((item) => (
                   <div key={item.label} className={`flex min-w-0 gap-2 text-sm ${item.label === '安装路径' ? 'sm:col-span-2 xl:col-span-1' : ''}`}>
                     <dt className="text-muted-foreground shrink-0">{item.label}</dt>
-                    <dd className="min-w-0 break-words [overflow-wrap:anywhere]">{item.value}</dd>
+                    <dd className="min-w-0 wrap-anywhere">{item.value}</dd>
                   </div>
                 ))}
               </dl>
@@ -1023,7 +1023,7 @@ export function PluginConfigEditor({ plugin, onBack, initialTab }: PluginConfigE
             </span>
           </div>
         </div>
-        <div className="grid min-w-0 auto-cols-fr grid-flow-col items-center gap-1 whitespace-nowrap max-lg:[&>*]:min-w-0 max-lg:[&>button]:!px-1 max-lg:[&>button]:!text-xs max-lg:[&>button>svg]:hidden lg:flex lg:shrink-0 lg:gap-3">
+        <div className="grid min-w-0 auto-cols-fr grid-flow-col items-center gap-1 whitespace-nowrap max-lg:*:min-w-0 max-lg:[&>button]:px-1! max-lg:[&>button]:text-xs! max-lg:[&>button>svg]:hidden lg:flex lg:shrink-0 lg:gap-3">
           <Button
             variant="outline"
             size="sm"
@@ -1129,7 +1129,7 @@ export function PluginConfigEditor({ plugin, onBack, initialTab }: PluginConfigE
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     <p>配置校验失败，工具和调度已暂停。请修正下方原始 TOML 并保存，校验通过后恢复运行。</p>
-                    <pre className="mt-2 whitespace-pre-wrap break-words text-xs">{configError}</pre>
+                    <pre className="mt-2 whitespace-pre-wrap wrap-break-word text-xs">{configError}</pre>
                   </AlertDescription>
                 </Alert>
               )}
@@ -1398,7 +1398,7 @@ function PluginConfigPageContent() {
     return (
       <>
         <ScrollArea
-          className="h-full max-lg:h-auto max-lg:overflow-visible max-lg:[&>[data-dashboard-scrollbar]]:hidden"
+          className="h-full max-lg:h-auto max-lg:overflow-visible max-lg:*:data-dashboard-scrollbar:hidden"
           viewportClassName="max-lg:h-auto max-lg:!overflow-visible max-lg:overscroll-auto"
           scrollbars="vertical"
         >
@@ -1431,7 +1431,7 @@ function PluginConfigPageContent() {
       )}
       {/* 手机端让列表自然撑高，由工作区统一滚动，避免内部视口拦截手势。 */}
       <ScrollArea
-        className="h-full max-lg:h-auto max-lg:overflow-visible max-lg:[&>[data-dashboard-scrollbar]]:hidden"
+        className="h-full max-lg:h-auto max-lg:overflow-visible max-lg:*:data-dashboard-scrollbar:hidden"
         viewportClassName="max-lg:h-auto max-lg:!overflow-visible max-lg:overscroll-auto"
         scrollbars="vertical"
       >
@@ -1626,11 +1626,11 @@ function PluginConfigPageContent() {
                 >
                   <div className="flex min-w-0 items-start gap-3 sm:items-center">
                     <span
-                      className={`mt-4 h-2.5 w-2.5 flex-shrink-0 rounded-full sm:mt-0 ${statusMeta.dotClassName}`}
+                      className={`mt-4 h-2.5 w-2.5 shrink-0 rounded-full sm:mt-0 ${statusMeta.dotClassName}`}
                       title={statusMeta.label}
                       aria-label={statusMeta.label}
                     />
-                    <div className="flex w-12 flex-shrink-0 flex-col items-center gap-1 sm:w-10">
+                    <div className="flex w-12 shrink-0 flex-col items-center gap-1 sm:w-10">
                       <PluginIcon
                         pluginId={plugin.id}
                         manifest={plugin.manifest}
@@ -1643,18 +1643,18 @@ function PluginConfigPageContent() {
                     </div>
                     <div className="min-w-0 flex-1 space-y-2 sm:space-y-1">
                       <div className="flex min-w-0 flex-wrap items-center gap-2">
-                        <h3 className="min-w-0 text-sm leading-snug font-medium break-words sm:truncate sm:text-base">
+                        <h3 className="min-w-0 text-sm leading-snug font-medium wrap-break-word sm:truncate sm:text-base">
                           {plugin.manifest.name}
                         </h3>
                         {!adapterManagement && (
-                          <Badge variant="outline" className="flex-shrink-0 text-xs">
+                          <Badge variant="outline" className="shrink-0 text-xs">
                             {getPluginTypeLabel(plugin)}
                           </Badge>
                         )}
                         {statusMeta.showsBadge !== false && (
                           <Badge
                             variant="outline"
-                            className={`flex-shrink-0 gap-1 text-xs ${statusMeta.badgeClassName ?? ''}`}
+                            className={`shrink-0 gap-1 text-xs ${statusMeta.badgeClassName ?? ''}`}
                           >
                             {statusMeta.icon === 'loading' && (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -1674,7 +1674,7 @@ function PluginConfigPageContent() {
                             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                             <div className="min-w-0 space-y-0.5">
                               <div className="text-sm font-medium">{loadFailureTitle}</div>
-                              <div className="line-clamp-2 break-words">{loadFailureDescription}</div>
+                              <div className="line-clamp-2 wrap-break-word">{loadFailureDescription}</div>
                             </div>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
@@ -1720,7 +1720,7 @@ function PluginConfigPageContent() {
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-2 sm:flex-shrink-0 sm:border-t-0 sm:pt-0">
+                  <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-2 sm:shrink-0 sm:border-t-0 sm:pt-0">
                     {reviewPrompt && (
                       <Button
                         type="button"
@@ -1844,7 +1844,7 @@ function PluginConfigPageContent() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-md border px-3 py-2">
                     <div className="text-muted-foreground text-xs font-medium">插件 ID</div>
-                    <div className="mt-1 break-words text-sm">{loadFailureDetailPlugin.id}</div>
+                    <div className="mt-1 wrap-break-word text-sm">{loadFailureDetailPlugin.id}</div>
                   </div>
                   <div className="rounded-md border px-3 py-2">
                     <div className="text-muted-foreground text-xs font-medium">版本</div>
@@ -1856,14 +1856,14 @@ function PluginConfigPageContent() {
                   </div>
                   <div className="rounded-md border px-3 py-2">
                     <div className="text-muted-foreground text-xs font-medium">安装路径</div>
-                    <div className="mt-1 break-words text-sm">{loadFailureDetailPlugin.path}</div>
+                    <div className="mt-1 wrap-break-word text-sm">{loadFailureDetailPlugin.path}</div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="text-sm font-medium">失败原因</div>
                   <ScrollArea className="max-h-[min(42vh,20rem)] rounded-md border bg-muted/30 p-3">
-                    <pre className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                    <pre className="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed">
                       {loadFailureDetailPlugin.load_error?.trim() || '运行时未返回具体失败原因'}
                     </pre>
                   </ScrollArea>
@@ -1948,7 +1948,7 @@ function PluginConfigPageContent() {
                   />
                 )}
                 <p
-                  className={`text-sm break-words ${
+                  className={`text-sm wrap-break-word ${
                     updateProgress.stage === 'success'
                       ? 'text-green-600 dark:text-green-400'
                       : updateProgress.stage === 'error'
@@ -2064,7 +2064,7 @@ function PluginConfigPageContent() {
                   />
                 )}
                 <p
-                  className={`text-sm break-words ${
+                  className={`text-sm wrap-break-word ${
                     deleteProgress.stage === 'success'
                       ? 'text-green-600 dark:text-green-400'
                       : deleteProgress.stage === 'error'
