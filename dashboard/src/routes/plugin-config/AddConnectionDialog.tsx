@@ -66,7 +66,7 @@ export function AddConnectionDialog({ onClose, onInstalled }: AddConnectionDialo
       try {
         const [market, installed, git] = await Promise.all([
           fetchPluginList({ compatibleOnly: true }),
-          getInstalledPlugins({ forceRefresh: true }),
+          getInstalledPlugins({ forceRefresh: true, includeBuiltin: true }),
           checkGitStatus(),
         ])
         if (cancelled) return

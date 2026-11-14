@@ -197,7 +197,7 @@ export function usePluginList() {
     try {
       // 启停和状态通知同步刷新列表及导航，跳过缓存以获取最新运行状态。
       const [allInstalled] = await Promise.all([
-        getInstalledPlugins({ forceRefresh: true }),
+        getInstalledPlugins({ forceRefresh: true, includeBuiltin: adapterOnly }),
         refreshPluginWebUI(true),
       ])
       if (requestId !== installedRequestRef.current) return
@@ -411,6 +411,9 @@ export function usePluginList() {
     )
   }
   const getPluginUpdateState = (plugin: InstalledPlugin): PluginUpdateState => {
+    if (plugin.builtin) {
+      return { canUpdate: false, hasUpdate: false, title: '随主程序更新' }
+    }
     if (checkingUpdates) {
       return { canUpdate: false, hasUpdate: false, title: '正在检查更新' }
     }

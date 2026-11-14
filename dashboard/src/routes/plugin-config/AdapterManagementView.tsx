@@ -183,7 +183,7 @@ export function AdapterManagementView({
                           aria-label={`${plugin.enabled === false ? '启动' : '关闭'} ${plugin.manifest.name}`}
                           onCheckedChange={() => onToggle(plugin)}
                         />
-                        <DropdownMenu>
+                        {!plugin.builtin && <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
@@ -214,7 +214,7 @@ export function AdapterManagementView({
                               卸载适配器
                             </DropdownMenuItem>
                           </DropdownMenuContent>
-                        </DropdownMenu>
+                        </DropdownMenu>}
                       </>
                     }
                   >
@@ -234,7 +234,7 @@ export function AdapterManagementView({
                                 立即更新
                               </Button>
                             )}
-                            {incompatible && !needsUpdate && !checkingUpdates && (
+                            {incompatible && !plugin.builtin && !needsUpdate && !checkingUpdates && (
                               <Button asChild variant="outline" size="xs">
                                 <a href={getPluginMarketplaceRoutePath()}>前往插件市场</a>
                               </Button>
