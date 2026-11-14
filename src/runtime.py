@@ -193,7 +193,7 @@ loop = None
 
 
 def print_opensource_notice():
-    """打印开源项目提示，防止倒卖"""
+    """打印个人 Fork 的项目信息、许可证与上游归属。"""
     from colorama import init, Fore, Style
 
     init()
@@ -207,9 +207,9 @@ def print_opensource_notice():
         "",
         f"{Fore.WHITE}{t('startup.opensource_repo')}{Fore.BLUE}{t('startup.opensource_repo_value')} {Style.RESET_ALL}",
         f"{Fore.WHITE}{t('startup.opensource_docs')}{Fore.BLUE}{t('startup.opensource_docs_value')} {Style.RESET_ALL}",
-        f"{Fore.WHITE}{t('startup.opensource_group')}{Fore.BLUE}{t('startup.opensource_group_value')}{Style.RESET_ALL}",
+        f"{Fore.WHITE}{t('startup.opensource_upstream')}{Fore.BLUE}{t('startup.opensource_upstream_value')}{Style.RESET_ALL}",
         f"{Fore.CYAN}{'─' * 70}{Style.RESET_ALL}",
-        f"{Fore.RED}{t('startup.opensource_resale_warning')}{Style.RESET_ALL}",
+        f"{Fore.WHITE}{t('startup.opensource_attribution')}{Style.RESET_ALL}",
         f"{Fore.CYAN}{'═' * 70}{Style.RESET_ALL}",
         "",
     ]

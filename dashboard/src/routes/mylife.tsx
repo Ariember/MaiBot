@@ -9,7 +9,6 @@ import {
   Loader2,
   Save,
   Settings2,
-  Sun,
   Users,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -36,9 +35,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Switch } from '@/components/ui/switch'
+import { SwitchField } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
 import { MYLIFE_PLUGIN_ID } from '@/lib/mylife'
 import {
@@ -292,6 +290,21 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
             <span className="text-muted-foreground mr-auto text-xs sm:mr-2" role="status">
               {t(hasChanges ? 'mylife.unsaved' : 'mylife.saved')}
             </span>
+            {!repairMode && (
+              <>
+                <SwitchField
+                  id="mylife-enabled"
+                  label={t('mylife.enable')}
+                  aria-describedby="mylife-enable-hint"
+                  checked={Boolean((config.plugin as Record<string, unknown>)?.enabled)}
+                  onCheckedChange={(enabled) => changeField('plugin', 'enabled', enabled)}
+                  disabled={saving}
+                />
+                <p id="mylife-enable-hint" className="sr-only">
+                  {t('mylife.enableHint')}
+                </p>
+              </>
+            )}
             <Button
               variant="outline"
               disabled={!hasChanges || saving}
@@ -336,27 +349,6 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
           </div>
         ) : (
           <fieldset disabled={saving} className="min-w-0 space-y-6">
-            <Card>
-              <CardContent className="flex items-center gap-4 py-5">
-                <div className="bg-primary/5 text-primary hidden rounded-lg p-3 sm:block">
-                  <Sun className="h-6 w-6" aria-hidden="true" />
-                </div>
-                <div className="min-w-0 flex-1 space-y-1">
-                  <Label htmlFor="mylife-enabled" className="text-base font-medium">
-                    {t('mylife.enable')}
-                  </Label>
-                  <p id="mylife-enable-hint" className="text-muted-foreground text-sm">
-                    {t('mylife.enableHint')}
-                  </p>
-                </div>
-                <Switch
-                  id="mylife-enabled"
-                  aria-describedby="mylife-enable-hint"
-                  checked={Boolean((config.plugin as Record<string, unknown>)?.enabled)}
-                  onCheckedChange={(enabled) => changeField('plugin', 'enabled', enabled)}
-                />
-              </CardContent>
-            </Card>
             <section
               aria-label={t(`mylife.groups.${activeGroup.id}.title`)}
               className="min-w-0 space-y-5"
