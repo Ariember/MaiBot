@@ -55,7 +55,7 @@ LABEL org.opencontainers.image.source="https://github.com/Ariember/MaiBot" \
       org.opencontainers.image.revision="${VCS_REF}"
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends git ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install system libraries required by Playwright Chromium. The browser binary

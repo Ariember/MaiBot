@@ -49,6 +49,7 @@ dependencies = [
     "rapidfuzz",
     "rich>=14.0.0",
     "scipy>=1.7.0",
+    "silk-python>=0.2.8",
     "sqlalchemy>=2.0.40",
     "sqlmodel>=0.0.24",
     "structlog>=25.4.0",
@@ -76,6 +77,7 @@ namespaces = true
 "src.computer" = ["guest.ps1"]
 "src.desktop_pet" = ["web/*.html", "web/*.js", "LICENSE"]
 "src.plugins.built_in.mylife" = ["webui.json", "webui/*.html", "mailife.png", "config.toml.example"]
+"src.plugins.built_in.snowluma_adapter" = ["README.md", "assets/icon-v2.png"]
 "*" = ["_manifest.json", "config_schema.json", "LICENSE", "LICENSE-MAIBOT-GPL.md"]
 
 [dependency-groups]

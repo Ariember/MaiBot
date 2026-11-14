@@ -56,6 +56,7 @@ from src.plugin_runtime.protocol.envelope import InspectPluginConfigResultPayloa
 from src.plugin_runtime.runner.manifest_validator import ManifestValidator, is_reserved_plugin_directory
 from src.plugin_runtime.runner.plugin_enabled import is_plugin_disabled
 from src.plugin_runtime.runner.plugin_paths import get_plugin_config_path, is_builtin_plugin_path
+from src.plugin_runtime.snowluma_migration import migrate_snowluma_adapter
 from src.plugin_runtime.usage_tracker import PluginUsageTracker
 
 if TYPE_CHECKING:
@@ -637,6 +638,7 @@ class PluginRuntimeManager(
             DependencySyncState: 同步后的环境变更状态与阻止列表变化集合。
         """
 
+        await asyncio.to_thread(migrate_snowluma_adapter, plugin_dirs)
         duplicate_plugin_reasons = await asyncio.to_thread(self._build_duplicate_plugin_block_reasons, plugin_dirs)
         if duplicate_plugin_reasons:
             details = "; ".join(
