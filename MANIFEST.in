@@ -1,5 +1,7 @@
 include EULA.md PRIVACY.md
 include changelogs/changelog.md
+include dashboard/package.json
+recursive-include dashboard/dist *
 recursive-include prompts *.prompt *.toml
 recursive-include locales *.json
 recursive-include src/plugins/built_in _manifest.json

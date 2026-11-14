@@ -6,8 +6,6 @@ from typing import Any, Dict, List
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
 from packaging.version import Version
 
 import argparse
@@ -20,8 +18,6 @@ import tarfile
 import time
 import tomllib
 import zipfile
-
-from release_dependencies import run_with_published_package
 
 
 def digest(path: Path) -> str:
@@ -54,12 +50,8 @@ def prepare(source: Path, destination: Path, version: str) -> None:
     project = tomllib.loads((source / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     if project["name"].lower() != "maibot" or project["version"] != version:
         raise ValueError("输入版本号必须与主程序 pyproject.toml 一致")
-    dashboard = next(Requirement(item) for item in project["dependencies"] if Requirement(item).name == "maibot-dashboard")
-    specs = list(dashboard.specifier)
-    if len(specs) != 1 or specs[0].operator != "==" or Version(specs[0].version).is_prerelease:
-        raise ValueError("请先运行 Prepare Main Release，固定已发布的 Dashboard 正式版本")
-    if not pypi_files("maibot-dashboard", specs[0].version):
-        raise ValueError("主程序依赖的 Dashboard 正式版本尚未发布到 PyPI")
+    if not (source / "dashboard" / "dist" / "index.html").is_file():
+        raise ValueError("缺少 dashboard/dist/index.html，请先在 dashboard 目录执行 bun run build")
     commit = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
     destination.mkdir(parents=True, exist_ok=True)
     manifest = {"version": version, "tag": f"v{version}", "commit": commit, "files": {}}
@@ -70,7 +62,8 @@ def prepare(source: Path, destination: Path, version: str) -> None:
 
 def audit_names(names: List[str], prefix: str = "") -> None:
     required = {"src/runtime.py", "src/cli/tool.py", "src/_resources/pyproject.toml", "src/_resources/EULA.md",
-                "src/_resources/PRIVACY.md", "src/A_memorix/config_schema.json", "src/plugins/built_in/plugin_management/_manifest.json"}
+                "src/_resources/PRIVACY.md", "src/_resources/dashboard/package.json", "src/_resources/dashboard/dist/index.html",
+                "src/A_memorix/config_schema.json", "src/plugins/built_in/plugin_management/_manifest.json"}
     paths = {name.removeprefix(prefix) for name in names}
     for name in paths:
         parts = Path(name).parts
@@ -155,28 +148,20 @@ def smoke(directory: Path) -> None:
     work = Path(os.environ["RUNNER_TEMP"]) / "maibot-smoke"
     work.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
-    env.pop("PYTHONPATH", None)
-    env.pop("MAIBOT_INSTANCE_DIR", None)
-    env.pop("MAIBOT_INITIALIZE_ONLY", None)
+    for key in (
+        "PYTHONPATH", "MAIBOT_INSTANCE_DIR", "MAIBOT_INITIALIZE_ONLY", "UV_INDEX", "UV_EXTRA_INDEX_URL",
+        "UV_INDEX_URL", "UV_DEFAULT_INDEX", "UV_FIND_LINKS",
+    ):
+        env.pop(key, None)
     env["PYTHONIOENCODING"] = "utf-8"
     env["UV_TOOL_DIR"] = str(work / "tools")
     env["UV_TOOL_BIN_DIR"] = str(work / "bin")
     wheel = next((directory / "dist").glob("*.whl")).resolve()
-    # 从已校验的 wheel 读取依赖，重试旧产物时也不受当前分支版本变化影响。
-    with zipfile.ZipFile(wheel) as archive:
-        metadata_path = next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
-        metadata = BytesParser().parsebytes(archive.read(metadata_path))
-    requirements = [Requirement(item) for item in metadata.get_all("Requires-Dist", [])]
-    dashboard = next(item for item in requirements if canonicalize_name(item.name) == "maibot-dashboard")
-    specs = list(dashboard.specifier)
-    if len(specs) != 1 or specs[0].operator != "==" or Version(specs[0].version).is_prerelease:
-        raise ValueError("发布 wheel 必须固定 Dashboard 正式版本")
-    run_with_published_package(
-        ["uv", "tool", "install", "--python", "3.13", str(wheel)],
-        "maibot-dashboard",
-        specs[0].version,
+    subprocess.run(
+        ["uv", "tool", "install", "--python", "3.13", "--no-config", "--default-index", "https://pypi.org/simple", str(wheel)],
         cwd=work,
         env=env,
+        check=True,
         timeout=600,
     )
     executable = work / "bin" / ("maibot.exe" if os.name == "nt" else "maibot")

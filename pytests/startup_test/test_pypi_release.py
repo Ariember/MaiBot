@@ -3,6 +3,7 @@
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Dict
+from unittest.mock import Mock
 
 import hashlib
 import json
@@ -68,26 +69,69 @@ def test_archive_rejects_user_data(path: str) -> None:
         release.audit_names(["root/" + path], prefix="root/")
 
 
-def test_prepare_rejects_dev_dashboard_before_network(tmp_path: Path) -> None:
+def test_prepare_requires_dashboard_build(tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text(
-        '[project]\nname="MaiBot"\nversion="1.3.9"\ndependencies=["maibot-dashboard==1.9.1.dev1"]\n',
+        '[project]\nname="MaiBot"\nversion="1.3.9"\ndependencies=[]\n',
         encoding="utf-8",
     )
-    with pytest.raises(ValueError, match="正式版本"):
+    with pytest.raises(ValueError, match="bun run build"):
         release.prepare(tmp_path, tmp_path / "release", "1.3.9")
 
 
 def test_prepare_freezes_commit_and_notes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / "pyproject.toml").write_text(
-        '[project]\nname="MaiBot"\nversion="1.3.9"\ndependencies=["maibot-dashboard==1.9.1"]\n',
+        '[project]\nname="MaiBot"\nversion="1.3.9"\ndependencies=[]\n',
         encoding="utf-8",
     )
+    dashboard_dist = tmp_path / "dashboard" / "dist"
+    dashboard_dist.mkdir(parents=True)
+    (dashboard_dist / "index.html").write_text("<html></html>", encoding="utf-8")
     changelogs = tmp_path / "changelogs"
     changelogs.mkdir()
     (changelogs / "changelog.md").write_text("# [1.3.9]\n- 本次变更\n# [1.3.8]\n- 上次变更\n", encoding="utf-8")
-    monkeypatch.setattr(release, "pypi_files", lambda name, version: {"dashboard.whl": "sha"})
+    pypi_files = Mock(side_effect=AssertionError("发布准备不应查询前端依赖包"))
+    monkeypatch.setattr(release, "pypi_files", pypi_files)
     monkeypatch.setattr(release.subprocess, "check_output", lambda *args, **kwargs: "a" * 40 + "\n")
     destination = tmp_path / "release"
     release.prepare(tmp_path, destination, "1.3.9")
     assert release.read_manifest(destination)["commit"] == "a" * 40
     assert (destination / "notes.md").read_text(encoding="utf-8") == "- 本次变更\n"
+    pypi_files.assert_not_called()
+
+
+@pytest.mark.parametrize("missing", ["src/_resources/dashboard/package.json", "src/_resources/dashboard/dist/index.html"])
+def test_wheel_requires_dashboard_resources(missing: str) -> None:
+    names = {
+        "src/runtime.py", "src/cli/tool.py", "src/_resources/pyproject.toml", "src/_resources/EULA.md",
+        "src/_resources/PRIVACY.md", "src/_resources/dashboard/package.json", "src/_resources/dashboard/dist/index.html",
+        "src/A_memorix/config_schema.json", "src/plugins/built_in/plugin_management/_manifest.json",
+        "src/_resources/prompts/zh-CN/test.prompt", "src/_resources/prompts/en-US/test.prompt",
+        "src/_resources/prompts/ja-JP/test.prompt", "src/_resources/locales/zh-CN/startup.json",
+    }
+    release.audit_names(list(names))
+    with pytest.raises(ValueError, match=missing):
+        release.audit_names(list(names - {missing}))
+
+
+def test_smoke_installs_artifact_and_checks_init(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    wheel = dist / "maibot-1.3.16-py3-none-any.whl"
+    wheel.touch()
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
+    monkeypatch.setenv("UV_INDEX", "https://stale-mirror.invalid/simple")
+    monkeypatch.setattr(release, "verify", Mock())
+    config = tmp_path / "maibot-smoke" / "instance" / "config"
+    config.mkdir(parents=True)
+    for name in ("bot_config.toml", "model_config.toml"):
+        (config / name).write_text("# unchanged", encoding="utf-8")
+    run = Mock()
+    monkeypatch.setattr(release.subprocess, "run", run)
+    release.smoke(tmp_path)
+    install, *commands = run.call_args_list
+    assert install.args[0] == [
+        "uv", "tool", "install", "--python", "3.13", "--no-config", "--default-index", "https://pypi.org/simple", str(wheel),
+    ]
+    assert "UV_INDEX" not in install.kwargs["env"]
+    assert install.kwargs["check"] is True
+    assert [call.args[0][1] for call in commands] == ["--help", "--version", "init", "init"]

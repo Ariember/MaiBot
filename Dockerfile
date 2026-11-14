@@ -33,7 +33,6 @@ COPY pyproject.toml ./
 # Place uv cache in the cache mount.
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev --no-install-project --link-mode=copy \
-        --no-install-package maibot-dashboard \
         --no-install-package maibot-plugin-sdk \
         --no-install-package maim-message
 # Store the Playwright package separately so it can be mounted when the runtime image installs.
@@ -48,7 +47,7 @@ WORKDIR /MaiMBot
 
 ENV MAIBOT_LEGACY_0X_UPGRADE_CONFIRMED=1
 ENV PATH="/MaiMBot/.venv/bin:${PATH}"
-ENV MAIBOT_WEBUI_USE_LOCAL_DASHBOARD=1 MAIBOT_CONTAINER_IMAGE=1
+ENV MAIBOT_CONTAINER_IMAGE=1
 ARG VERSION
 ARG VCS_REF
 LABEL org.opencontainers.image.source="https://github.com/Ariember/MaiBot" \
@@ -73,7 +72,7 @@ COPY --from=deps /MaiMBot/uv.lock ./uv.lock
 # The dashboard is built above; only the Python runtime dependencies are installed here.
 COPY pyproject.toml ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --no-install-project --no-install-package maibot-dashboard --link-mode=copy
+    uv sync --no-dev --no-install-project --link-mode=copy
 
 # Copy project source
 COPY . .

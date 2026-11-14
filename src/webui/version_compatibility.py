@@ -1,27 +1,16 @@
 """主程序与 WebUI 的版本兼容性检查。"""
 
 from dataclasses import dataclass
-from importlib.metadata import PackageNotFoundError, version as read_installed_version
-from os import getenv
 from pathlib import Path
 from typing import Literal
 
 import json
 import re
-import tomllib
 
-from src.common.paths import project_metadata_path
 from src.common.version import PROJECT_ROOT, read_project_version
-
-DASHBOARD_PACKAGE_NAME = "maibot-dashboard"
-_LOCAL_DASHBOARD_ENV = "MAIBOT_WEBUI_USE_LOCAL_DASHBOARD"
 
 WebUICompatibilityStatus = Literal["compatible", "webui_outdated", "main_program_outdated"]
 
-_DASHBOARD_REQUIREMENT_PATTERN = re.compile(
-    rf"^{re.escape(DASHBOARD_PACKAGE_NAME)}\s*(?:>=|==)\s*(?P<version>[^,;\s]+)",
-    re.IGNORECASE,
-)
 _VERSION_PATTERN = re.compile(
     r"^v?"
     r"(?P<release>\d+(?:\.\d+)*)"
@@ -108,43 +97,6 @@ def _has_same_release(left: str, right: str) -> bool:
     )
 
 
-def resolve_local_dashboard_path(project_root: Path | None = None) -> Path | None:
-    """返回已启用且可加载的本地 Dashboard 构建目录。"""
-    if getenv(_LOCAL_DASHBOARD_ENV, "").strip().lower() not in {"1", "true", "yes", "on"}:
-        return None
-    static_path = (project_root or PROJECT_ROOT) / "dashboard" / "dist"
-    if static_path.is_dir() and (static_path / "index.html").exists():
-        return static_path
-    return None
-
-
-def read_required_webui_version(project_root: Path | None = None) -> str:
-    """从 pyproject.toml 读取主程序要求的 WebUI 版本。"""
-
-    root = project_root or PROJECT_ROOT
-    with project_metadata_path(root).open("rb") as pyproject_file:
-        pyproject_data = tomllib.load(pyproject_file)
-
-    project_data = pyproject_data.get("project")
-    if not isinstance(project_data, dict):
-        raise ValueError("pyproject.toml 缺少 [project] 配置节，无法读取 WebUI 版本要求")
-
-    dependencies = project_data.get("dependencies")
-    if not isinstance(dependencies, list):
-        raise ValueError("pyproject.toml 缺少 project.dependencies，无法读取 WebUI 版本要求")
-
-    for dependency in dependencies:
-        if not isinstance(dependency, str):
-            continue
-        match = _DASHBOARD_REQUIREMENT_PATTERN.match(dependency.strip())
-        if match is not None:
-            return match.group("version")
-
-    raise ValueError(
-        f"pyproject.toml 未声明有效的 {DASHBOARD_PACKAGE_NAME} 版本约束（支持 >= 或 ==）"
-    )
-
-
 def read_local_webui_version(project_root: Path | None = None) -> str:
     """读取本地 Dashboard 源码声明的版本。"""
 
@@ -159,29 +111,16 @@ def read_local_webui_version(project_root: Path | None = None) -> str:
     return webui_version.strip()
 
 
-def read_installed_webui_version() -> str:
-    """读取当前安装的 Dashboard 静态资源包版本。"""
-
-    try:
-        return read_installed_version(DASHBOARD_PACKAGE_NAME)
-    except PackageNotFoundError as exc:
-        raise RuntimeError(f"未安装 {DASHBOARD_PACKAGE_NAME}，无法检查 WebUI 版本") from exc
-
-
 def get_webui_version_compatibility(
     webui_version: str,
     project_root: Path | None = None,
 ) -> WebUIVersionCompatibility:
-    """按实际静态资源来源选择版本声明，再比较浏览器中的 WebUI 版本。"""
+    """比较浏览器中的 WebUI 版本与程序自带的 Dashboard 版本。"""
 
     root = project_root or PROJECT_ROOT
-    required_webui_version = (
-        read_local_webui_version(root)
-        if resolve_local_dashboard_path(root) is not None
-        else read_required_webui_version(root)
-    )
+    required_webui_version = read_local_webui_version(root)
     comparison = compare_versions(webui_version, required_webui_version)
-    # 测试版依赖用于开发迭代，不据此提示前后端版本不匹配。
+    # 测试版前端用于开发迭代，不据此提示前后端版本不匹配。
     if _parse_version(required_webui_version).phase[0] < 4:
         status: WebUICompatibilityStatus = "compatible"
     elif comparison < 0:

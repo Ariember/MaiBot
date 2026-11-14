@@ -6,7 +6,7 @@
 - 更新服务：`ghcr.io/ariember/maibot-updater:latest`
 - 开发渠道将两者的标签换成 `dev`；发布同时保留完整提交 SHA 和版本标签。
 
-镜像包含本仓库构建的 dashboard，不需要发布或安装自己的 `maibot-dashboard` 包。
+镜像包含本仓库构建的 `dashboard/dist`，前后端随镜像一起更新。
 Python 包自更新已移除；已有包安装仍可运行，请先备份实例目录，再迁移到容器部署。
 源码部署的 WebUI 更新固定跟随 `Ariember/MaiBot`，不再检查上游或 CNB。
 

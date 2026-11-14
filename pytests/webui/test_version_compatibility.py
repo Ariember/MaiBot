@@ -1,12 +1,13 @@
 from pathlib import Path
 
+import json
+
 import pytest
 
 from src.webui.version_compatibility import (
     compare_versions,
     get_webui_version_compatibility,
     read_local_webui_version,
-    read_required_webui_version,
 )
 
 
@@ -14,11 +15,8 @@ def _write_project_files(
     project_root: Path,
     *,
     main_program_version: str = "1.2.3",
-    required_webui_version: str = "2.0.0.dev10",
     local_webui_version: str = "2.0.0.dev10",
-    dashboard_requirement: str | None = None,
 ) -> None:
-    requirement = dashboard_requirement or f"maibot-dashboard>={required_webui_version}"
     (project_root / "dashboard").mkdir()
     (project_root / "pyproject.toml").write_text(
         "\n".join(
@@ -26,7 +24,7 @@ def _write_project_files(
                 "[project]",
                 'name = "MaiBot"',
                 f'version = "{main_program_version}"',
-                f'dependencies = ["{requirement}"]',
+                "dependencies = []",
             ]
         ),
         encoding="utf-8",
@@ -53,22 +51,9 @@ def test_compare_versions(left: str, right: str, expected: int) -> None:
     assert compare_versions(left, right) == expected
 
 
-@pytest.mark.parametrize(
-    "dashboard_requirement",
-    [
-        "maibot-dashboard>=2.0.0.dev10",
-        "maibot-dashboard >= 2.0.0.dev10",
-        "maibot-dashboard==2.0.0.dev10",
-        "maibot-dashboard == 2.0.0.dev10",
-    ],
-)
-def test_read_webui_versions_from_project_files(
-    tmp_path: Path,
-    dashboard_requirement: str,
-) -> None:
-    _write_project_files(tmp_path, dashboard_requirement=dashboard_requirement)
+def test_read_webui_version_from_dashboard_package(tmp_path: Path) -> None:
+    _write_project_files(tmp_path)
 
-    assert read_required_webui_version(tmp_path) == "2.0.0.dev10"
     assert read_local_webui_version(tmp_path) == "2.0.0.dev10"
 
 
@@ -88,7 +73,7 @@ def test_get_webui_version_compatibility_distinguishes_update_target(
     webui_version: str,
     expected_status: str,
 ) -> None:
-    _write_project_files(tmp_path, required_webui_version="2.0.0")
+    _write_project_files(tmp_path, local_webui_version="2.0.0")
 
     compatibility = get_webui_version_compatibility(webui_version, tmp_path)
 
@@ -103,42 +88,18 @@ def test_get_webui_version_compatibility_distinguishes_update_target(
 def test_prerelease_requirement_skips_mismatch(
     tmp_path: Path, required_version: str, webui_version: str,
 ) -> None:
-    _write_project_files(tmp_path, required_webui_version=required_version)
+    _write_project_files(tmp_path, local_webui_version=required_version)
 
     assert get_webui_version_compatibility(webui_version, tmp_path).status == "compatible"
 
 
-def test_read_required_webui_version_rejects_missing_dependency(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").write_text(
-        '[project]\nname = "MaiBot"\nversion = "1.2.3"\ndependencies = []\n',
+@pytest.mark.parametrize("version", ["", " ", None, 123])
+def test_read_local_webui_version_rejects_invalid_version(tmp_path: Path, version: object) -> None:
+    (tmp_path / "dashboard").mkdir()
+    (tmp_path / "dashboard" / "package.json").write_text(
+        json.dumps({"version": version}),
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="maibot-dashboard"):
-        read_required_webui_version(tmp_path)
-
-
-@pytest.mark.parametrize(
-    ("enabled", "built", "browser_version", "required", "status"),
-    [
-        ("1", True, "1.9.14", "1.9.14", "compatible"),
-        ("1", True, "1.9.13", "1.9.14", "webui_outdated"),
-        ("1", True, "1.9.15", "1.9.14", "main_program_outdated"),
-        ("0", True, "1.9.13", "1.9.13", "compatible"),
-        ("1", False, "1.9.13", "1.9.13", "compatible"),
-    ],
-)
-def test_compatibility_follows_the_loaded_dashboard_source(
-    monkeypatch, tmp_path, enabled, built, browser_version, required, status
-):
-    _write_project_files(tmp_path, required_webui_version="1.9.13", local_webui_version="1.9.14")
-    monkeypatch.setenv("MAIBOT_WEBUI_USE_LOCAL_DASHBOARD", enabled)
-    if built:
-        static_path = tmp_path / "dashboard" / "dist"
-        static_path.mkdir()
-        (static_path / "index.html").write_text("<html></html>", encoding="utf-8")
-
-    compatibility = get_webui_version_compatibility(browser_version, tmp_path)
-
-    assert compatibility.required_webui_version == required
-    assert compatibility.status == status
+    with pytest.raises(ValueError, match="dashboard/package.json"):
+        read_local_webui_version(tmp_path)

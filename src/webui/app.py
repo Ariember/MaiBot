@@ -1,6 +1,5 @@
 """FastAPI 应用工厂 - 创建和配置 WebUI 应用实例"""
 
-from importlib import import_module
 from os import getenv
 from pathlib import Path
 from typing import Any, Dict, Tuple
@@ -12,24 +11,17 @@ import mimetypes
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
-from src.common.paths import SOURCE_ROOT, get_instance_root
+from src.common.paths import RESOURCE_ROOT, get_instance_root
 from src.common.i18n import t
 from src.common.logger import get_logger
 from src.webui.dependencies import require_auth
 from src.webui.middleware.compression import TextGZipMiddleware, accepts_gzip
-from src.webui.version_compatibility import (
-    get_webui_version_compatibility,
-    read_installed_webui_version,
-    read_local_webui_version,
-    resolve_local_dashboard_path,
-)
 
 logger = get_logger("webui.app")
 
-_DASHBOARD_PACKAGE_NAME = "maibot-dashboard"
 _STATISTICS_REPORT_PATH_ENV = "MAIBOT_STATISTICS_REPORT_PATH"
 _DEFAULT_STATISTICS_REPORT_PATH = "maibot_statistics.html"
-_MANUAL_INSTALL_COMMAND = f"pip install {_DASHBOARD_PACKAGE_NAME}"
+_DASHBOARD_BUILD_COMMAND = "bun install --frozen-lockfile && bun run build"
 
 # 前端构建产物里可压缩的文本类文件；woff2、图片等本身已压缩，不再处理
 _GZIP_STATIC_SUFFIXES = frozenset({".css", ".html", ".js", ".json", ".map", ".mjs", ".svg", ".ttf", ".txt"})
@@ -99,7 +91,7 @@ async def _build_static_file_response(request: Request, static_path: Path, file_
 
 
 def _get_project_root() -> Path:
-    return SOURCE_ROOT
+    return RESOURCE_ROOT
 
 
 def _resolve_statistics_report_path() -> Path:
@@ -111,10 +103,7 @@ def _resolve_statistics_report_path() -> Path:
     return (get_instance_root() / report_path).resolve()
 
 
-def _validate_static_path(static_path: Path | None) -> Tuple[str, Dict[str, Any]] | None:
-    if static_path is None:
-        return "startup.webui_static_dir_missing", {}
-
+def _validate_static_path(static_path: Path) -> Tuple[str, Dict[str, Any]] | None:
     if not static_path.exists():
         return "startup.webui_static_dir_missing_with_path", {"static_path": static_path}
 
@@ -134,7 +123,7 @@ def _ensure_static_path_ready() -> Path | None:
     logger.warning(t("startup.webui_static_assets_unavailable"))
     error_key, error_kwargs = validation_error
     logger.warning(t(error_key, **error_kwargs))
-    logger.warning(t("startup.webui_dashboard_package_hint", command=_MANUAL_INSTALL_COMMAND))
+    logger.warning(t("startup.webui_dashboard_build_hint", command=_DASHBOARD_BUILD_COMMAND))
     return None
 
 
@@ -220,18 +209,6 @@ def _setup_static_files(app: FastAPI):
     if static_path is None:
         return
 
-    _log_webui_version_compatibility(static_path)
-
-    if not static_path.exists():
-        logger.warning(t("startup.webui_static_dir_missing_with_path", static_path=static_path))
-        logger.warning(t("startup.webui_dashboard_package_hint", command=_MANUAL_INSTALL_COMMAND))
-        return
-
-    if not (static_path / "index.html").exists():
-        logger.warning(t("startup.webui_index_missing", index_path=static_path / "index.html"))
-        logger.warning(t("startup.webui_dashboard_package_hint", command=_MANUAL_INSTALL_COMMAND))
-        return
-
     @app.get("/maibot_statistics.html", include_in_schema=False, dependencies=[Depends(require_auth)])
     async def serve_statistics_report():
         report_path = _resolve_statistics_report_path()
@@ -262,51 +239,8 @@ def _setup_static_files(app: FastAPI):
     logger.debug(t("startup.webui_static_files_configured", static_path=static_path))
 
 
-def _log_webui_version_compatibility(static_path: Path) -> None:
-    """在控制台提示当前加载的 WebUI 与主程序版本是否匹配。"""
-
-    local_static_path = (_get_project_root() / "dashboard" / "dist").resolve()
-    if static_path.resolve() == local_static_path:
-        webui_version = read_local_webui_version(_get_project_root())
-    else:
-        webui_version = read_installed_webui_version()
-
-    compatibility = get_webui_version_compatibility(webui_version, _get_project_root())
-    if compatibility.status == "webui_outdated":
-        logger.warning(
-            t(
-                "startup.webui_version_outdated",
-                current_version=compatibility.webui_version,
-                required_version=compatibility.required_webui_version,
-            )
-        )
-    elif compatibility.status == "main_program_outdated":
-        logger.warning(
-            t(
-                "startup.main_program_version_outdated_for_webui",
-                main_version=compatibility.main_program_version,
-                current_version=compatibility.webui_version,
-                required_version=compatibility.required_webui_version,
-            )
-        )
-
-
-def _resolve_static_path() -> Path | None:
-    static_path = resolve_local_dashboard_path(_get_project_root())
-    if static_path is not None:
-        return static_path
-
-    try:
-        module = import_module("maibot_dashboard")
-        get_dist_path = getattr(module, "get_dist_path", None)
-        if callable(get_dist_path):
-            package_path = get_dist_path()
-            if isinstance(package_path, Path) and package_path.exists():
-                return package_path
-    except Exception:
-        pass
-
-    return None
+def _resolve_static_path() -> Path:
+    return _get_project_root() / "dashboard" / "dist"
 
 
 def show_access_token():

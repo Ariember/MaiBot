@@ -9,8 +9,11 @@ import shutil
 
 class BuildPy(build_py):
     def run(self) -> None:
-        super().run()
         root = Path(__file__).resolve().parent
+        dashboard = root / "dashboard"
+        if not (dashboard / "dist" / "index.html").is_file():
+            raise RuntimeError("缺少 dashboard/dist/index.html，请先在 dashboard 目录执行 bun install --frozen-lockfile 和 bun run build")
+        super().run()
         destination = Path(self.build_lib) / "src" / "_resources"
         destination.mkdir(parents=True, exist_ok=True)
         for name in ("prompts", "locales"):
@@ -21,6 +24,8 @@ class BuildPy(build_py):
                     shutil.copy2(source, target)
         for name in ("pyproject.toml", "EULA.md", "PRIVACY.md"):
             shutil.copy2(root / name, destination / name)
+        shutil.copytree(dashboard / "dist", destination / "dashboard" / "dist", dirs_exist_ok=True)
+        shutil.copy2(dashboard / "package.json", destination / "dashboard" / "package.json")
         (destination / "changelogs").mkdir(exist_ok=True)
         shutil.copy2(root / "changelogs" / "changelog.md", destination / "changelogs" / "changelog.md")
 

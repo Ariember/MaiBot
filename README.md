@@ -38,16 +38,12 @@ MaiBot（麦麦）是一个基于大语言模型的可交互智能体，可通�
 
 适合本地开发或需要自行修改代码的场景。准备 **Git、Python 3.12+、[uv](https://docs.astral.sh/uv/getting-started/installation/)**；构建本 Fork 的 WebUI 还需要 **Node.js 22 和 Bun**。
 
-**1. 获取源码并初始化配置**
+**1. 获取源码**
 
 ```sh
 git clone https://github.com/Ariember/MaiBot.git
 cd MaiBot
-uv sync --inexact
-uv run --no-sync maibot init
 ```
-
-初始化会生成缺失的 `config/bot_config.toml` 和 `config/model_config.toml`，保留已有配置。前者用于机器人与功能设置，后者用于模型提供商、API Key、模型及任务分配；可编辑文件，也可启动后在 WebUI 中配置。
 
 **2. 构建本仓库的 WebUI**
 
@@ -58,24 +54,24 @@ bun run build
 cd ..
 ```
 
-**3. 从仓库根目录启动**
-
-Linux / macOS：
+**3. 安装依赖并初始化配置**
 
 ```sh
-MAIBOT_WEBUI_USE_LOCAL_DASHBOARD=1 uv run --no-sync bot.py
+uv sync --inexact
+uv run --no-sync maibot init
 ```
 
-Windows PowerShell：
+初始化会生成缺失的 `config/bot_config.toml` 和 `config/model_config.toml`，保留已有配置。前者用于机器人与功能设置，后者用于模型提供商、API Key、模型及任务分配；可编辑文件，也可启动后在 WebUI 中配置。
 
-```powershell
-$env:MAIBOT_WEBUI_USE_LOCAL_DASHBOARD = "1"
+**4. 从仓库根目录启动**
+
+```sh
 uv run --no-sync bot.py
 ```
 
 启动后访问 [http://127.0.0.1:8001](http://127.0.0.1:8001)，使用日志中的临时 Token 登录，再按页面提示设置固定 Token。完成模型配置后即可使用网页聊天室。
 
-`MAIBOT_WEBUI_USE_LOCAL_DASHBOARD=1` 用于加载 `dashboard/dist/`。未设置或构建产物缺失时，程序会尝试加载已安装的 `maibot-dashboard` 包，其界面可能与本 Fork 不一致。源码更新后如前端有变化，需重新构建；依赖有变化时运行 `uv sync --inexact`，以保留插件额外安装的依赖。
+WebUI 直接加载 `dashboard/dist/`，无需设置额外环境变量。源码更新后如前端有变化，需重新构建；依赖有变化时运行 `uv sync --inexact`，以保留插件额外安装的依赖。
 
 ### 前端开发
 
