@@ -339,6 +339,7 @@ class EmbeddingAPIAdapter:
 
         if last_exc is not None:
             logger.error(f"通过直接 Client 获取 Embedding 失败: {last_exc}")
+            raise last_exc
         return None
 
     def get_embedding_configuration_key(self) -> str:

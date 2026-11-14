@@ -3,6 +3,11 @@ display_name = "Context summary retry"
 advanced = true
 description = "Regenerate an invalid context summary with reminders about the format, tool restrictions, and character budget."
 
+[reply_supplement]
+display_name = "Reply supplement"
+advanced = true
+description = "Arranges quotes, images, emojis, and mentions from reply guidance and available resources while Replyer generates the text separately."
+
 [reply_supplement_retry]
 display_name = "Reply supplement retry"
 advanced = true
@@ -42,6 +47,21 @@ description = "Main Maisaka planning template used when independent timing aware
 display_name = "Replyer"
 advanced = false
 description = "Maisaka reply generation template that creates the final reply from persona, expression style, chat notes, and reply context."
+
+[maisaka_expression_selector]
+display_name = "Reply expression selection"
+advanced = true
+description = "Selects suitable expressions for the current reply from candidates based on the actual chat context."
+
+[maisaka_replyer_document]
+display_name = "Article and community post writing"
+advanced = false
+description = "Writes complete articles or community posts using source material, persona, and expression style."
+
+[maisaka_wait_reminder]
+display_name = "Repeated wait reminder"
+advanced = true
+description = "Reminds the planner to wait longer or stop the session after repeated waits."
 
 [reply_attachments]
 display_name = "Reply attachments"
@@ -102,6 +122,16 @@ description = "Template for evaluating the quality of candidate expressions."
 display_name = "Expression Selection"
 advanced = true
 description = "Template for selecting a suitable expression from the expression library."
+
+[gallery_search]
+display_name = "Gallery Search"
+advanced = true
+description = "Selects the most suitable image from gallery candidates for a request, returning no result when none match."
+
+[gallery_tags]
+display_name = "Gallery Tag Generation"
+advanced = true
+description = "Generates concise Chinese tags describing a gallery image's category, people, emotions, actions, and text."
 
 [image_description]
 display_name = "Image Description"

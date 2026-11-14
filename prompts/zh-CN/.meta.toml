@@ -3,6 +3,11 @@ display_name = "上下文摘要重试"
 advanced = true
 description = "上下文摘要无效时，重申摘要格式、工具限制和长度预算后重新生成。"
 
+[reply_supplement]
+display_name = "回复补充器"
+advanced = true
+description = "根据发言指导和可用资源编排回复的引用、图片、表情与 @，正文由 Replyer 独立生成。"
+
 [reply_supplement_retry]
 display_name = "回复补充器重试"
 advanced = true
@@ -42,6 +47,21 @@ description = "独立时间感知关闭时使用的 Maisaka 主规划模板，�
 display_name = "回复"
 advanced = false
 description = "Maisaka 回复生成模板，负责根据人格、表达风格、群聊注意事项和待回复上下文生成最终回复。"
+
+[maisaka_expression_selector]
+display_name = "回复表达选择"
+advanced = true
+description = "根据真实聊天上下文，从候选表达方式中选择适合本次回复的表达。"
+
+[maisaka_replyer_document]
+display_name = "文章与社区帖子写作"
+advanced = false
+description = "结合材料、人格和表达风格，撰写完整的文章或社区帖子。"
+
+[maisaka_wait_reminder]
+display_name = "连续等待提醒"
+advanced = true
+description = "连续等待多次后，提醒规划器延长等待时间或停止会话。"
 
 [reply_attachments]
 display_name = "回复附件提示"
@@ -102,6 +122,16 @@ description = "用于评价候选表达方式质量的模板。"
 display_name = "表达选择"
 advanced = true
 description = "用于从表达库中选择合适表达方式的模板。"
+
+[gallery_search]
+display_name = "图库检索"
+advanced = true
+description = "根据需求从图库候选中选择最合适的图片，没有匹配图片时返回空结果。"
+
+[gallery_tags]
+display_name = "图库标签生成"
+advanced = true
+description = "为图库图片生成描述类别、人物、情绪、动作和文字的简洁中文标签。"
 
 [image_description]
 display_name = "图片描述"

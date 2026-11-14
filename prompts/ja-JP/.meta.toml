@@ -3,6 +3,11 @@ display_name = "コンテキスト要約の再試行"
 advanced = true
 description = "要約が無効な場合、形式・ツールの制限・文字数上限を再提示して生成し直します。"
 
+[reply_supplement]
+display_name = "返信補足"
+advanced = true
+description = "発言方針と利用可能な素材に基づいて引用、画像、絵文字、メンションを構成し、本文は Replyer が個別に生成します。"
+
 [reply_supplement_retry]
 display_name = "返信補足の再試行"
 advanced = true
@@ -42,6 +47,21 @@ description = "独立したタイミング判断を使わない場合の Maisaka
 display_name = "Replyer"
 advanced = false
 description = "Maisaka の返信生成テンプレート。人格、表現スタイル、グループチャット上の注意点、返信対象の文脈から最終返信を生成する。"
+
+[maisaka_expression_selector]
+display_name = "返信表現の選択"
+advanced = true
+description = "実際のチャット文脈に基づき、候補の表現方式から今回の返信に適した表現を選びます。"
+
+[maisaka_replyer_document]
+display_name = "記事とコミュニティ投稿の執筆"
+advanced = false
+description = "資料、人格、表現スタイルをもとに、記事やコミュニティ投稿の全文を執筆します。"
+
+[maisaka_wait_reminder]
+display_name = "連続待機のリマインダー"
+advanced = true
+description = "待機が繰り返された際、待機時間の延長またはセッションの停止を Planner に促します。"
 
 [reply_attachments]
 display_name = "返信の添付案内"
@@ -102,6 +122,16 @@ description = "候補表現の品質を評価するためのテンプレート�
 display_name = "表現選択"
 advanced = true
 description = "表現ライブラリから適切な表現方式を選択するためのテンプレート。"
+
+[gallery_search]
+display_name = "ギャラリー検索"
+advanced = true
+description = "要求に合う最適な画像をギャラリーの候補から選び、一致する画像がない場合は空の結果を返します。"
+
+[gallery_tags]
+display_name = "ギャラリータグ生成"
+advanced = true
+description = "ギャラリー画像の種類、人物、感情、動作、文字を表す簡潔な中国語タグを生成します。"
 
 [image_description]
 display_name = "画像説明"

@@ -165,6 +165,30 @@ def test_metadata_store_nested_transaction_preserves_outer_commit_control(tmp_pa
         store.close()
 
 
+@pytest.mark.parametrize("explicit_connection", [False, True])
+@pytest.mark.parametrize("operation", ["invalidate", "restore"])
+def test_image_link_changes_preserve_outer_transaction(
+    tmp_path: Path, operation: str, explicit_connection: bool
+) -> None:
+    store = MetadataStore(data_dir=tmp_path)
+    store.connect()
+    try:
+        with pytest.raises(RuntimeError, match="回滚图片关联事务"):
+            with store.transaction(immediate=True) as connection:
+                paragraph = store.add_paragraph("图片关联事务中的段落")
+                kwargs = {"conn": connection} if explicit_connection else {}
+                if operation == "invalidate":
+                    store.invalidate_image_memory_links(target_type="paragraph", target_ids=[paragraph], **kwargs)
+                else:
+                    store.restore_image_memory_links(["missing-link"], **kwargs)
+                assert connection.in_transaction is True
+                raise RuntimeError("回滚图片关联事务")
+        assert store.get_paragraph(paragraph) is None
+        assert store.get_connection().in_transaction is False
+    finally:
+        store.close()
+
+
 def test_metadata_store_reaps_connections_owned_by_finished_threads(tmp_path: Path) -> None:
     store = MetadataStore(data_dir=tmp_path)
     store.connect()

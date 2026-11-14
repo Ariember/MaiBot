@@ -314,6 +314,13 @@ class MetadataImageMixin:
         tokens = [str(item) for item in target_ids if str(item)]
         if not tokens:
             return 0
+        if conn is None:
+            with self.transaction(immediate=True) as database:
+                return self.invalidate_image_memory_links(
+                    target_type=target_type,
+                    target_ids=tokens,
+                    conn=database,
+                )
         database = self._resolve_conn(conn)
         placeholders = ",".join("?" for _ in tokens)
         cursor = database.execute(
@@ -358,6 +365,9 @@ class MetadataImageMixin:
         tokens = [str(item) for item in link_ids if str(item)]
         if not tokens:
             return 0
+        if conn is None:
+            with self.transaction(immediate=True) as database:
+                return self.restore_image_memory_links(tokens, conn=database)
         database = self._resolve_conn(conn)
         placeholders = ",".join("?" for _ in tokens)
         cursor = database.execute(

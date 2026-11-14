@@ -10,6 +10,8 @@ import pytest
 from A_memorix.core.embedding import api_adapter as api_adapter_module
 from A_memorix.core.embedding.api_adapter import EmbeddingAPIAdapter
 from A_memorix.core.utils.runtime_self_check import run_embedding_runtime_self_check
+from src.llm_models.exceptions import NetworkConnectionError
+from src.llm_models.request_snapshot import attach_request_snapshot, has_request_snapshot
 
 
 class _FakeEmbeddingClient:
@@ -283,6 +285,43 @@ async def test_encode_batch_keeps_batch_local_indexes_when_cache_hits_previous_b
     assert np.array_equal(embeddings[0], embeddings[2])
     assert embeddings[1][0] == float(ord("B"))
     assert embeddings[3][0] == float(ord("C"))
+
+
+@pytest.mark.asyncio
+async def test_encode_preserves_provider_error_and_request_snapshot(monkeypatch, tmp_path):
+    adapter, _ = _build_adapter(
+        monkeypatch,
+        client_type="openai",
+        configured_dimension=4,
+        effective_dimension=4,
+    )
+    failure = NetworkConnectionError("Request timed out.")
+    attach_request_snapshot(failure, tmp_path / "embedding-request.json")
+
+    async def fail_request(**kwargs):
+        raise failure
+
+    monkeypatch.setattr(adapter, "_request_with_retry", fail_request)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await adapter.encode("段落内容")
+
+    assert exc_info.value.__cause__ is failure
+    assert has_request_snapshot(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_dimension_probe_failure_keeps_configured_dimension(monkeypatch):
+    adapter, _ = _build_adapter(monkeypatch, client_type="openai", configured_dimension=4)
+    monkeypatch.setattr(EmbeddingAPIAdapter, "_GLOBAL_DIMENSION_CACHE", {})
+
+    async def fail_request(**kwargs):
+        raise NetworkConnectionError("Request timed out.")
+
+    monkeypatch.setattr(adapter, "_request_with_retry", fail_request)
+
+    assert await adapter._detect_dimension() == 4
+    assert adapter.get_embedding_dimension() == 4
 
 
 @pytest.mark.asyncio

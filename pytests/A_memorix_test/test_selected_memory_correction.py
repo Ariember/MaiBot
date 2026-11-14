@@ -6,12 +6,12 @@ import pytest
 
 from src.A_memorix.core.runtime.sdk_memory_kernel import SDKMemoryKernel
 from src.A_memorix.core.runtime.services import correction_admin_service
-from src.A_memorix.core.storage import MetadataStore
+from src.A_memorix.core.storage import GraphStore, MetadataStore
 
 
 @pytest.fixture
 def correction_kernel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    kernel = SDKMemoryKernel(plugin_root=tmp_path, config={})
+    kernel = SDKMemoryKernel(plugin_root=tmp_path, config={"storage": {"data_dir": str(tmp_path)}})
     metadata = MetadataStore(data_dir=tmp_path / "metadata")
     metadata.connect()
     kernel.metadata_store = metadata
@@ -63,6 +63,80 @@ async def test_selected_preview_reads_exact_records_and_still_requires_confirmat
     assert result["plan"]["status"] == "awaiting_confirmation"
     assert metadata.get_paragraph(first)["content"] == "小明喜欢咖啡"
     assert metadata.get_relation(relation, include_inactive=False) is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("target_type", ["paragraph", "relation"])
+@pytest.mark.parametrize("with_images", [False, True])
+async def test_correction_execute_and_rollback_persist_graph_without_holding_metadata_lock(
+    correction_kernel: SDKMemoryKernel, tmp_path: Path, target_type: str, with_images: bool
+) -> None:
+    kernel = correction_kernel
+    metadata = kernel.metadata_store
+    kernel.graph_store = GraphStore(data_dir=tmp_path / "graph")
+    paragraph = metadata.add_paragraph("小明喜欢红茶", source="test")
+    relation = metadata.add_relation("小明", "喜欢", "红茶", source_paragraph=paragraph)
+    targets = {"paragraph": paragraph, "relation": relation}
+    occurrence_id = ""
+    image_links = {}
+    if with_images:
+        with metadata.transaction(immediate=True) as connection:
+            asset = metadata.upsert_image_asset(
+                content_hash="correction-image",
+                storage_key="correction.png",
+                mime_type="image/png",
+                byte_size=10,
+                width=1,
+                height=1,
+                conn=connection,
+            )
+            occurrence = metadata.upsert_image_occurrence(
+                asset_id=asset["asset_id"],
+                external_ref="correction:message:0",
+                source_kind="chat",
+                scope_type="chat",
+                chat_id="test-chat",
+                conn=connection,
+            )
+            occurrence_id = occurrence["occurrence_id"]
+            for kind, target_id in targets.items():
+                image_links[kind] = metadata.upsert_image_memory_link(
+                    occurrence_id=occurrence_id,
+                    target_type=kind,
+                    target_id=target_id,
+                    link_kind="fact_evidence",
+                    evidence={},
+                    conn=connection,
+                )["link_id"]
+    plan = metadata.create_fuzzy_modify_plan(
+        request_text="小明已经不喜欢红茶",
+        scope="memory",
+        plan={"operations": [{"action": "mark_superseded", "target_type": target_type, "hash": targets[target_type]}]},
+    )
+
+    executed = await kernel.memory_correction_admin(action="execute", plan_id=plan["plan_id"], confirmed=True)
+
+    assert executed["success"] is True, executed
+    assert executed["plan"]["status"] == "executed"
+    assert metadata.get_connection().in_transaction is False
+    assert metadata.get_relation(relation, include_inactive=False) is None
+    assert kernel.graph_store.num_edges == 0
+    remaining_link_ids = {item["link_id"] for item in metadata.list_image_memory_links([occurrence_id])}
+    expected_link_ids = {image_links["paragraph"]} if with_images and target_type == "relation" else set()
+    assert remaining_link_ids == expected_link_ids
+
+    rolled_back = await kernel.memory_correction_admin(action="rollback", plan_id=plan["plan_id"])
+
+    assert rolled_back["success"] is True, rolled_back
+    assert rolled_back["plan"]["status"] == "rolled_back"
+    assert metadata.get_connection().in_transaction is False
+    assert metadata.get_relation(relation, include_inactive=False) is not None
+    assert metadata.get_paragraph(paragraph)["metadata"] == {}
+    assert {item["link_id"] for item in metadata.list_image_memory_links([occurrence_id])} == set(image_links.values())
+    assert kernel.graph_store.num_edges == 1
+    reloaded_graph = GraphStore(data_dir=tmp_path / "graph")
+    reloaded_graph.load()
+    assert reloaded_graph.num_edges == 1
 
 
 @pytest.mark.asyncio
