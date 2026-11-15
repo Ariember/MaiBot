@@ -40,7 +40,14 @@ def configured_image_memory(monkeypatch):
 )
 @pytest.mark.asyncio
 async def test_image_memory_enablement_controls_injection_tools_and_writeback(
-    monkeypatch, tmp_path, configured_image_memory, plugin_enabled, image_enabled, task_name, models, expected,
+    monkeypatch,
+    tmp_path,
+    configured_image_memory,
+    plugin_enabled,
+    image_enabled,
+    task_name,
+    models,
+    expected,
 ):
     config, tasks = configured_image_memory
     config.plugin.enabled = plugin_enabled
@@ -54,9 +61,13 @@ async def test_image_memory_enablement_controls_injection_tools_and_writeback(
     if not expected:
         memory_call = AsyncMock()
         monkeypatch.setattr(image_injector_module.memory_service, "image_memory", memory_call)
-        assert await image_injector_module.image_memory_injector.build_injection_message(
-            session_id="real-chat", source_messages=[SimpleNamespace()],
-        ) == ""
+        assert (
+            await image_injector_module.image_memory_injector.build_injection_message(
+                session_id="real-chat",
+                source_messages=[SimpleNamespace()],
+            )
+            == ""
+        )
         assert await service._handle_message(SimpleNamespace()) is False
         await service.enqueue(SimpleNamespace())
         assert service._journal is None
@@ -65,7 +76,8 @@ async def test_image_memory_enablement_controls_injection_tools_and_writeback(
 
 @pytest.mark.asyncio
 async def test_image_memory_injector_uses_current_occurrence_and_expands_memory(
-    monkeypatch, configured_image_memory,
+    monkeypatch,
+    configured_image_memory,
 ) -> None:
     captured: dict[str, object] = {}
     component = SimpleNamespace(binary_hash="sha256-current")

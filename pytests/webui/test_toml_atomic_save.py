@@ -49,6 +49,7 @@ def test_failed_config_save_preserves_original(tmp_path: Path, monkeypatch, raw:
 
         monkeypatch.setattr(toml_utils, "NamedTemporaryFile", failing_temporary)
     else:
+
         def fail_replace(self, target):
             raise OSError("disk replace failed")
 
