@@ -40,7 +40,7 @@ import { useLocalCacheMetrics } from './home/hooks/useLocalCacheMetrics'
 import { useMaibotVersion } from './home/hooks/useMaibotVersion'
 import { HitokotoEditorDialog } from './home/HitokotoEditorDialog'
 import { HomeCardManager, type HomeCardDefinition } from './home/HomeCardManager'
-import { NewsCard, NewsDialog } from './home/NewsCard'
+import { NewsDialog, RecentUpdatesCard } from './home/NewsCard'
 import { useNews } from './home/hooks/useNews'
 import { useNewsReadState } from './home/hooks/useNewsReadState'
 import { NewsStrip } from './home/NewsStrip'
@@ -653,14 +653,14 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:news',
-      title: t('home.news.title'),
-      description: t('home.news.description'),
+      title: t('home.updates.title'),
+      description: t('home.updates.description'),
       width: 'small',
       allowedWidths: ['small', 'medium', 'large'],
       preferredHeight: 'low',
       category: 'status',
       source: 'builtin',
-      render: () => <NewsCard newsState={newsState} readState={newsReadState} onOpen={openNews} />,
+      render: () => <RecentUpdatesCard />,
     },
     {
       id: 'builtin:prompt-cache',

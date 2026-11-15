@@ -1633,6 +1633,14 @@
       "missTokens": "미적중 Token",
       "eligibleTokens": "통계 대상 {{value}} Token"
     },
+    "updates": {
+      "title": "최근 업데이트",
+      "description": "최근 3개 버전의 업데이트 요약",
+      "refresh": "업데이트 새로고침",
+      "open": "전체 변경 내역 보기",
+      "details": "이 버전의 전체 변경 내역",
+      "empty": "업데이트 내역이 없습니다"
+    },
     "news": {
       "title": "뉴스",
       "description": "서버의 최신 소식",

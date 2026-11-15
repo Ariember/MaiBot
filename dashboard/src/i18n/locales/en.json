@@ -1717,6 +1717,14 @@
       "missTokens": "Miss Tokens",
       "eligibleTokens": "{{value}} eligible tokens"
     },
+    "updates": {
+      "title": "Recent Updates",
+      "description": "Highlights from the three latest versions",
+      "refresh": "Refresh updates",
+      "open": "View full changelog",
+      "details": "Full changelog for this version",
+      "empty": "No updates yet"
+    },
     "news": {
       "title": "News",
       "description": "Latest news from the server",

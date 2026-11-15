@@ -1650,6 +1650,14 @@
       "missTokens": "未ヒットToken",
       "eligibleTokens": "集計対象 {{value}} Token"
     },
+    "updates": {
+      "title": "最近の更新",
+      "description": "直近3バージョンの更新概要",
+      "refresh": "更新履歴を再読み込み",
+      "open": "更新履歴の全文を見る",
+      "details": "このバージョンの更新履歴全文",
+      "empty": "更新履歴はありません"
+    },
     "news": {
       "title": "ニュース",
       "description": "サーバーからの最新ニュース",

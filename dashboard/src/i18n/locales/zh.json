@@ -1714,6 +1714,14 @@
       "missTokens": "未命中Token",
       "eligibleTokens": "参与统计 {{value}} Token"
     },
+    "updates": {
+      "title": "最近更新",
+      "description": "最近三个版本的更新梗概",
+      "refresh": "刷新更新记录",
+      "open": "查看完整更新日志",
+      "details": "此版本的完整更新记录",
+      "empty": "暂无更新记录"
+    },
     "news": {
       "title": "资讯",
       "description": "来自服务器的新闻动态",
