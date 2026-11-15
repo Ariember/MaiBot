@@ -75,7 +75,7 @@ BOT_CONFIG_PATH: Path = (CONFIG_DIR / "bot_config.toml").resolve().absolute()
 MODEL_CONFIG_PATH: Path = (CONFIG_DIR / "model_config.toml").resolve().absolute()
 LEGACY_ENV_PATH: Path = (PROJECT_ROOT / ".env").resolve().absolute()
 MMC_VERSION: str = read_project_version(PROJECT_ROOT)
-CONFIG_VERSION: str = "8.15.73"
+CONFIG_VERSION: str = "8.15.75"
 MODEL_CONFIG_VERSION: str = "1.17.25"
 
 logger = get_logger("config")
@@ -196,7 +196,7 @@ class ModelConfig(ConfigBase):
     """模型配置类"""
 
     web: WebConfig = Field(default_factory=WebConfig)
-    """统一联网服务配置，与模型列表独立；默认关闭。"""
+    """统一联网服务配置，与模型列表独立。"""
 
     models: list[ModelInfo] = Field(default_factory=list)
     """模型配置列表"""

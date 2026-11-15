@@ -7,15 +7,20 @@ import asyncio
 import httpx
 
 from src.core.tooling import ToolExecutionContext, ToolInvocation
+from src.common.logger import get_logger
 
 from .adapters.anysearch import AnySearchAdapter
+from .adapters.bing import BingSearchAdapter
 from .adapters.deepseek import DeepSeekAdapter
 from .adapters.exa import ExaAdapter
 from .adapters.firecrawl import FirecrawlAdapter
+from .adapters.google import GoogleSearchAdapter
 from .adapters.stepsearch import MCPCaller, StepSearchAdapter
 from .adapters.tavily import TavilyAdapter
 from .config import WebRuntimeConfig
 from .models import PageResult, SearchResult, WebSearchError
+
+logger = get_logger("web_search")
 
 
 def validate_url(url: str) -> str:
@@ -44,6 +49,68 @@ class WebSearchService:
             raise WebSearchError("统一联网功能未启用")
         if invocation.tool_name not in {"web_search", "web_fetch"}:
             raise WebSearchError("未知联网工具")
+        if invocation.tool_name == "web_fetch":
+            result = await self._execute_provider(config, invocation, context)
+            result.service = config.fetch
+            return result
+
+        arguments = invocation.arguments
+        if set(arguments) - {"query", "max_results"}:
+            raise WebSearchError("web_search 仅支持 query 和 max_results")
+        query = arguments.get("query")
+        count = arguments.get("max_results", 5)
+        if not isinstance(query, str) or not query.strip() or len(query) > 1000:
+            raise WebSearchError("query 必须是非空字符串且不超过 1000 个字符")
+        if type(count) is not int or not 1 <= count <= 20:
+            raise WebSearchError("max_results 必须是 1 到 20 的整数")
+
+        sources = ["provider"] if config.search else []
+        engines = []
+        if config.engine.enabled:
+            engines = [config.engine.engine, "bing" if config.engine.engine == "google" else "google"]
+        if config.engine.priority == "engine_first":
+            sources = engines + sources
+        else:
+            sources.extend(engines)
+        if not sources:
+            raise WebSearchError("当前操作未配置联网服务或搜索引擎")
+        errors = []
+        for index, source in enumerate(sources):
+            name = config.search if source == "provider" else f"search_engine:{source}"
+            try:
+                if source == "provider":
+                    result = await self._execute_provider(config, invocation, context)
+                else:
+                    adapter = GoogleSearchAdapter if source == "google" else BingSearchAdapter
+                    async with asyncio.timeout(config.engine.timeout):
+                        result = await adapter(config.engine, self.transport).search(query.strip(), count)
+                    self._validate_search_result(result)
+                result.service = name
+                return result
+            except TimeoutError:
+                error = f"搜索引擎调用超过 {config.engine.timeout:g} 秒"
+            except WebSearchError as exc:
+                error = str(exc)
+            errors.append(f"{name}：{error}")
+            if index + 1 < len(sources):
+                logger.warning(f"联网搜索来源 {name} 调用失败，尝试下一来源：{error}")
+        raise WebSearchError("；".join(errors))
+
+    @staticmethod
+    def _validate_search_result(result: SearchResult) -> None:
+        for item in result.results:
+            validate_url(item.url)
+            if not all(isinstance(value, str) for value in (item.title, item.snippet, item.summary)):
+                raise WebSearchError("搜索服务返回了无效文本字段")
+            if item.published_at is not None and not isinstance(item.published_at, str):
+                raise WebSearchError("搜索服务返回了无效日期字段")
+
+    async def _execute_provider(
+        self,
+        config: WebRuntimeConfig,
+        invocation: ToolInvocation,
+        context: Optional[ToolExecutionContext],
+    ) -> Union[SearchResult, PageResult]:
         search = invocation.tool_name == "web_search"
         name = config.search if search else config.fetch
         if not name or name not in config.services:
@@ -65,21 +132,10 @@ class WebSearchService:
         try:
             async with asyncio.timeout(settings.timeout):
                 if search:
-                    if set(arguments) - {"query", "max_results"}:
-                        raise WebSearchError("web_search 仅支持 query 和 max_results")
-                    query = arguments.get("query")
+                    query = arguments["query"]
                     count = arguments.get("max_results", 5)
-                    if not isinstance(query, str) or not query.strip() or len(query) > 1000:
-                        raise WebSearchError("query 必须是非空字符串且不超过 1000 个字符")
-                    if type(count) is not int or not 1 <= count <= 20:
-                        raise WebSearchError("max_results 必须是 1 到 20 的整数")
                     result = await adapter.search(query.strip(), count)
-                    for item in result.results:
-                        validate_url(item.url)
-                        if not all(isinstance(value, str) for value in (item.title, item.snippet, item.summary)):
-                            raise WebSearchError("搜索服务返回了无效文本字段")
-                        if item.published_at is not None and not isinstance(item.published_at, str):
-                            raise WebSearchError("搜索服务返回了无效日期字段")
+                    self._validate_search_result(result)
                     return result
                 if set(arguments) != {"url"}:
                     raise WebSearchError("web_fetch 仅支持必填参数 url")

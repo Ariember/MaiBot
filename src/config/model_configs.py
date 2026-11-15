@@ -442,9 +442,9 @@ class ModelTaskConfig(ConfigBase):
 
     web_search: WebSearchTaskConfig = Field(
         default_factory=WebSearchTaskConfig,
-        json_schema_extra={"x-widget": "custom", "label": {"zh_CN": "联网搜索 (web_search)"}},
+        json_schema_extra={"x-widget": "custom", "label": {"zh_CN": "联网搜索提供商 (web_search)"}},
     )
-    """选择已定义的联网服务，用于搜索和网页读取；未分配时不开放统一联网工具。"""
+    """选择已定义的联网搜索提供商，用于搜索和网页读取；未分配时仍可使用能力设置中的搜索引擎，网页读取需要分配提供商。"""
 
     replyer: TaskConfig = Field(
         default_factory=TaskConfig,

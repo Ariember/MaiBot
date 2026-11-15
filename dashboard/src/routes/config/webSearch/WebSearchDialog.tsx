@@ -252,9 +252,9 @@ export function WebSearchDialog({
     >
       <DialogContent className="sm:max-w-lg" preventOutsideClose>
         <DialogHeader>
-          <DialogTitle>{editingName ? '编辑联网搜索' : '添加联网搜索'}</DialogTitle>
+          <DialogTitle>{editingName ? '编辑联网搜索提供商' : '添加联网搜索提供商'}</DialogTitle>
           <DialogDescription>
-            保存连接后，需在“功能分配 → 联网搜索”中选用才能使用。
+            保存连接后，需在“功能分配 → 联网搜索提供商”中选用才能使用该提供商。
           </DialogDescription>
         </DialogHeader>
         <DialogBody viewportClassName="max-h-[65vh] pr-3">

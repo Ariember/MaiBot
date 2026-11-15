@@ -1031,6 +1031,78 @@ class CapabilitiesConfig(ConfigBase):
     __ui_label__ = "能力"
     __ui_order__ = 30
 
+    web_search_enabled: bool = Field(
+        default=True,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "联网搜索能力",
+                "en_US": "Web search capability",
+                "ja_JP": "ウェブ検索機能",
+            },
+            "x-widget": "switch",
+        },
+    )
+    """允许麦麦使用统一联网搜索工具；默认优先使用模型设置中已分配的联网搜索提供商，不可用时使用搜索引擎。关闭后停止提供搜索工具，不影响已配置的网页读取工具。"""
+
+    web_search_priority: Literal["provider_first", "engine_first"] = Field(
+        default="provider_first",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "联网搜索优先级",
+                "en_US": "Web search priority",
+                "ja_JP": "ウェブ検索の優先順位",
+            },
+            "x-widget": "select",
+            "x-option-labels": {
+                "provider_first": "联网搜索提供商优先",
+                "engine_first": "搜索引擎优先",
+            },
+        },
+    )
+    """优先使用所选来源，调用失败或来源未配置时尝试另一来源；联网搜索提供商仍在模型设置中管理和分配。"""
+
+    web_search_engine: Literal["google", "bing"] = Field(
+        default="google",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "默认搜索引擎",
+                "en_US": "Default search engine",
+                "ja_JP": "既定の検索エンジン",
+            },
+            "x-widget": "select",
+            "x-option-labels": {"google": "Google", "bing": "Bing"},
+        },
+    )
+    """搜索引擎直接访问公开搜索页面，默认引擎失败后尝试另一个引擎；与需要单独配置密钥的联网搜索提供商分开管理。"""
+
+    web_search_proxy: str = Field(
+        default="",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "搜索引擎代理",
+                "en_US": "Search engine proxy",
+                "ja_JP": "検索エンジンのプロキシ",
+            },
+            "x-widget": "input",
+        },
+    )
+    """仅用于搜索引擎请求的代理地址，如 http://127.0.0.1:7890；留空使用当前网络环境。联网搜索提供商使用各自的连接配置。"""
+
+    web_search_timeout: float = Field(
+        default=20.0,
+        gt=0,
+        le=120,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "搜索引擎超时（秒）",
+                "en_US": "Search engine timeout (seconds)",
+                "ja_JP": "検索エンジンのタイムアウト（秒）",
+            },
+            "x-widget": "input",
+        },
+    )
+    """单次搜索引擎请求的最长等待时间；超时后继续尝试其余搜索来源。"""
+
     files: bool = Field(
         default=False,
         json_schema_extra={

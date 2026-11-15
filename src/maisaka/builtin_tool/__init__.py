@@ -162,7 +162,11 @@ def _is_builtin_tool_enabled_by_config(entry: BuiltinToolEntry) -> bool:
         return global_config.capabilities.planner_subagent and global_config.capabilities.advanced_sub_agent
     if entry.name == "read_tool_result":
         # 长结果整理和统一联网工具均会暂存原文，任一开启都需要回查入口。
-        return global_config.capabilities.tool_result_condense or bool(model_config.model_task_config.web_search.model_list)
+        return (
+            global_config.capabilities.tool_result_condense
+            or global_config.capabilities.web_search_enabled
+            or bool(model_config.model_task_config.web_search.model_list)
+        )
     return True
 
 

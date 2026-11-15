@@ -96,8 +96,8 @@ export const TASK_CONFIGS = [
   },
   {
     key: 'web_search' as const,
-    title: '联网搜索 (web_search)',
-    description: '使用已分配的联网服务搜索和读取网页',
+    title: '联网搜索提供商 (web_search)',
+    description: '使用已分配的联网搜索提供商搜索和读取网页',
   },
 ] as const
 

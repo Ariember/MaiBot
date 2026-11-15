@@ -22,12 +22,12 @@ export function WebSearchTaskCard({ config, selected, onChange, onAdd }: Props) 
   const services = Object.keys(config.services)
   return (
     <div className="space-y-3">
-      <h4 className="text-base font-semibold sm:text-lg">联网搜索 (web_search)</h4>
+      <h4 className="text-base font-semibold sm:text-lg">联网搜索提供商 (web_search)</h4>
       <p className="text-muted-foreground text-sm">
-        选择一个已定义的联网服务，供模型搜索互联网和读取网页。未分配时不开放统一联网工具。
+        选择一个已定义的联网搜索提供商，供模型搜索互联网和读取网页。未分配时仍可使用能力设置中的搜索引擎；网页读取需要分配提供商。
       </p>
       <PageFrame className="space-y-3 p-3">
-        <Label htmlFor="web-search-task-service">搜索服务</Label>
+        <Label htmlFor="web-search-task-service">联网搜索提供商</Label>
         <div className="flex gap-2">
           <Select
             value={selected}
@@ -35,7 +35,7 @@ export function WebSearchTaskCard({ config, selected, onChange, onAdd }: Props) 
             disabled={services.length === 0}
           >
             <SelectTrigger id="web-search-task-service" className="min-w-0 flex-1">
-              <SelectValue placeholder="选择已添加的联网服务" />
+              <SelectValue placeholder="选择已添加的联网搜索提供商" />
             </SelectTrigger>
             <SelectContent>
               {services.map((name) => (
@@ -52,10 +52,10 @@ export function WebSearchTaskCard({ config, selected, onChange, onAdd }: Props) 
           )}
         </div>
         {services.length === 0 && (
-          <p className="text-muted-foreground text-sm">还没有联网服务，请先添加连接配置。</p>
+          <p className="text-muted-foreground text-sm">还没有联网搜索提供商，请先添加连接配置。</p>
         )}
         <Button variant="outline" onClick={onAdd}>
-          添加联网搜索
+          添加联网搜索提供商
         </Button>
       </PageFrame>
     </div>

@@ -77,7 +77,7 @@ export function ProviderSidebar({
               <DropdownMenuItem onSelect={onAdd} data-tour="add-llm-provider-item">
                 添加 LLM 模型提供商
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onAddWebSearch}>添加联网搜索</DropdownMenuItem>
+              <DropdownMenuItem onSelect={onAddWebSearch}>添加联网搜索提供商</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -105,7 +105,7 @@ export function ProviderSidebar({
           ))}
           {webServiceNames.map((name) => (
             <option key={`web:${name}`} value={`web:${name}`}>
-              {name} · 联网搜索
+              {name} · 联网搜索提供商
             </option>
           ))}
         </select>
@@ -182,7 +182,7 @@ export function ProviderSidebar({
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium">{name}</span>
               <span className="text-muted-foreground block text-xs">
-                联网搜索 · {assignedWebService === name ? '已分配' : '未分配'}
+                联网搜索提供商 · {assignedWebService === name ? '已分配' : '未分配'}
               </span>
             </span>
             <Globe className="text-muted-foreground h-4 w-5 shrink-0" />

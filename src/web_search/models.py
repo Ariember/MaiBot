@@ -22,6 +22,7 @@ class SearchResult:
     query: str
     results: List[SearchHit] = field(default_factory=list)
     content_kind: str = "search_results"
+    service: str = ""
 
 
 @dataclass
@@ -30,3 +31,4 @@ class PageResult:
     title: str
     content: str
     content_kind: str = "page_text"
+    service: str = ""

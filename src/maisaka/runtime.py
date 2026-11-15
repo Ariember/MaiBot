@@ -71,7 +71,7 @@ from src.maisaka.turn_trigger import IdleBackoffController, MessageTurnScheduler
 from src.mcp_module.provider import MCPToolProvider
 from src.mcp_module.service import get_mcp_service
 from src.web_search.provider import WebSearchToolProvider
-from src.web_search.config import resolve_web_search_config
+from src.web_search.config import SearchEngineConfig, resolve_web_search_config
 from src.web_search.service import WebSearchService
 from src.plugin_runtime.tool_provider import PluginToolProvider
 from src.services.message_word_frequency_service import update_high_frequency_terms_from_context_messages
@@ -1337,7 +1337,17 @@ class MaisakaHeartFlowChatting(MaisakaRuntimeDisplayMixin):
         self._tool_registry.register_provider(
             WebSearchToolProvider(
                 WebSearchService(get_mcp_service()),
-                lambda: resolve_web_search_config(model_config.web, model_config.model_task_config.web_search),
+                lambda: resolve_web_search_config(
+                    model_config.web,
+                    model_config.model_task_config.web_search,
+                    SearchEngineConfig(
+                        enabled=global_config.capabilities.web_search_enabled,
+                        engine=global_config.capabilities.web_search_engine,
+                        priority=global_config.capabilities.web_search_priority,
+                        proxy=global_config.capabilities.web_search_proxy,
+                        timeout=global_config.capabilities.web_search_timeout,
+                    ),
+                ),
             )
         )
         self._tool_registry.register_provider(PluginToolProvider())

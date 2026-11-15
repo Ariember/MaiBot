@@ -1,6 +1,6 @@
 """联网服务配置，作为 model_config.toml 的独立 web 配置节。"""
 
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urlsplit
 
 from src.config.config_base import ConfigBase, Field
@@ -48,7 +48,7 @@ class WebConfig(ConfigBase):
     """单次返回的内容预览字数，完整内容通过 read_tool_result 读取。"""
 
     services: Dict[str, WebServiceConfig] = Field(default_factory=dict)
-    """联网服务定义；仅添加服务不会启用工具，需要在功能分配中选择。"""
+    """联网服务定义；需要在功能分配中选择才会用于搜索和读取。"""
 
     def model_post_init(self, context: Any = None) -> None:
         for name in self.services:
@@ -59,16 +59,33 @@ class WebConfig(ConfigBase):
 
 class WebSearchTaskConfig(ConfigBase):
     model_list: List[str] = Field(default_factory=list, max_length=1)
-    """选择一个 web.services 中的联网服务名称；留空不开放统一联网工具。"""
+    """选择一个 web.services 中的联网服务名称；留空时搜索仍可使用能力设置中的搜索引擎。"""
 
 
-def resolve_web_search_config(config: WebConfig, task: WebSearchTaskConfig) -> "WebRuntimeConfig":
-    """只有功能分配能启用统一联网工具，服务定义本身不授予使用权限。"""
+class SearchEngineConfig(ConfigBase):
+    """能力设置生成的搜索引擎调用配置，与联网服务提供商独立。"""
+
+    enabled: bool = False
+    engine: Literal["google", "bing"] = "google"
+    priority: Literal["provider_first", "engine_first"] = "provider_first"
+    proxy: str = Field(default="", repr=False)
+    timeout: float = Field(default=20.0, gt=0, le=120)
+
+
+def resolve_web_search_config(
+    config: WebConfig,
+    task: WebSearchTaskConfig,
+    engine: Optional[SearchEngineConfig] = None,
+) -> "WebRuntimeConfig":
+    """提供商由功能分配选择；能力开关控制搜索，不影响已分配的网页读取。"""
     selected = task.model_list[0] if task.model_list else ""
     if selected and selected not in config.services:
         raise ValueError(f"web_search 引用了不存在的联网服务：{selected}，请先取消该功能分配")
+    search_enabled = engine.enabled if engine is not None else bool(selected)
     return WebRuntimeConfig(
-        enabled=bool(selected), search=selected, fetch=selected,
+        enabled=bool(selected) or search_enabled,
+        search=selected if search_enabled else "", fetch=selected,
+        engine=engine if engine is not None else SearchEngineConfig(),
         preview_chars=config.preview_chars, services=config.services,
     )
 
@@ -80,10 +97,13 @@ class WebRuntimeConfig(WebConfig):
     """启用统一 web_search / web_fetch 工具；默认关闭，不影响原始 MCP 工具。"""
 
     search: str = ""
-    """搜索使用的 services 条目名；留空不提供统一搜索工具。"""
+    """搜索使用的 services 条目名；留空时仅由已启用的搜索引擎处理。"""
 
     fetch: str = ""
     """网页读取使用的 services 条目名；留空不提供统一读取工具。"""
+
+    engine: SearchEngineConfig = Field(default_factory=SearchEngineConfig)
+    """独立的搜索引擎能力；未注入时保持仅使用已分配提供商。"""
 
     def model_post_init(self, context: Any = None) -> None:
         for operation in ("search", "fetch"):
@@ -96,6 +116,6 @@ class WebRuntimeConfig(WebConfig):
                     raise ValueError(f"联网服务 {selected} 缺少 server_ref")
                 if service.adapter != "stepsearch_mcp" and not service.api_key.strip():
                     raise ValueError(f"联网服务 {selected} 缺少 api_key")
-        if self.enabled and not (self.search or self.fetch):
-            raise ValueError("启用联网功能时至少需要选择一个 search 或 fetch 服务")
+        if self.enabled and not (self.search or self.fetch or self.engine.enabled):
+            raise ValueError("启用联网功能时至少需要选择一个 search、fetch 服务或启用搜索引擎")
         super().model_post_init(context)

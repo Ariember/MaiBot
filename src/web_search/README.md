@@ -1,14 +1,36 @@
 # 联网搜索后端
 
 通过 `WebSearchToolProvider` 注册 `web_search(query, max_results=5)` 和 `web_fetch(url)`。
-服务选择、协议转换和工具实现均独立于 WebUI。默认未分配，不开放统一联网工具。
+服务选择、协议转换和工具实现均独立于 WebUI。默认优先使用已分配的联网搜索提供商，
+未分配或搜索失败时依次使用 Google、Bing 搜索引擎；网页读取仍需分配提供商。
 
 插件可声明 `web.search` / `web.fetch` 能力，通过 SDK 的 `ctx.web.search(query, max_results=5)`
-和 `ctx.web.fetch(url)` 复用已分配服务。插件接口直接返回完整结构化结果，无需聊天 ID，
+和 `ctx.web.fetch(url)` 复用相同的优先级与已分配服务。插件接口直接返回完整结构化结果，无需聊天 ID，
 不写入工具结果缓存；序列化结果超过 500000 字符时明确报错。SDK 调用示例与返回字段见
 [插件联网接口文档](https://github.com/Mai-with-u/maibot-plugin-sdk/blob/main/docs/web.md)。
 
 ## 配置
+
+麦麦设置的“能力”页配置搜索能力；模型设置中的“联网搜索提供商”继续管理 API 服务、
+密钥和功能分配，两者独立。
+
+```toml
+[capabilities]
+web_search_enabled = true
+web_search_priority = "provider_first"
+web_search_engine = "google"
+web_search_proxy = ""
+web_search_timeout = 20.0
+```
+
+优先级可选 `provider_first`（提供商 → 搜索引擎）或 `engine_first`（搜索引擎 → 提供商）。
+`web_search_engine` 可选 `google` 或 `bing`，指定默认搜索引擎；该引擎失败时尝试另一个引擎。
+例如默认顺序为“提供商 → Google → Bing”，选择 Bing 后变为“提供商 → Bing → Google”。
+首选来源未配置或调用失败时尝试下一来源；正常返回的空列表仍视为成功。
+关闭联网搜索能力会停用统一 `web_search`，不影响已分配提供商的 `web_fetch`。
+Google 和 Bing 无需 API Key，代理留空时沿用当前网络环境，也可填写 HTTP(S) 或 SOCKS5 代理地址。
+Clash 开启 TUN 时可留空，也可显式填写其本地 HTTP 代理地址。每个引擎与提供商的超时分别生效。
+配置通过下一次调用生效。
 
 在 `model_config.toml` 的独立 `web` 节配置服务实例，无需声明模型。
 以下为示例；将示例密钥替换为实际密钥后再启用，不要把密钥提交到仓库。
@@ -57,9 +79,9 @@ StepSearch 的 `server_ref` 指向 `bot_config.toml` 中已有且已启用的 `m
 地址和鉴权只在 MCP 配置维护。不会自动启动第二套 MCP 连接。
 
 六种适配器均支持搜索和读取。在 `model_task_config.web_search.model_list` 中选择一个服务名称，
-搜索和网页读取统一使用该服务。留空时不注册工具，残留的直接调用也会被拒绝。
-仅添加服务或填写旧的 `web.enabled` / `search` / `fetch` 字段不会启用联网功能。
-不支持的过滤参数会报错，不会将日期过滤悄悄转换成搜索关键词，也不自动切换服务或重试。
+提供商搜索和网页读取统一使用该服务。留空时仍可使用能力页启用的 Google、Bing 搜索，
+不注册 `web_fetch`。仅添加服务或填写旧的 `web.enabled` / `search` / `fetch` 字段不会分配提供商。
+不支持的过滤参数会报错，不会将日期过滤悄悄转换成搜索关键词。
 Tavily 的搜索深度、提取深度和 StepSearch 的类别在服务实例中配置，不由模型选择。
 AnySearch 使用 v1 Search / Extract，单次搜索最多 10 条；需要填写 API Key。
 Exa 使用 Search 返回 highlights 搜索片段，Contents 返回完整正文。
@@ -68,8 +90,8 @@ AnySearch 和 Firecrawl 的自定义地址可填写根地址或分别带 `/v1`�
 
 默认模板由 `src/config/default_model_config.py` 与配置类生成，版本为 `1.17.24`。
 读取配置通过稳定配置代理完成；每次调用使用配置快照，下一次调用生效于新配置。
-WebUI 在模型设置左侧加号菜单中提供“添加联网搜索”，支持添加、编辑和删除服务。
-在“功能分配 → 联网搜索 (web_search)”选定服务后才启用搜索和读取。已分配的服务需先取消分配才能改名或删除。
+WebUI 在模型设置左侧加号菜单中提供“添加联网搜索提供商”，支持添加、编辑和删除服务。
+在“功能分配 → 联网搜索提供商 (web_search)”选定服务后启用提供商搜索和读取。已分配的服务需先取消分配才能改名或删除。
 StepSearch MCP 复用插件扩展中已有的连接，原始 MCP 工具不受统一联网任务分配影响。
 DeepSeek 可选择检测到的模型提供商组，复制当前地址和密钥到联网配置，也可选择“自定义”手动填写。
 管理界面复用配置加载与分节保存接口，`web` 节整体替换，其他模型配置保持不变。
@@ -86,8 +108,14 @@ DeepSeek 可选择检测到的模型提供商组，复制当前地址和密钥�
 - 暂存沿用现有每会话最近 20 条、重启失效的规则。必须传入真实聊天 `session_id`。
 - 供应商响应最多 8 MiB，单条暂存文本最多 500000 字符；超限明确失败，不伪装为完整结果。
 
-超时、鉴权失败、限流、协议错误和网页提取失败均返回失败结果；空搜索结果是成功的空列表。
+搜索超时、鉴权失败、限流和协议错误按优先级尝试另一个来源，全部失败时返回错误。
+网页提取失败直接返回错误；提供商空搜索结果是成功的空列表。
 错误不回显上游响应体或凭据。调用取消会继续向上传播。
+
+## 已知问题
+
+Google、Bing 网页搜索依赖可访问的网络和搜索结果页面结构，验证码或 JavaScript 验证页会明确报错，
+并按优先级切换到下一来源。Google 只有在结果链接使用不透明跳转令牌时重新请求一次。
 
 ## 重名工具
 

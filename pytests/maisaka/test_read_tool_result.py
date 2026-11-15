@@ -99,6 +99,7 @@ async def test_read_tool_result_reports_expired_ids() -> None:
 
 def test_read_tool_result_is_exposed_with_the_condense_switch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(model_config.model_task_config, "web_search", WebSearchTaskConfig())
+    monkeypatch.setattr(global_config.capabilities, "web_search_enabled", False)
     monkeypatch.setattr(global_config.capabilities, "tool_result_condense", False)
     assert "read_tool_result" not in {tool_spec.name for tool_spec in get_all_builtin_tool_specs()}
 
@@ -106,9 +107,13 @@ def test_read_tool_result_is_exposed_with_the_condense_switch(monkeypatch: pytes
     assert "read_tool_result" in {tool_spec.name for tool_spec in get_all_builtin_tool_specs()}
 
 
-def test_web_results_can_be_read_without_condense(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("engine_enabled", [False, True])
+def test_web_results_can_be_read_without_condense(monkeypatch: pytest.MonkeyPatch, engine_enabled: bool) -> None:
     monkeypatch.setattr(global_config.capabilities, "tool_result_condense", False)
-    monkeypatch.setattr(model_config.model_task_config, "web_search", WebSearchTaskConfig(model_list=["step"]))
+    monkeypatch.setattr(global_config.capabilities, "web_search_enabled", engine_enabled)
+    monkeypatch.setattr(
+        model_config.model_task_config, "web_search", WebSearchTaskConfig(model_list=[] if engine_enabled else ["step"])
+    )
     assert "read_tool_result" in {tool_spec.name for tool_spec in get_all_builtin_tool_specs()}
 
 

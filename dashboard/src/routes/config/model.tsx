@@ -2559,7 +2559,7 @@ function ModelConfigPageContent() {
             { label: '添加嵌入模型', onSelect: () => openAddModelDialog('embedding') },
             { label: '批量添加模型', onSelect: () => openAddModelDialog('batch') },
             { label: '添加 LLM 模型提供商', onSelect: () => openProviderDialog(null, null) },
-            { label: '添加联网搜索', onSelect: () => setWebSearchEditor({ name: null }) },
+            { label: '添加联网搜索提供商', onSelect: () => setWebSearchEditor({ name: null }) },
           ]}
         />
       </MobileHeaderActions>

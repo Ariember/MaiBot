@@ -6,7 +6,7 @@ from typing import Any, Dict
 import json
 
 from src.core.tooling import ToolInvocation
-from src.web_search.config import WebRuntimeConfig, resolve_web_search_config
+from src.web_search.config import SearchEngineConfig, WebRuntimeConfig, resolve_web_search_config
 from src.web_search.models import WebSearchError
 from src.web_search.service import WebSearchService
 
@@ -14,9 +14,19 @@ MAX_RESULT_CHARS = 500000
 
 
 def get_config() -> WebRuntimeConfig:
-    from src.config.config import model_config
+    from src.config.config import global_config, model_config
 
-    return resolve_web_search_config(model_config.web, model_config.model_task_config.web_search)
+    return resolve_web_search_config(
+        model_config.web,
+        model_config.model_task_config.web_search,
+        SearchEngineConfig(
+            enabled=global_config.capabilities.web_search_enabled,
+            engine=global_config.capabilities.web_search_engine,
+            priority=global_config.capabilities.web_search_priority,
+            proxy=global_config.capabilities.web_search_proxy,
+            timeout=global_config.capabilities.web_search_timeout,
+        ),
+    )
 
 
 def get_service() -> WebSearchService:
@@ -40,7 +50,7 @@ async def call(plugin_id: str, capability: str, args: Dict[str, Any]) -> Dict[st
         "success": True,
         "result": {
             **payload,
-            "service": config.search if capability == "web.search" else config.fetch,
+            "service": result.service,
             "retrieved_at": datetime.now(timezone.utc).isoformat(),
         },
     }
