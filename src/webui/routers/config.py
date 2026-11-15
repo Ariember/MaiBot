@@ -59,7 +59,7 @@ from src.config.official_configs import (
 )
 from src.webui.config_schema import ConfigSchemaGenerator
 from src.webui.dependencies import require_auth
-from src.webui.utils.toml_utils import _update_toml_doc, save_toml_with_format
+from src.webui.utils.toml_utils import _update_toml_doc, save_toml_raw, save_toml_with_format
 
 logger = get_logger("webui")
 
@@ -1718,8 +1718,7 @@ def update_bot_config_raw(raw_content: RawContentBody):
 
         # 保存配置文件
         config_path = os.path.join(CONFIG_DIR, "bot_config.toml")
-        with open(config_path, "w", encoding="utf-8") as f:
-            f.write(raw_content)
+        save_toml_raw(raw_content, config_path)
 
         logger.info("麦麦主程序配置已更新（原始模式）")
         return {"success": True, "message": "配置已保存"}

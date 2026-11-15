@@ -190,15 +190,17 @@ class PluginRuntimeManager(
         return self._plugin_usage_tracker.snapshot() if self._plugin_usage_tracker is not None else {}
 
     async def _start_plugin_usage_tracking(self) -> None:
-        tracker = PluginUsageTracker(get_instance_root() / "data" / "plugin_runtime" / "plugin_usage.json")
+        usage_path = get_instance_root() / "data" / "plugin_runtime" / "plugin_usage.json"
+        tracker = PluginUsageTracker(usage_path)
         self._plugin_usage_tracker = None
         self._plugin_usage_tracking = False
         self._plugin_usage_error = None
         try:
             await tracker.load()
-        except Exception as exc:
-            self._plugin_usage_error = str(exc)
-            raise
+        except (OSError, ValueError) as exc:
+            self._plugin_usage_error = f"{usage_path}: {exc}"
+            logger.exception(f"读取插件累计使用时长失败，已停用计时，原文件保留: {usage_path}")
+            return
         self._plugin_usage_tracker = tracker
         self._plugin_usage_tracking = True
         self._reconcile_plugin_usage()
@@ -254,7 +256,7 @@ class PluginRuntimeManager(
         reasons = self.get_plugin_load_failure_reasons()
         return {"statuses": statuses, "failure_reasons": reasons,
                 "circuit_statuses": self.get_plugin_circuit_statuses(), "running": self._started,
-                "usage_seconds": self.get_plugin_usage_seconds()}
+                "usage_seconds": None if self._plugin_usage_error is not None else self.get_plugin_usage_seconds()}
 
     async def apply_plugin_config(
         self, plugin_id: str, write_config: Optional[Callable[[], Awaitable[None]]] = None,

@@ -109,6 +109,20 @@ def test_installed_plugins_expose_actual_usage_seconds(client: TestClient, monke
     assert response.json()["plugins"][0]["usage_seconds"] == 259_200.5
 
 
+def test_installed_plugins_remain_available_when_usage_tracking_fails(client: TestClient) -> None:
+    manager = integration_module.get_plugin_runtime_manager()
+    manager._plugin_usage_error = "plugin_usage.json: access denied"
+
+    response = client.get("/api/webui/plugins/installed")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["total"] == 1
+    assert payload["plugins"][0]["id"] == "test.demo"
+    assert "usage_seconds" not in payload["plugins"][0]
+
+
 def test_plugin_usage_reads_runtime_without_scanning_directories(client: TestClient, monkeypatch) -> None:
     monkeypatch.setattr(
         integration_module.get_plugin_runtime_manager(), "get_plugin_usage_seconds", lambda: {"test.demo": 123.5}

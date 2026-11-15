@@ -18,6 +18,7 @@ import tomlkit
 from src.common.logger import get_logger
 from src.common.runtime_loop import run_on_main_loop
 from src.common.utils.utils_config import AMemorixConfigUtils
+from src.config.image_memory import is_image_embedding_configured, is_image_memory_enabled
 from src.config.official_configs import AMemorixConfig
 from src.webui.utils.toml_utils import _update_toml_doc
 
@@ -482,7 +483,7 @@ class AMemorixHostService:
             async with self._lock:
                 self._runtime_state = "migrating"
                 self._startup_error_stage = "startup_migration"
-            kernel = SDKMemoryKernel(plugin_root=repo_root(), config=config)
+            kernel = SDKMemoryKernel(plugin_root=repo_root(), config=self._build_kernel_config(config))
             await kernel.initialize()
             # 等待启动期写入落盘后再发布就绪状态，避免回放快照漏掉正在入队的记录。
             async with self._queue_lock, self._lock:
@@ -525,6 +526,15 @@ class AMemorixHostService:
                     self._startup_error_stage = "startup"
                 self._startup_finished_at = time.time()
             logger.error(f"A_Memorix 后台初始化失败: {exc}", exc_info=True)
+
+    @staticmethod
+    def _build_kernel_config(config: Dict[str, Any]) -> Dict[str, Any]:
+        """仅对运行时关闭缺少图片嵌入模型的图片记忆，保留用户配置。"""
+        image_config = dict(config.get("image_memory", {}))
+        image_config["enabled"] = image_config.get("enabled", True) and is_image_embedding_configured(
+            image_config.get("task_name", "image_embedding")
+        )
+        return {**config, "image_memory": image_config}
 
     def _read_config(self) -> Dict[str, Any]:
         if self._config_cache is not None:
@@ -1031,7 +1041,15 @@ class AMemorixHostService:
             return
         # 运行时仅在启动时固化 a_memorix 配置节，其余配置节变更无需重启
         _get_config_manager().register_reload_callback(self.on_config_reload, sections=("a_memorix",))
+        _get_config_manager().register_reload_callback(self.on_model_config_reload)
         self._reload_callback_registered = True
+
+    async def on_model_config_reload(self, changed_scopes: Sequence[str] | None = None) -> None:
+        if "model" not in (changed_scopes or ()) or self._kernel is None:
+            return
+        # 模型分配只在改变图片运行时启用状态时触发重载。
+        if (self._kernel.image_memory_runtime is not None) != is_image_memory_enabled():
+            await self.reload()
 
     async def on_config_reload(self, changed_scopes: Sequence[str] | None = None) -> None:
         normalized = {str(scope or "").strip().lower() for scope in (changed_scopes or [])}

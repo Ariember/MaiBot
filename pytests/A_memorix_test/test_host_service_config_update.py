@@ -1,6 +1,7 @@
 from pathlib import Path
+from types import SimpleNamespace
 from typing import List, Optional, Sequence, Tuple
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import asyncio
 import json
@@ -8,6 +9,7 @@ import json
 import pytest
 import tomlkit
 
+from src.A_memorix import host_service as host_module
 from src.A_memorix.host_service import AMemorixHostService, _backup_config_file
 from src.config.official_configs import AMemorixConfig
 
@@ -22,6 +24,51 @@ class _FakeConfigManager:
         if not self.reload_results:
             raise AssertionError("reload_config 调用次数超出预期")
         return self.reload_results.pop(0)
+
+
+@pytest.mark.parametrize("enabled,configured", [(True, True), (True, False), (False, True)])
+def test_kernel_image_memory_enablement_preserves_user_config(monkeypatch, enabled, configured):
+    check = Mock(return_value=configured)
+    monkeypatch.setattr(host_module, "is_image_embedding_configured", check)
+    config = {"image_memory": {"enabled": enabled, "task_name": "embedding"}}
+    runtime_config = AMemorixHostService._build_kernel_config(config)
+    assert runtime_config["image_memory"]["enabled"] is (enabled and configured)
+    assert config == {"image_memory": {"enabled": enabled, "task_name": "embedding"}}
+    if enabled:
+        check.assert_called_once_with("embedding")
+
+
+@pytest.mark.parametrize(
+    "scopes,runtime_enabled,configured,reload_expected",
+    [
+        (("model",), False, True, True),
+        (("model",), True, False, True),
+        (("model",), True, True, False),
+        (("model",), False, False, False),
+        (("bot",), False, True, False),
+    ],
+)
+@pytest.mark.asyncio
+async def test_model_reload_updates_image_runtime_only_when_enablement_changes(
+    monkeypatch, scopes, runtime_enabled, configured, reload_expected,
+):
+    service = AMemorixHostService()
+    service._kernel = SimpleNamespace(image_memory_runtime=object() if runtime_enabled else None)
+    monkeypatch.setattr(host_module, "is_image_memory_enabled", lambda: configured)
+    reload = AsyncMock()
+    monkeypatch.setattr(service, "reload", reload)
+    await service.on_model_config_reload(scopes)
+    assert reload.await_count == int(reload_expected)
+
+
+def test_model_reload_callback_is_registered_once(monkeypatch):
+    manager = SimpleNamespace(register_reload_callback=Mock())
+    monkeypatch.setattr(host_module, "_get_config_manager", lambda: manager)
+    service = AMemorixHostService()
+    service.register_config_reload_callback()
+    service.register_config_reload_callback()
+    assert manager.register_reload_callback.call_count == 2
+    manager.register_reload_callback.assert_any_call(service.on_model_config_reload)
 
 
 def _write_initial_config(path: Path) -> bytes:

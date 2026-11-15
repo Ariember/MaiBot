@@ -870,7 +870,7 @@ def _collect_installed_plugins(snapshot: Dict[str, Any], include_builtin: bool =
                         "disabled": enabled is False,
                         "loaded": effective_load_status == "success",
                         "load_status": effective_load_status,
-                        "usage_seconds": usage_seconds.get(plugin_id, 0.0),
+                        **({"usage_seconds": usage_seconds.get(plugin_id, 0.0)} if usage_seconds is not None else {}),
                         "load_error": load_error if effective_load_status == "failed" else "",
                         "circuit_status": circuit_status,
                         "changelog": changelog,

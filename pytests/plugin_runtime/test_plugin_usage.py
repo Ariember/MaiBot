@@ -228,10 +228,34 @@ async def test_manager_exposes_corrupt_record_without_overwriting_it(tmp_path: P
     await manager._stop_plugin_usage_tracking()
     assert manager._plugin_usage_tracker is not None
     path.write_text("broken", encoding="utf-8")
-    with pytest.raises(ValueError):
-        await manager._start_plugin_usage_tracking()
+    await manager._start_plugin_usage_tracking()
     await manager._stop_plugin_usage_tracking()
     with pytest.raises(RuntimeError, match="计时不可用"):
         manager.get_plugin_usage_seconds()
+    assert (await manager.get_plugin_state_snapshot())["usage_seconds"] is None
+    assert manager._plugin_usage_tracker is None
+    assert manager._plugin_usage_tracking is False
     assert manager._plugin_usage_task is None
     assert path.read_text(encoding="utf-8") == "broken"
+
+
+@pytest.mark.asyncio
+async def test_manager_disables_unreadable_usage_until_record_is_available(tmp_path: Path, monkeypatch) -> None:
+    manager = PluginRuntimeManager()
+    monkeypatch.setattr(integration_module, "get_instance_root", lambda: tmp_path)
+    load = Mock(side_effect=PermissionError("access denied"))
+    with monkeypatch.context() as patch:
+        patch.setattr(PluginUsageTracker, "_read_totals", load)
+        await manager._start_plugin_usage_tracking()
+    assert manager._plugin_usage_tracker is None
+    assert manager._plugin_usage_task is None
+    with pytest.raises(RuntimeError, match="plugin_usage.json: access denied"):
+        manager.get_plugin_usage_seconds()
+
+    await manager._start_plugin_usage_tracking()
+    try:
+        assert manager.get_plugin_usage_seconds() == {}
+        assert manager._plugin_usage_error is None
+        assert manager._plugin_usage_tracking is True
+    finally:
+        await manager._stop_plugin_usage_tracking()

@@ -1121,7 +1121,7 @@ export function PluginConfigEditor({ plugin, onBack, initialTab }: PluginConfigE
             )}
             <div className="min-w-0 xl:order-1">
               {showHostPolicy && <h2 className="mb-4 text-base font-medium">设置</h2>}
-              {!configError && !!schema?.runtime_widgets?.length && (
+              {!configError && plugin.load_status === 'success' && !!schema?.runtime_widgets?.length && (
                 <ConfigWidgetsPanel key={plugin.id} pluginId={plugin.id} />
               )}
               {configError && (

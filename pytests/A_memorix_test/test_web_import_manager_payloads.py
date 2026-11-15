@@ -1,6 +1,7 @@
 from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import asyncio
 import json
@@ -19,6 +20,7 @@ from src.A_memorix.core.utils.web_import_manager import (
     ImportTaskRecord,
 )
 from src.A_memorix.core.utils.relation_write_service import RelationWriteService
+from src.A_memorix.core.utils import web_import_manager
 
 
 class _DummyMetadataStore:
@@ -238,6 +240,26 @@ def _build_manager(
     )
     manager = ImportTaskManager(plugin)
     return manager, metadata_store
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("max_attempts, expected_calls", [(1, 1), (4, 4), (0, 1)])
+async def test_llm_import_attempt_limit_includes_initial_call(tmp_path, monkeypatch, max_attempts, expected_calls):
+    manager, _ = _build_manager(data_dir=tmp_path)
+    get_config = manager.plugin.get_config
+    manager.plugin.get_config = lambda key, default=None: (
+        max_attempts if key == "web.import.llm_retry.max_attempts" else get_config(key, default)
+    )
+    generate = AsyncMock(side_effect=RuntimeError("model unavailable"))
+    sleep = AsyncMock()
+    monkeypatch.setattr(web_import_manager, "generate_with_resolved_model", generate)
+    monkeypatch.setattr(web_import_manager.asyncio, "sleep", sleep)
+
+    with pytest.raises(RuntimeError, match="LLM 抽取失败: model unavailable"):
+        await manager._llm_call("extract facts", SimpleNamespace(task_config=SimpleNamespace()))
+
+    assert generate.await_count == expected_calls
+    assert sleep.await_count == expected_calls - 1
 
 
 def test_runtime_store_persistence_uses_fingerprint_entrypoint() -> None:

@@ -4,11 +4,27 @@ TOML 工具函数
 提供 TOML 文件的格式化保存功能，确保数组等元素以美观的多行格式输出。
 """
 
-import re
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
-
-import tomlkit
 from tomlkit.items import AoT, Array, InlineTable, Table
+
+import re
+import tomlkit
+
+
+def save_toml_raw(content: str, file_path: str) -> None:
+    """原子保存已校验的 TOML 文本，写入失败时保留原配置。"""
+    path = Path(file_path)
+    temporary_path = None
+    try:
+        with NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as temporary:
+            temporary_path = Path(temporary.name)
+            temporary.write(content)
+        temporary_path.replace(path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def _create_inline_table(data: dict[str, Any]) -> InlineTable:
@@ -120,5 +136,4 @@ def save_toml_with_format(
     output = tomlkit.dumps(formatted)
     output = re.sub(r"\n{3,}", "\n\n", output)
     tomlkit.loads(output)
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(output)
+    save_toml_raw(output, file_path)
