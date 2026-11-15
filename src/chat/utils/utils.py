@@ -280,7 +280,7 @@ async def get_embedding(text: str, request_type: str = "embedding") -> Optional[
 
 def _split_into_sentence_segments(text: str) -> list[tuple[str, str]]:
     """将文本分割成 (句子, 尾随分隔符) 元组，并根据概率合并
-    1. 识别分割点（, ， 。 ; 空格），但如果分割点左右都是英文字母则不分割。
+    1. 识别引号外的分割点（, ， 。 ; 换行），保留句内空格。
     2. 将文本分割成 (内容, 分隔符) 的元组。
     3. 根据原始文本长度计算合并概率，概率性地合并相邻段落。
     注意：此函数假定颜文字已在上层被保护。
@@ -303,45 +303,38 @@ def _split_into_sentence_segments(text: str) -> list[tuple[str, str]]:
 
     len_text = len(text)
     if len_text < 3:
-        if random.random() < 0.01:
-            return [(char, "") for char in text]
         return [(text, "")]
 
     # 先标记哪些位置位于成对引号内部，避免在引号内部进行句子分割
-    # 支持的引号包括：中英文单/双引号和常见中文书名号/引号
-    quote_chars = {
-        '"',
-        "'",
-        "“",
-        "”",
-        "‘",
-        "’",
-        "「",
-        "」",
-        "『",
-        "』",
+    # 支持的引号包括：中英文单/双引号和常见中文引号
+    quote_pairs = {
+        '"': '"',
+        "'": "'",
+        "“": "”",
+        "‘": "’",
+        "「": "」",
+        "『": "』",
     }
     inside_quote = [False] * len_text
-    in_quote = False
-    current_quote_char = ""
+    closing_quote = ""
     for idx, ch in enumerate(text):
-        if ch in quote_chars:
-            # 遇到引号时切换状态（英文引号本身开闭相同，用同一个字符表示）
-            if not in_quote:
-                in_quote = True
-                current_quote_char = ch
-                inside_quote[idx] = False
-            else:
-                # 只有遇到同一类引号才视为关闭
-                if ch == current_quote_char or ch in {'"', "'"} and current_quote_char in {'"', "'"}:
-                    in_quote = False
-                    current_quote_char = ""
-                inside_quote[idx] = False
-        else:
-            inside_quote[idx] = in_quote
+        inside_quote[idx] = bool(closing_quote)
+        # don't、SpaceX’s 等单词内部的撇号不参与引号配对。
+        if (
+            ch in {"'", "’"}
+            and 0 < idx < len_text - 1
+            and (is_english_letter(text[idx - 1]) or text[idx - 1].isdigit())
+            and is_english_letter(text[idx + 1])
+        ):
+            continue
+        if closing_quote:
+            if ch == closing_quote:
+                closing_quote = ""
+        elif ch in quote_pairs:
+            closing_quote = quote_pairs[ch]
 
-    # 定义分隔符（包含换行符）
-    separators = {"，", ",", " ", "。", ";", "\n"}
+    # 空格可能连接中英文、数字单位或英文短语，不能作为消息边界。
+    separators = {"，", ",", "。", ";", "\n"}
     segments = []
     current_segment = ""
 
@@ -354,7 +347,7 @@ def _split_into_sentence_segments(text: str) -> list[tuple[str, str]]:
             if inside_quote[i]:
                 can_split = False
             else:
-                # 换行符在不在引号内时都强制分割
+                # 引号外的换行符强制分割
                 if char == "\n":
                     can_split = True
                 else:
@@ -370,26 +363,12 @@ def _split_into_sentence_segments(text: str) -> list[tuple[str, str]]:
                         if next_char in {":", "："}:
                             can_split = False
 
-                    # 如果左右没有冒号，再检查空格的特殊情况
-                    if can_split and char == " " and i > 0 and i < len(text) - 1:
-                        prev_char = text[i - 1]
-                        next_char = text[i + 1]
-                        dash_chars = {"-", "—"}
-                        if prev_char in dash_chars or next_char in dash_chars:
-                            can_split = False
-                        else:
-                            # 不分割数字和数字、数字和英文、英文和数字、英文和英文之间的空格
-                            prev_is_alnum = prev_char.isdigit() or is_english_letter(prev_char)
-                            next_is_alnum = next_char.isdigit() or is_english_letter(next_char)
-                            if prev_is_alnum and next_is_alnum:
-                                can_split = False
-
             if can_split:
                 # 只有当当前段不为空时才添加
                 if current_segment:
                     segments.append((current_segment, char))
-                # 如果当前段为空，但分隔符是空格或换行符，则也添加一个空段（保留分隔符）
-                elif char in {" ", "\n"}:
+                # 如果当前段为空，但分隔符是换行符，则也添加一个空段（保留分隔符）
+                elif char == "\n":
                     segments.append(("", char))
                 current_segment = ""
             else:
