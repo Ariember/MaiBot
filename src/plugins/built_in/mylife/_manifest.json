@@ -3,7 +3,7 @@
   "id": "fraternity-z.mai-mylife",
   "name": "麦日常",
   "version": "1.3.0",
-  "description": "日常生活、日程与记忆；联网校时、私聊必回、群聊概率回复和可配置工作时间，支持新闻见闻",
+  "description": "日常生活、日程与记忆；联网校时、私聊陪伴和可配置主动私聊工作时间，支持新闻见闻",
   "author": {
     "name": "fraternity-z",
     "url": "https://github.com/Ariember/maibot-mylife"
@@ -35,8 +35,6 @@
     "chat.get_all_streams",
     "chat.get_stream_by_user_id",
     "chat.get_private_streams",
-    "chat.get_stream_by_group_id",
-    "chat.get_group_streams",
     "chat.open_session",
     "llm.generate",
     "llm.get_available_models",

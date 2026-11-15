@@ -393,7 +393,7 @@
     <div class="ml-brand">
       <div class="ml-brand-icon" aria-hidden="true">统</div>
       <div>
-        <h1 class="ml-brand-title">系统与配置 · 巡检诊断、群矩阵与配置透视</h1>
+        <h1 class="ml-brand-title">系统与配置 · 巡检诊断与配置透视</h1>
         <div class="ml-brand-sub" id="sys-subtitle">规则层确定性守门 · 只读安全透视（修改配置请前往插件设置）</div>
       </div>
     </div>
@@ -448,34 +448,11 @@
     </div>
   </section>
 
-  <!-- QQ 群白名单与观察/转述矩阵 -->
-  <section class="ml-card" id="sec-groups">
-    <div class="ml-card-header">
-      <h2 class="ml-card-title">QQ 群观察与转述配置矩阵 (Group Profiles)</h2>
-      <span class="ml-badge" id="groups-count-badge">0 个群</span>
-    </div>
-    <div class="ml-table-wrap">
-      <table class="ml-table">
-        <thead>
-          <tr>
-            <th>群号 (group_id)</th>
-            <th>群名称备注</th>
-            <th>群总开关</th>
-            <th>后台群观察 (observe)</th>
-            <th>群转述目标 (relay_target)</th>
-            <th>Stream 会话已识别</th>
-          </tr>
-        </thead>
-        <tbody id="groups-tbody"></tbody>
-      </table>
-    </div>
-  </section>
-
   <!-- 全量配置透视面板 -->
   <section class="ml-card" id="sec-config">
     <div class="ml-card-header">
       <h2 class="ml-card-title">全量配置透视</h2>
-      <input type="search" class="ml-input" id="cfg-search-input" placeholder="搜索配置节或参数名（如 reply_probability / work_start / 概率）…"/>
+      <input type="search" class="ml-input" id="cfg-search-input" placeholder="搜索配置节或参数名（如 proactive / work_start / 工作时间）…"/>
     </div>
     <p style="font-size:12px;color:var(--ml-muted);">新闻源列表请在宿主插件设置中选择，或参考 config.toml.example 修改 network.news_sources。</p>
     <div class="ml-cfg-grid" id="cfg-cards-grid">
@@ -498,7 +475,6 @@
     users: { title: '用户档案统计 (users)', badge: '社交' },
     models: { title: '模型任务路由 (models)', badge: 'LLM' },
     environment: { title: '天气 (environment)', badge: '感知' },
-    group: { title: '群聊回复与观察 (group)', badge: '群聊' },
     memory: { title: '重要日期 (memory)', badge: '记忆' },
     network: { title: '联网见闻与搜索 (network)', badge: '联网' },
     proactive: { title: '主动私聊巡检 (proactive)', badge: '主动' },
@@ -515,22 +491,8 @@
     timezone: '全局时区',
     city: '全局地区',
     weather_refresh_minutes: '天气刷新间隔(分)',
-    reply_probability: '回复概率（0～1）',
     work_start: '工作开始时间',
     work_end: '工作结束时间',
-    profiles: '已配置群数量',
-    gate_enabled: '群聊概率回复开关',
-    turn_enabled: '群轮次注入开关',
-    relay_enabled: '群聊转述开关',
-    observation_wait_seconds: '群观察聚合等待(秒)',
-    max_buffer_messages: '群缓冲最大消息数',
-    interesting_threshold: '群话题趣味度阈值',
-    summary_retention_hours: '群摘要保留小时',
-    relay_pending_seconds: '转述待确认过期(秒)',
-    owner_group_to_private_enabled: '主人群聊转私聊跟进',
-    inactivity_hours: '群冷场判定小时',
-    group_share_daily_max: '每日群分享上限',
-    group_share_min_interval_minutes: '群分享最小间隔(分)',
     important_dates_enabled: '重要日期提醒开关',
     date_model_analysis_enabled: '模型自动抽取日期',
     date_candidate_retention_days: '日期候选保留天数',
@@ -609,7 +571,7 @@
       <div class="ml-kpi-tile">
         <div class="ml-kpi-label">插件版本</div>
         <div class="ml-kpi-value">v${esc(ov.version || '—')}</div>
-        <div class="ml-kpi-sub">社交 ${esc(ov.social_enabled)} · 联网 ${esc(ov.network_enabled)}</div>
+        <div class="ml-kpi-sub">联网 ${esc(ov.network_enabled)}</div>
       </div>
       <div class="ml-kpi-tile">
         <div class="ml-kpi-label">建档用户 / 主人</div>
@@ -662,20 +624,6 @@
         `;
       }).join('');
     }
-
-    // Groups Matrix
-    const groups = d.groups || [];
-    document.getElementById('groups-count-badge').textContent = `${groups.length} 个已配置群`;
-    document.getElementById('groups-tbody').innerHTML = groups.length ? groups.map((g) => `
-      <tr>
-        <td style="font-family:var(--ml-font-mono);"><strong>${esc(g.group_id)}</strong></td>
-        <td>${esc(g.group_name || '未备注群名')}</td>
-        <td><span class="ml-badge ${g.enabled === '开' ? 'ml-badge-good' : ''}">${esc(g.enabled)}</span></td>
-        <td><span class="ml-badge ${g.observe_enabled === '开' ? 'ml-badge-good' : ''}">${esc(g.observe_enabled)}</span></td>
-        <td><span class="ml-badge ${g.relay_target_enabled === '开' ? 'ml-badge-good' : ''}">${esc(g.relay_target_enabled)}</span></td>
-        <td><span class="ml-badge ${g.stream_known === '开' ? 'ml-badge-good' : 'ml-badge-warn'}">${esc(g.stream_known)}</span></td>
-      </tr>
-    `).join('') : '<tr><td colspan="6" class="ml-empty">未配置任何 QQ 群档案</td></tr>';
   }
 
   function renderConfig() {
@@ -684,18 +632,16 @@
 
     // 1. Render Pitfall & Coupling Diagnostic Callouts
     const proactive = cfg.proactive || {};
-    const gp = cfg.group || {};
 
     document.getElementById('diag-callouts').innerHTML = `
       <div class="ml-diag-card">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <strong style="font-size:13.5px;">工作时间与回复概率</strong>
+          <strong style="font-size:13.5px;">主动私聊工作时间</strong>
           <span class="ml-badge ml-badge-good">${esc((cfg.environment || {}).timezone || 'Asia/Shanghai')}</span>
         </div>
         <div style="font-size:12px;color:var(--ml-muted);line-height:1.5;">
-          私聊：全天必回；主动私聊：${esc(proactive.work_start)}–${esc(proactive.work_end)}；
-          群聊：${esc(gp.work_start)}–${esc(gp.work_end)}，概率 ${esc(gp.reply_probability)}。
-          起止相同表示全天，支持跨午夜。群聊每条消息独立抽取一次，日程活动不改变回复策略。
+          主动私聊：${esc(proactive.work_start)}–${esc(proactive.work_end)}。
+          起止相同表示全天，支持跨午夜。日程活动不改变回复策略。
         </div>
       </div>
     `;

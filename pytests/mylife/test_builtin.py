@@ -1,5 +1,6 @@
 """内置模块的配置、日期提醒、存储与页面契约。"""
 
+from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Event, get_ident
@@ -104,13 +105,22 @@ def test_defaults_template_and_webui_contract():
     assert "reading" not in template
     assert "context" not in model_schema["properties"]
     assert "context" not in template
+    assert "group" not in model_schema["properties"]
+    assert "group" not in template
+    assert "group_to_private_enabled" not in model_schema["$defs"]["UserProfile"]["properties"]
+    assert "group_judgment_task" not in model_schema["$defs"]["ModelRoutingSettings"]["properties"]
     schema = json.dumps(model_schema, ensure_ascii=False).lower()
     assert "diary" not in schema
     assert "日记" not in schema
     assert not hasattr(plugin, "webui_memories")
 
     webui = json.loads((ROOT / "webui.json").read_text(encoding="utf-8"))
-    api_names = {item["name"] for item in plugin.get_components() if item["type"] == "API"}
+    components = plugin.get_components()
+    api_names = {item["name"] for item in components if item["type"] == "API"}
+    assert not {"mai_life_get_schedule", "/麦麦转述"} & {item["name"] for item in components}
+    chat_components = [item for item in components if item["type"] in {"TOOL", "COMMAND"}]
+    assert chat_components
+    assert all(item["chat_scope"] == "private" for item in chat_components)
     assert {page["id"] for page in webui["pages"]} == {"overview", "life", "system"}
     for page in webui["pages"]:
         assert page["placement"] == "sidebar"
@@ -168,6 +178,9 @@ async def test_important_dates_still_remind_before_two_am(tmp_path):
         assert "朋友考试" not in json.dumps(context, ensure_ascii=False)
         tables = {row[0] for row in store.conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert "diary_entries" not in tables
+        assert not tables & {
+            "group_observations", "group_directory", "group_user_activity", "relay_candidates", "relay_events"
+        }
         assert not hasattr(store, "save_diary")
         llm.generate_json.assert_not_awaited()
     finally:
@@ -223,7 +236,6 @@ def configured_plugin(monkeypatch):
         context=AsyncMock(return_value={}), tick=AsyncMock(return_value={})
     )
     plugin._user_by_session = AsyncMock(return_value={"user_id": "10001", "role": "friend"})
-    plugin._relay_for_session = AsyncMock(return_value={})
     plugin._activate_planner_task = AsyncMock(return_value=None)
     monkeypatch.setattr(type(plugin), "_ready", property(lambda self: True))
     monkeypatch.setattr(plugin, "_get_logger", Mock(return_value=Mock()))
@@ -246,14 +258,56 @@ async def test_life_background_is_shared_without_a_separate_context_switch(confi
     plugin._information.context.assert_awaited_once()
     assert plugin._store.get_state.await_count == 2
 
-    plugin._group_turns[("group", "group-message")] = {"turn_scope": "group:100"}
-    group = await plugin.on_replyer(session_id="group", reply_message_id="group-message")
-    assert "该用户是普通朋友" not in group["modified_kwargs"]["extra_prompt"]
-    assert plugin._store.get_state.await_count == 2
+
+@pytest.mark.parametrize(
+    "text,is_notify,is_command",
+    [("普通群消息", False, False), ("戳了戳", True, False), ("/麦麦未识别", False, True)],
+)
+@pytest.mark.asyncio
+async def test_group_messages_bypass_mylife(configured_plugin, text, is_notify, is_command):
+    plugin = configured_plugin
+    plugin._process_private_message = AsyncMock()
+    plugin._send_command_menu = AsyncMock()
+    message = {
+        "session_id": "group",
+        "message_id": "group-message",
+        "processed_plain_text": text,
+        "is_notify": is_notify,
+        "is_command": is_command,
+        "message_info": {
+            "user_info": {"user_id": "10001"},
+            "group_info": {"group_id": "20001", "group_name": "测试群"},
+            "additional_config": {"is_mentioned": True},
+        },
+    }
+    original = deepcopy(message)
+
+    assert await plugin.on_receive(message=message) == {"action": "continue"}
+
+    assert message == original
+    plugin._process_private_message.assert_not_awaited()
+    plugin._send_command_menu.assert_not_awaited()
+    plugin._store.get_state.assert_not_awaited()
+    plugin._store.save_state.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_private_supplements_pass_but_group_turns_and_friend_terms_are_checked(configured_plugin):
+async def test_group_planner_and_replyer_leave_prompts_unchanged(configured_plugin, monkeypatch):
+    plugin = configured_plugin
+    plugin._user_by_session.return_value = None
+    monkeypatch.setattr(type(plugin), "ctx", property(lambda self: SimpleNamespace(logger=Mock())))
+
+    planner = await plugin.on_planner(session_id="group", messages=[])
+    replyer = await plugin.on_replyer(session_id="group", reply_message_id="group-message")
+
+    assert planner == replyer == {"action": "continue"}
+    plugin._store.get_state.assert_not_awaited()
+    plugin._memory.context_for_user.assert_not_awaited()
+    plugin._information.context.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_private_supplements_pass_and_friend_terms_are_checked(configured_plugin):
     plugin = configured_plugin
     for response in ("回答正文", "补充说明"):
         result = await plugin.on_replyer_after(
@@ -270,14 +324,6 @@ async def test_private_supplements_pass_but_group_turns_and_friend_terms_are_che
         session_id="private", reply_message_id="message", response="专属称呼", retry_count=1, max_retries=1
     )
     assert exhausted["modified_kwargs"]["response"] == ""
-
-    plugin._group_turns[("group", "group-message")] = {"turn_scope": "group:100"}
-    plugin._store.reserve_reply_turn.side_effect = [True, False]
-    await plugin.on_replyer_after(session_id="group", reply_message_id="group-message", response="群聊回复")
-    duplicate = await plugin.on_replyer_after(
-        session_id="group", reply_message_id="group-message", response="重复回复"
-    )
-    assert duplicate["modified_kwargs"]["mai_life_suppress_reason"] == "duplicate_turn"
 
 
 @pytest.mark.asyncio

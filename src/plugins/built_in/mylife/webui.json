@@ -56,7 +56,7 @@
     {
       "id": "system",
       "title": "系统与配置",
-      "description": "运行健康诊断、主动私聊候选与跳过统计、QQ 群白名单及配置",
+      "description": "运行健康诊断、主动私聊候选与跳过统计及配置",
       "placement": "sidebar",
       "icon": "settings",
       "mode": "custom",

@@ -34,12 +34,11 @@ COMMAND_SECTIONS: Tuple[CommandSection, ...] = (
             CommandItem("/麦麦确认日期 编号 [日期]", "确认日期候选（需用户档案）"),
         ),
     ),
-    CommandSection("社交转述", (CommandItem("/麦麦转述 群QQ号 内容", "向白名单群发起简单转述"),)),
     CommandSection(
         "管理与诊断",
         (
             CommandItem("/麦麦重生日程", "检查今日任务窗口，保留执行记录（管理员）"),
-            CommandItem("/麦麦休息测试", "时间与概率回复诊断（管理员）"),
+            CommandItem("/麦麦休息测试", "时间与主动私聊诊断（管理员）"),
         ),
     ),
 )

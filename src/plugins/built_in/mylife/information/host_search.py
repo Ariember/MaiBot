@@ -32,18 +32,14 @@ class HostSearchService:
         return self._web() is not None
 
     async def _private_query_terms(self) -> List[str]:
-        """联网前移除 QQ 号及 Host 自动读取的昵称、群名、群成员昵称；展示名称从不参与身份匹配。"""
+        """联网前移除 QQ 号及 Host 自动读取的昵称；展示名称从不参与身份匹配。"""
         terms = [str(item.user_id) for item in self.config.users.profiles]
-        terms.extend(str(item.group_id) for item in self.config.group.profiles)
         for item in await self.store.list_users(include_disabled=True):
             terms.append(str(item.get("display_name") or ""))
-        for item in await self.store.list_group_directory(500):
-            terms.append(str(item.get("group_name") or ""))
-        terms.extend(await self.store.list_group_member_names())
         return [term for term in terms if term]
 
     async def sanitize_query(self, query: str) -> str:
-        """隐私清洗：NFKC 归一后，按整词边界移除 QQ 号、昵称、群名等本地私有多词禁词。
+        """隐私清洗：NFKC 归一后，按整词边界移除 QQ 号、昵称等本地私有多词禁词。
 
         只删除作为独立词元出现的禁词。Python 的 \\w 含 CJK，一段连续中文被视为单一词元，
         所以 '明天天气怎么样' 里的 '天气' 不会命中，只有独立的 '天气'（两侧为空白/标点/异类字符）才删。

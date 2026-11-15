@@ -17,7 +17,7 @@ import sqlite3
 import time
 
 SCHEMA_VERSION = 18
-# 长期运行记录（互动、主动事件、契机、转述候选/事件、跳过统计）的保留天数。
+# 长期运行记录（互动、主动事件、契机、跳过统计）的保留天数。
 # 这些表没有过期字段驱动的外部清理，超期行必须在 cleanup_runtime_records 中删除，
 # 否则只会无限增长；pending 与在途行永远保留，避免打断正在结算的引用。
 RECORD_RETENTION_DAYS = 90
@@ -175,7 +175,7 @@ class LifeStore:
                     counter += 1
                 shutil.move(str(self.path), str(backup))
                 self._conn = self._connect()
-        # 表按生活时间线、用户消息、长期记忆、社交与联网运行态分组；建表本身可重复执行。
+        # 表按生活时间线、用户消息、长期记忆与联网运行态分组；建表本身可重复执行。
         self.conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -313,43 +313,6 @@ class LifeStore:
               next_retry_at REAL NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '',
               etag TEXT NOT NULL DEFAULT '', last_modified TEXT NOT NULL DEFAULT ''
             );
-            -- 群聊观察和跨会话转述使用 QQ 号定位，名称字段仅用于展示。
-            CREATE TABLE IF NOT EXISTS group_observations(
-              id TEXT PRIMARY KEY, group_id TEXT NOT NULL, group_alias TEXT NOT NULL,
-              topic TEXT NOT NULL, summary TEXT NOT NULL, interest_score REAL NOT NULL DEFAULT 0,
-              source_adapter TEXT NOT NULL DEFAULT 'unknown', created_at REAL NOT NULL,
-              expires_at REAL NOT NULL, source_message_ids TEXT NOT NULL DEFAULT '[]'
-            );
-            CREATE INDEX IF NOT EXISTS idx_group_observation_time
-              ON group_observations(group_id,created_at);
-            CREATE TABLE IF NOT EXISTS group_directory(
-              group_id TEXT PRIMARY KEY, group_name TEXT NOT NULL DEFAULT '',
-              stream_id TEXT NOT NULL DEFAULT '', updated_at REAL NOT NULL DEFAULT 0
-            );
-            CREATE TABLE IF NOT EXISTS group_user_activity(
-              group_id TEXT NOT NULL, user_id TEXT NOT NULL,
-              display_name TEXT NOT NULL DEFAULT '', last_active_at REAL NOT NULL,
-              source_message_id TEXT NOT NULL DEFAULT '',
-              PRIMARY KEY(group_id,user_id)
-            );
-            CREATE TABLE IF NOT EXISTS relay_candidates(
-              id TEXT PRIMARY KEY, kind TEXT NOT NULL,
-              opportunity_id TEXT NOT NULL DEFAULT '',
-              source_observation_id TEXT NOT NULL DEFAULT '', source_group_id TEXT NOT NULL DEFAULT '',
-              target_group_id TEXT NOT NULL DEFAULT '', target_user_id TEXT NOT NULL DEFAULT '',
-              target_stream_id TEXT NOT NULL, summary TEXT NOT NULL, reason TEXT NOT NULL DEFAULT '',
-              mention_user_id TEXT NOT NULL DEFAULT '', mention_name TEXT NOT NULL DEFAULT '',
-              status TEXT NOT NULL, created_at REAL NOT NULL, expires_at REAL NOT NULL,
-              sent_at REAL NOT NULL DEFAULT 0, host_task_id TEXT NOT NULL DEFAULT ''
-            );
-            CREATE INDEX IF NOT EXISTS idx_relay_pending
-              ON relay_candidates(target_stream_id,status,expires_at);
-            CREATE INDEX IF NOT EXISTS idx_relay_user_time
-              ON relay_candidates(target_user_id,kind,created_at);
-            CREATE TABLE IF NOT EXISTS relay_events(
-              id INTEGER PRIMARY KEY AUTOINCREMENT, relay_id TEXT NOT NULL,
-              status TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', created_at REAL NOT NULL
-            );
             -- 搜索 Key 只保存不可逆指纹和健康状态，调用事件与模型 Token 分开统计。
             CREATE TABLE IF NOT EXISTS search_key_runtime(
               provider_id TEXT NOT NULL, key_fingerprint TEXT NOT NULL,
@@ -385,19 +348,14 @@ class LifeStore:
         self._ensure_column("users", "daily_proactive_max", "INTEGER NOT NULL DEFAULT 1")
         self._ensure_column("users", "daily_proactive_unlimited", "INTEGER NOT NULL DEFAULT 0")
         self._ensure_column("proactive_opportunities", "target_user_id", "TEXT NOT NULL DEFAULT ''")
-        self._ensure_column("relay_candidates", "opportunity_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("proactive_events", "host_task_id", "TEXT NOT NULL DEFAULT ''")
-        self._ensure_column("relay_candidates", "host_task_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("interaction_events", "source_message_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("important_dates", "source_message_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("date_candidates", "source_message_id", "TEXT NOT NULL DEFAULT ''")
-        self._ensure_column("group_observations", "source_message_ids", "TEXT NOT NULL DEFAULT '[]'")
-        self._ensure_column("group_user_activity", "source_message_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("global_state", "current_location", "TEXT NOT NULL DEFAULT '家里'")
         self._ensure_column("global_state", "current_activity", "TEXT NOT NULL DEFAULT '自由活动'")
         self._ensure_column("global_state", "last_updated_at", "REAL NOT NULL DEFAULT 0")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_proactive_host_task ON proactive_events(host_task_id,status)")
-        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_relay_host_task ON relay_candidates(host_task_id,status)")
         self.conn.commit()
         if version < 9:
             self._migrate_to_v9()
@@ -434,10 +392,8 @@ class LifeStore:
             # v1.6 的 -1 表示“继承角色默认值”；v1.7 起数据库中只保存明确额度。
             conn.execute("""UPDATE users SET daily_proactive_max=
                 CASE WHEN role='owner' THEN 2 ELSE 1 END WHERE daily_proactive_max<0""")
-            # 旧版允许手填昵称、群别名和 @ 目标；升级后清空这些展示快照，等待 Host 重新读取。
+            # 旧版允许手填昵称；升级后清空展示快照，等待 Host 重新读取。
             conn.execute("UPDATE users SET display_name='' ")
-            conn.execute("UPDATE group_observations SET group_alias='' ")
-            conn.execute("UPDATE relay_candidates SET mention_user_id='',mention_name='' ")
             columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(memory_runtime)").fetchall()}
             if "last_skill_day" in columns:
                 conn.execute("""CREATE TABLE memory_runtime_v9(
@@ -935,16 +891,6 @@ class LifeStore:
                         "UPDATE users SET proactive_day=?,proactive_count=1,last_proactive_at=? WHERE user_id=?",
                         (day, now, row[1]),
                     )
-                relay = conn.execute(
-                    "SELECT id FROM relay_candidates WHERE opportunity_id=? AND kind='group_to_private' AND status='queued'",
-                    (row[2],),
-                ).fetchone()
-                if relay:
-                    conn.execute("UPDATE relay_candidates SET status='sent',sent_at=? WHERE id=?", (now, relay[0]))
-                    conn.execute(
-                        "INSERT INTO relay_events(relay_id,status,detail,created_at) VALUES(?,?,?,?)",
-                        (relay[0], "sent", "proactive_after_send", now),
-                    )
                 return True
 
     def _expire_pending_locked(self, conn: sqlite3.Connection, now: float, max_retries: int, day: str) -> None:
@@ -1039,310 +985,6 @@ class LifeStore:
             return {str(row[0]) for row in rows if str(row[0] or "")}
 
     @_database_operation
-    def record_group_activity(
-        self, group_id: str, user_id: str, display_name: str, now: float, source_message_id: str = ""
-    ) -> None:
-        if not group_id or not user_id:
-            return
-        with self._lock:
-            self.conn.execute(
-                """INSERT INTO group_user_activity(group_id,user_id,display_name,last_active_at,source_message_id)
-                VALUES(?,?,?,?,?) ON CONFLICT(group_id,user_id) DO UPDATE SET
-                display_name=CASE WHEN excluded.last_active_at>=group_user_activity.last_active_at
-                                  THEN excluded.display_name ELSE group_user_activity.display_name END,
-                source_message_id=CASE WHEN excluded.last_active_at>=group_user_activity.last_active_at
-                                       THEN excluded.source_message_id ELSE group_user_activity.source_message_id END,
-                last_active_at=MAX(group_user_activity.last_active_at,excluded.last_active_at)""",
-                (group_id, user_id, display_name[:120], now, source_message_id[:240]),
-            )
-            self.conn.commit()
-
-    @_database_operation
-    def upsert_group_directory(self, group_id: str, group_name: str, stream_id: str, now: float) -> None:
-        if not group_id:
-            return
-        name = " ".join(str(group_name or "").replace("\x00", "").split())[:160]
-        with self._lock:
-            self.conn.execute(
-                """INSERT INTO group_directory(group_id,group_name,stream_id,updated_at) VALUES(?,?,?,?)
-                ON CONFLICT(group_id) DO UPDATE SET
-                group_name=CASE WHEN excluded.group_name!='' THEN excluded.group_name ELSE group_directory.group_name END,
-                stream_id=CASE WHEN excluded.stream_id!='' THEN excluded.stream_id ELSE group_directory.stream_id END,
-                updated_at=MAX(group_directory.updated_at,excluded.updated_at)""",
-                (group_id, name, str(stream_id or "")[:240], float(now)),
-            )
-            self.conn.commit()
-
-    @_database_operation
-    def get_group_directory(self, group_id: str) -> Dict[str, Any]:
-        with self._lock:
-            row = self.conn.execute("SELECT * FROM group_directory WHERE group_id=?", (group_id,)).fetchone()
-            return dict(row) if row else {}
-
-    @_database_operation
-    def list_group_directory(self, limit: int = 100) -> List[Dict[str, Any]]:
-        with self._lock:
-            rows = self.conn.execute(
-                "SELECT * FROM group_directory ORDER BY updated_at DESC LIMIT ?", (max(1, min(500, int(limit))),)
-            ).fetchall()
-            return [dict(row) for row in rows]
-
-    @_database_operation
-    def list_group_member_names(self, limit: int = 200) -> List[str]:
-        """群成员昵称去重列表（按最近活跃排序）——供搜索查询词隐私清洗。"""
-        with self._lock:
-            rows = self.conn.execute(
-                "SELECT DISTINCT display_name FROM group_user_activity "
-                "WHERE display_name!='' ORDER BY last_active_at DESC LIMIT ?",
-                (max(1, min(500, int(limit))),),
-            ).fetchall()
-            return [" ".join(str(row[0] or "").split())[:120] for row in rows if str(row[0] or "").strip()]
-
-    @_database_operation
-    def unique_group_for_stream(self, stream_id: str) -> str:
-        with self._lock:
-            rows = self.conn.execute(
-                "SELECT group_id FROM group_directory WHERE stream_id=? ORDER BY updated_at DESC", (stream_id,)
-            ).fetchall()
-            values = {str(row[0]) for row in rows if str(row[0])}
-            return next(iter(values)) if len(values) == 1 else ""
-
-    @_database_operation
-    def get_group_activity(self, group_id: str, user_id: str) -> Dict[str, Any]:
-        with self._lock:
-            row = self.conn.execute(
-                "SELECT * FROM group_user_activity WHERE group_id=? AND user_id=?", (group_id, user_id)
-            ).fetchone()
-            return dict(row) if row else {}
-
-    @_database_operation
-    def save_group_observation(self, item: Dict[str, Any]) -> bool:
-        """群聊原文不会传入存储层，只接受长度受限的公开话题摘要。"""
-        with self._lock:
-            cursor = self.conn.execute(
-                """INSERT OR IGNORE INTO group_observations
-                (id,group_id,group_alias,topic,summary,interest_score,source_adapter,created_at,expires_at,source_message_ids)
-                VALUES(?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    item["id"],
-                    item["group_id"],
-                    item["group_alias"],
-                    item["topic"][:240],
-                    item["summary"][:1200],
-                    max(0, min(1, float(item.get("interest_score") or 0))),
-                    item.get("source_adapter", "unknown")[:32],
-                    float(item["created_at"]),
-                    float(item["expires_at"]),
-                    json.dumps(
-                        [str(value)[:240] for value in item.get("source_message_ids") or [] if str(value).strip()],
-                        ensure_ascii=False,
-                    ),
-                ),
-            )
-            self.conn.commit()
-            return cursor.rowcount == 1
-
-    @_database_operation
-    def recent_group_observations(self, now: float, limit: int = 10) -> List[Dict[str, Any]]:
-        with self._lock:
-            rows = self.conn.execute(
-                """SELECT * FROM group_observations WHERE expires_at>?
-                ORDER BY created_at DESC LIMIT ?""",
-                (now, max(1, min(100, int(limit)))),
-            ).fetchall()
-            return [dict(row) for row in rows]
-
-    @_database_operation
-    def create_relay_candidate(self, item: Dict[str, Any]) -> bool:
-        """创建转述候选，并在同一事务内把相同目标的旧候选标记为已取代。"""
-        with self._lock:
-            with self._tx() as conn:
-                if item["kind"] == "explicit":
-                    sending = conn.execute(
-                        """SELECT 1 FROM relay_candidates WHERE target_stream_id=? AND kind='explicit'
-                        AND status='sending' AND expires_at>? LIMIT 1""",
-                        (item.get("target_stream_id", ""), float(item["created_at"])),
-                    ).fetchone()
-                    if sending:
-                        return False
-                    stale = conn.execute(
-                        """SELECT id FROM relay_candidates WHERE target_stream_id=? AND kind='explicit'
-                        AND status='pending' AND expires_at>?""",
-                        (item.get("target_stream_id", ""), float(item["created_at"])),
-                    ).fetchall()
-                    conn.execute(
-                        """UPDATE relay_candidates SET status='superseded' WHERE target_stream_id=?
-                        AND kind='explicit' AND status='pending'""",
-                        (item.get("target_stream_id", ""),),
-                    )
-                    conn.executemany(
-                        "INSERT INTO relay_events(relay_id,status,detail,created_at) VALUES(?,'superseded','newer_relay',?)",
-                        [(row[0], float(item["created_at"])) for row in stale],
-                    )
-                cursor = conn.execute(
-                    """INSERT OR IGNORE INTO relay_candidates
-                    (id,kind,opportunity_id,source_observation_id,source_group_id,target_group_id,target_user_id,target_stream_id,
-                     summary,reason,mention_user_id,mention_name,status,created_at,expires_at,host_task_id)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (
-                        item["id"],
-                        item["kind"],
-                        item.get("opportunity_id", "")[:80],
-                        item.get("source_observation_id", "")[:80],
-                        item.get("source_group_id", "")[:80],
-                        item.get("target_group_id", "")[:80],
-                        item.get("target_user_id", "")[:80],
-                        item.get("target_stream_id", "")[:160],
-                        item.get("summary", "")[:1200],
-                        item.get("reason", "")[:1200],
-                        item.get("mention_user_id", "")[:80],
-                        item.get("mention_name", "")[:120],
-                        item.get("status", "pending")[:24],
-                        float(item["created_at"]),
-                        float(item["expires_at"]),
-                        item.get("host_task_id", "")[:240],
-                    ),
-                )
-                if cursor.rowcount:
-                    conn.execute(
-                        "INSERT INTO relay_events(relay_id,status,detail,created_at) VALUES(?,?,?,?)",
-                        (item["id"], item.get("status", "pending"), "created", float(item["created_at"])),
-                    )
-                return cursor.rowcount == 1
-
-    @_database_operation
-    def pending_relay_context(self, stream_id: str, now: float) -> Dict[str, Any]:
-        with self._lock:
-            row = self.conn.execute(
-                """SELECT * FROM relay_candidates WHERE target_stream_id=? AND kind='explicit'
-                AND status IN ('pending','sending') AND expires_at>?
-                ORDER BY created_at DESC LIMIT 1""",
-                (stream_id, now),
-            ).fetchone()
-            return dict(row) if row else {}
-
-    @_database_operation
-    def set_relay_task_id(self, relay_id: str, host_task_id: str) -> bool:
-        if not relay_id or not host_task_id:
-            return False
-        with self._lock:
-            cursor = self.conn.execute(
-                "UPDATE relay_candidates SET host_task_id=? WHERE id=? AND status='pending'",
-                (host_task_id[:240], relay_id),
-            )
-            self.conn.commit()
-            return cursor.rowcount == 1
-
-    @_database_operation
-    def relay_for_task(self, stream_id: str, host_task_id: str) -> Dict[str, Any]:
-        if not stream_id or not host_task_id:
-            return {}
-        with self._lock:
-            row = self.conn.execute(
-                "SELECT * FROM relay_candidates WHERE target_stream_id=? AND host_task_id=? AND kind='explicit'",
-                (stream_id, host_task_id),
-            ).fetchone()
-            return dict(row) if row else {}
-
-    @_database_operation
-    def relay_candidate(self, relay_id: str) -> Dict[str, Any]:
-        """按候选号读取显式转述，支持 Planner 先于 Host task_id 回写到达。"""
-        if not relay_id:
-            return {}
-        with self._lock:
-            row = self.conn.execute(
-                "SELECT * FROM relay_candidates WHERE id=? AND kind='explicit'",
-                (relay_id,),
-            ).fetchone()
-            return dict(row) if row else {}
-
-    @_database_operation
-    def reserve_relay_for_send(
-        self, stream_id: str, now: float, host_task_id: str = "", *, allow_expired: bool = False
-    ) -> Dict[str, Any]:
-        """发送前原子占用一次 @；Host 正常分段时只有第一段会命中。
-
-        allow_expired 用于迟到发送放行：active 归因仍存活时，已过 expires_at 但未结算的
-        候选仍应被占用并结算，避免“回复已发出但候选停留在 pending”。
-        """
-        with self._lock:
-            with self._tx() as conn:
-                if host_task_id:
-                    row = conn.execute(
-                        """SELECT * FROM relay_candidates WHERE target_stream_id=? AND host_task_id=?
-                        AND kind='explicit' AND status='pending' AND (? OR expires_at>?)""",
-                        (stream_id, host_task_id, 1 if allow_expired else 0, now),
-                    ).fetchone()
-                else:
-                    # 兼容不返回 task_id 的旧 Host；不抢占已经精确关联的新任务。
-                    row = conn.execute(
-                        """SELECT * FROM relay_candidates WHERE target_stream_id=? AND kind='explicit'
-                        AND host_task_id='' AND status='pending' AND expires_at>?
-                        ORDER BY created_at DESC LIMIT 1""",
-                        (stream_id, now),
-                    ).fetchone()
-                if not row:
-                    return {}
-                changed = conn.execute(
-                    "UPDATE relay_candidates SET status='sending' WHERE id=? AND status='pending'", (row["id"],)
-                ).rowcount
-                if not changed:
-                    return {}
-                conn.execute(
-                    "INSERT INTO relay_events(relay_id,status,detail,created_at) VALUES(?,?,?,?)",
-                    (row["id"], "sending", "before_send", now),
-                )
-                return dict(row)
-
-    @_database_operation
-    def finish_relay_send(self, relay_id: str, sent: bool, now: float) -> None:
-        with self._lock:
-            with self._tx() as conn:
-                row = conn.execute("SELECT status,expires_at FROM relay_candidates WHERE id=?", (relay_id,)).fetchone()
-                if not row:
-                    return
-                current = str(row[0] or "")
-                if current == "sent":
-                    return
-                # 已被禁用、过期或新任务取代的在途发送若失败，保留原终态；若平台实际成功则记录事实。
-                if not sent and current != "sending":
-                    return
-                status = "sent" if sent else ("pending" if float(row[1]) > now else "expired")
-                conn.execute(
-                    "UPDATE relay_candidates SET status=?,sent_at=? WHERE id=?", (status, now if sent else 0, relay_id)
-                )
-                conn.execute(
-                    "INSERT INTO relay_events(relay_id,status,detail,created_at) VALUES(?,?,?,?)",
-                    (relay_id, status, "after_send", now),
-                )
-
-    @_database_operation
-    def set_relay_status(self, relay_id: str, status: str, now: float, detail: str = "") -> None:
-        """只从非终态迁移；已 sent/superseded/failed/expired/cancelled 的候选不会被覆盖。"""
-        with self._lock:
-            with self._tx() as conn:
-                cursor = conn.execute(
-                    "UPDATE relay_candidates SET status=? WHERE id=? AND status IN ('pending','sending','queued')",
-                    (status[:24], relay_id),
-                )
-                if cursor.rowcount:
-                    conn.execute(
-                        "INSERT INTO relay_events(relay_id,status,detail,created_at) VALUES(?,?,?,?)",
-                        (relay_id, status[:24], detail[:300], now),
-                    )
-
-    @_database_operation
-    def social_share_stats(self, user_id: str, since: float) -> Dict[str, Any]:
-        with self._lock:
-            row = self.conn.execute(
-                """SELECT COUNT(*) count,MAX(created_at) last_at FROM relay_candidates
-                WHERE target_user_id=? AND kind='group_to_private' AND created_at>=?
-                AND status IN ('queued','sent')""",
-                (user_id, since),
-            ).fetchone()
-            return {"count": int(row[0] or 0), "last_at": float(row[1] or 0)} if row else {"count": 0, "last_at": 0}
-
-    @_database_operation
     def management_date_candidates(self, limit: int = 100) -> List[Dict[str, Any]]:
         with self._lock:
             rows = self.conn.execute(
@@ -1391,11 +1033,6 @@ class LifeStore:
                 # 避免维护抢先时重试静默失效；_expire_pending_locked 是同步方法，不会重复取锁。
                 self._expire_pending_locked(conn, now, max(0, 2), day)
                 conn.execute("DELETE FROM llm_usage_events WHERE created_at<?", (usage_before,))
-                conn.execute("DELETE FROM group_observations WHERE expires_at<=?", (now,))
-                conn.execute(
-                    "UPDATE relay_candidates SET status='expired' WHERE expires_at<=? AND status IN ('pending','sending','queued')",
-                    (now,),
-                )
                 if records_before > 0:
                     # 只删终态行；已发送按 sent_at 计龄，未发送的终态按 expires_at 计龄。
                     conn.execute(
@@ -1407,12 +1044,6 @@ class LifeStore:
                     # （pending 事件 120 秒内必然被 expire_pending 转为终态）。
                     conn.execute("DELETE FROM proactive_opportunities WHERE expires_at<=?", (records_before,))
                     conn.execute("DELETE FROM interaction_events WHERE created_at<?", (records_before,))
-                    conn.execute(
-                        """DELETE FROM relay_candidates WHERE status NOT IN ('pending','sending','queued')
-                        AND (CASE WHEN sent_at>0 THEN sent_at ELSE expires_at END)<=?""",
-                        (records_before,),
-                    )
-                    conn.execute("DELETE FROM relay_events WHERE created_at<?", (records_before,))
                     # 日期由调用方按配置时区传入；未传时兼容旧调用方。
                     day_cut = records_before_day or time.strftime("%Y-%m-%d", time.localtime(records_before))
                     conn.execute("DELETE FROM proactive_skip_stats WHERE day<?", (day_cut,))

@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 from ..config import PLUGIN_VERSION
 
 
-_SCOPES = {"overview", "users", "groups", "dates", "tokens", "proactive", "search"}
+_SCOPES = {"overview", "users", "dates", "tokens", "proactive", "search"}
 
 
 def _bounded_limit(value: Any, default: int = 20) -> int:
@@ -34,8 +34,6 @@ class AdminService:
         limit = _bounded_limit(limit)
         if normalized == "users":
             return {"scope": normalized, "items": await self._users(limit)}
-        if normalized == "groups":
-            return {"scope": normalized, "items": await self._groups(limit)}
         if normalized == "dates":
             return {"scope": normalized, "items": await self.store.management_date_candidates(limit)}
         if normalized == "tokens":
@@ -68,24 +66,6 @@ class AdminService:
             for item in users[:limit]
         ]
 
-    async def _groups(self, limit: int) -> List[Dict[str, Any]]:
-        directory = {str(item["group_id"]): item for item in await self.store.list_group_directory(500)}
-        result = []
-        for profile in self.config.group.profiles[:limit]:
-            group_id = str(profile.group_id)
-            cached = directory.get(group_id, {})
-            result.append(
-                {
-                    "group_id": group_id,
-                    "group_name": str(cached.get("group_name") or ""),
-                    "stream_known": bool(cached.get("stream_id")),
-                    "enabled": bool(profile.enabled),
-                    "observe_enabled": bool(profile.observe_enabled),
-                    "relay_target_enabled": bool(profile.relay_target_enabled),
-                }
-            )
-        return result
-
     async def _tokens(self, now: Any) -> Dict[str, Any]:
         start = now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
         return {
@@ -107,7 +87,6 @@ class AdminService:
             "token_calls_today": sum(int(item.get("calls") or 0) for item in tokens),
             "token_total_today": sum(int(item.get("total_tokens") or 0) for item in tokens),
             "search_calls_today": sum(int(item.get("calls") or 0) for item in usage["search_api_usage"]),
-            "social_enabled": bool(self.config.group.relay_enabled),
             "network_enabled": bool(self.config.network.enabled),
         }
 
@@ -121,18 +100,12 @@ class AdminService:
                 f"用户 {data['users']}（主人 {data['owners']}）｜待确认日期 {data['pending_dates']}\n"
                 f"待发送主动 {data['pending_proactive']}\n"
                 f"今日模型调用 {data['token_calls_today']}｜Token {data['token_total_today']}｜搜索 API 请求 {data['search_calls_today']}\n"
-                f"联网 {'开' if data['network_enabled'] else '关'}｜社交 {'开' if data['social_enabled'] else '关'}"
+                f"联网 {'开' if data['network_enabled'] else '关'}"
             )
         if scope == "users":
             lines = ["用户角色与主动额度"]
             lines.extend(
                 f"{item['user_id']} {item['display_name'] or '未读取昵称'}｜{item['role']}｜温度 {item['temperature']}｜主动 {item['proactive_count']}/{'无上限' if item['daily_proactive_unlimited'] else item['daily_proactive_max']}"
-                for item in data["items"]
-            )
-        elif scope == "groups":
-            lines = ["QQ群配置"]
-            lines.extend(
-                f"{item['group_id']} {item['group_name'] or '未读取群名'}｜{'开' if item['enabled'] else '关'}｜观察 {'开' if item['observe_enabled'] else '关'}｜转述 {'开' if item['relay_target_enabled'] else '关'}"
                 for item in data["items"]
             )
         elif scope == "dates":

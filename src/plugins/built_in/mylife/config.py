@@ -20,7 +20,7 @@ import re
 
 PLUGIN_VERSION = "1.3.0"
 
-CONFIG_SCHEMA_VERSION = "1.23.0"
+CONFIG_SCHEMA_VERSION = "1.24.0"
 
 _TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
@@ -330,18 +330,6 @@ class UserProfile(PluginConfigBase):
         ),
     )
 
-    group_to_private_enabled: bool = Field(
-        default=False,
-        description="是否允许把白名单群聊中的公开话题低频转述给该用户。",
-        json_schema_extra=_ui(
-            "允许群聊转私聊",
-            "朋友默认关闭；主人还需启用“社交转述”中的主人群转私开关。",
-            9,
-            label_en="Allow Group-to-private Sharing",
-            hint_en="Disabled for friends by default. Owner sharing also requires the social relay owner switch.",
-        ),
-    )
-
     @model_validator(mode="before")
     @classmethod
     def migrate_legacy_daily_limit(cls, value: Any) -> Any:
@@ -360,34 +348,6 @@ class UserProfile(PluginConfigBase):
 
         if configured < 0:
             data["daily_proactive_max"] = 2 if str(data.get("role") or "friend") == "owner" else 1
-
-        return data
-
-    @model_validator(mode="before")
-    @classmethod
-    def default_owner_group_to_private(cls, value: Any) -> Any:
-        """主人档案未单独配置群转私开关时默认允许，保持旧版“全局开关即可”的行为。
-
-
-
-        群转私对主人是“全局开关 AND 档案开关”；只有显式关闭档案开关的主人才被排除，
-
-        避免既有部署在升级后静默失去主人群转私。朋友仍默认关闭。
-
-        """
-
-        if not isinstance(value, dict):
-            return value
-
-        if str(value.get("role") or "friend") != "owner":
-            return value
-
-        if "group_to_private_enabled" in value:
-            return value
-
-        data = dict(value)
-
-        data["group_to_private_enabled"] = True
 
         return data
 
@@ -459,67 +419,6 @@ class UsersSettings(PluginConfigBase):
             raise ValueError("私聊用户中最多只能配置一个主人")
 
         return self
-
-
-class SocialGroupProfile(PluginConfigBase):
-    """社交观察和转述使用的 QQ 群白名单。"""
-
-    __ui_label__: ClassVar[str] = "群聊白名单"
-
-    group_id: str = Field(
-        default="",
-        description="QQ 群号。",
-        json_schema_extra=_ui(
-            "QQ群号",
-            "SnowLuma 与 NapCat 均填写真实 QQ 群号字符串。",
-            0,
-            label_en="QQ Group ID",
-            hint_en="Real QQ group ID used by both SnowLuma and NapCat.",
-            placeholder="123456789",
-        ),
-    )
-
-    enabled: bool = Field(
-        default=True,
-        description="是否启用该群配置。",
-        json_schema_extra=_ui(
-            "启用群配置",
-            "关闭后该群既不观察也不作为转述目标。",
-            1,
-            label_en="Enable Group",
-            hint_en="Disable all observation and relay behavior for this group.",
-        ),
-    )
-
-    observe_enabled: bool = Field(
-        default=False,
-        description="是否观察该群的公开话题。",
-        json_schema_extra=_ui(
-            "允许观察公开话题",
-            "只保存短摘要，不保存群聊原文。",
-            2,
-            label_en="Observe Public Topics",
-            hint_en="Store short summaries only, never raw group messages.",
-        ),
-    )
-
-    relay_target_enabled: bool = Field(
-        default=False,
-        description="是否允许管理员向该群发起显式转述。",
-        json_schema_extra=_ui(
-            "允许作为转述目标",
-            "启用后主人或管理员可用 /麦麦转述 群QQ号 内容触发该群 Planner。",
-            3,
-            label_en="Allow Relay Target",
-            hint_en="Allow owner/admin to trigger this group's Planner with the Chinese relay command.",
-        ),
-    )
-
-    @field_validator("group_id", mode="before")
-    @classmethod
-    def normalize_text(cls, value: Any) -> str:
-
-        return _qq_id(value, "QQ群")
 
 
 class EnvironmentSettings(PluginConfigBase):
@@ -962,246 +861,6 @@ class NetworkSettings(PluginConfigBase):
     )
 
 
-class GroupChatSettings(PluginConfigBase):
-    """群聊集中设置：工作时段、回复概率、轮次注册、观察与转述。"""
-
-    __ui_label__: ClassVar[str] = "群聊设置"
-
-    __ui_order__: ClassVar[int] = 2
-
-    profiles: List[SocialGroupProfile] = Field(
-        default_factory=list,
-        description="QQ群白名单。",
-        json_schema_extra=_ui(
-            "群聊白名单",
-            "逐群开关：启用 / 观察 / 转述；只填真实 QQ 群号，群名由 MaiBot 会话自动读取。回复策略作用于所有群。",
-            0,
-            label_en="Group Allowlist",
-            hint_en="Controls observation sources and explicit relay targets.",
-        ),
-    )
-
-    gate_enabled: bool = Field(
-        default=True,
-        description="是否启用所有群聊的工作时段和概率。",
-        json_schema_extra=_ui(
-            "启用群聊回复策略",
-            "对所有群生效；关闭后交给宿主处理，命令始终不受限制。",
-            1,
-            label_en="Enable Group Reply Policy",
-            hint_en="Apply working hours and probability to every group; commands are exempt.",
-        ),
-    )
-
-    reply_probability: float = Field(
-        default=0.18,
-        ge=0,
-        le=1,
-        description="工作时段内每条群消息的放行概率。",
-        json_schema_extra=_ui(
-            "群聊回复概率",
-            "0.18 表示 18%；关键词、提及和媒体不改变此概率。麦麦仍可能选择不回复。",
-            2,
-            label_en="Group Reply Probability",
-            hint_en="Fixed admission probability; the host can still decide not to reply.",
-        ),
-    )
-
-    work_start: str = Field(
-        default="00:00",
-        description="群聊工作开始时间。",
-        json_schema_extra=_ui(
-            "群聊工作开始",
-            "HH:MM，按全局时区；支持跨午夜，与结束相同表示全天。",
-            3,
-            label_en="Group Work Start",
-            hint_en="HH:MM in the global timezone; equal endpoints mean all day.",
-        ),
-    )
-
-    work_end: str = Field(
-        default="00:00",
-        description="群聊工作结束时间。",
-        json_schema_extra=_ui(
-            "群聊工作结束",
-            "到此时刻停止放行普通消息；命令不受影响。",
-            4,
-            label_en="Group Work End",
-            hint_en="Ordinary messages stop being admitted at this time.",
-        ),
-    )
-
-    turn_enabled: bool = Field(
-        default=True,
-        description="群聊中为每条消息注册回复轮次锁，防止同一条群消息触发多次回复。",
-        json_schema_extra=_ui(
-            "群聊轮次注册",
-            "开启后按群号和发送者隔离轮次；关闭则群聊不做防重。",
-            10,
-            label_en="Group Turn Registration",
-            hint_en="Register reply turns for group messages, isolated by group and sender.",
-        ),
-    )
-
-    relay_enabled: bool = Field(
-        default=False,
-        description="社交转述总开关。",
-        json_schema_extra=_ui(
-            "启用社交转述",
-            "默认关闭；只处理白名单里开了「观察」的 QQ 群。",
-            10,
-            label_en="Enable Social Relay",
-            hint_en="Disabled by default and limited to allowlisted groups.",
-        ),
-    )
-
-    observation_wait_seconds: float = Field(
-        default=3.0,
-        ge=0.5,
-        le=20,
-        description="群聊话题收口等待。",
-        json_schema_extra=_ui(
-            "群话题等待（秒）",
-            "使用独立群缓冲，收口群内连发再判定话题。",
-            11,
-            label_en="Group Topic Wait (sec)",
-            hint_en="Wait window before judging a group topic.",
-        ),
-    )
-
-    max_buffer_messages: int = Field(
-        default=20,
-        ge=2,
-        le=100,
-        description="单个群话题最多暂存消息数。",
-        json_schema_extra=_ui(
-            "群缓冲消息上限",
-            "只在内存中短暂保留，入库前会整理成摘要。",
-            12,
-            label_en="Group Buffer Limit",
-            hint_en="Kept briefly in memory and summarized before storage.",
-        ),
-    )
-
-    interesting_threshold: float = Field(
-        default=0.65,
-        ge=0,
-        le=1,
-        description="公开话题进入群转私候选的最低分。",
-        json_schema_extra=_ui(
-            "公开话题阈值",
-            "越高越克制；模型不可用时使用保守本地规则。",
-            13,
-            label_en="Public Topic Threshold",
-            hint_en="Higher is more conservative; local fallback is used without a model.",
-        ),
-    )
-
-    summary_retention_hours: int = Field(
-        default=72,
-        ge=1,
-        le=720,
-        description="群聊短摘要保留时长。",
-        json_schema_extra=_ui(
-            "群摘要保留（小时）",
-            "到期自动删除，不保存群聊原文。",
-            14,
-            label_en="Group Summary Retention",
-            hint_en="Expired summaries are deleted; raw messages are never stored.",
-        ),
-    )
-
-    relay_pending_seconds: int = Field(
-        default=120,
-        ge=30,
-        le=600,
-        description="显式转述与发送关联窗口。",
-        json_schema_extra=_ui(
-            "转述确认窗口（秒）",
-            "Planner 沉默或超时不会记为已发送。",
-            15,
-            label_en="Relay Confirmation Window",
-            hint_en="Planner silence or expiry is not counted as sent.",
-        ),
-    )
-
-    owner_group_to_private_enabled: bool = Field(
-        default=True,
-        description="允许向主人低频分享群聊公开话题。",
-        json_schema_extra=_ui(
-            "允许向主人群转私",
-            "仍需群观察开启、已知主人离群至少指定时长，并遵守主动额度。",
-            16,
-            label_en="Share Group Topics with Owner",
-            hint_en="Requires observation, inactivity proof and proactive quota.",
-        ),
-    )
-
-    inactivity_hours: float = Field(
-        default=6.0,
-        ge=1,
-        le=168,
-        description="群转私前用户需离群的最短时间。",
-        json_schema_extra=_ui(
-            "离群时长（小时）",
-            "无已知群活跃记录时不推断用户离群，避免误打扰。",
-            17,
-            label_en="Group Inactivity (hours)",
-            hint_en="Unknown activity is not treated as proven absence.",
-        ),
-    )
-
-    group_share_daily_max: int = Field(
-        default=1,
-        ge=0,
-        le=5,
-        description="每用户每日群转私候选上限。",
-        json_schema_extra=_ui(
-            "每日群转私上限",
-            "该上限同时受用户主动消息总额度约束。",
-            18,
-            label_en="Daily Group-share Limit",
-            hint_en="Also constrained by the user's total proactive quota.",
-        ),
-    )
-
-    group_share_min_interval_minutes: int = Field(
-        default=360,
-        ge=30,
-        le=10080,
-        description="群转私候选最小间隔。",
-        json_schema_extra=_ui(
-            "群转私最小间隔（分钟）",
-            "默认 6 小时，避免连续搬运群话题。",
-            19,
-            label_en="Group-share Interval (min)",
-            hint_en="Default six hours to avoid repeated topic relays.",
-        ),
-    )
-
-    @field_validator("work_start", "work_end", mode="before")
-    @classmethod
-    def validate_work_time(cls, value: Any) -> str:
-
-        return _work_time(value)
-
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_reply_policy(cls, data: Any) -> Any:
-
-        return _migrate_reply_policy(data, "gate_enabled")
-
-    @model_validator(mode="after")
-    def unique_group_ids(self) -> "GroupChatSettings":
-
-        ids = [item.group_id for item in self.profiles if item.group_id]
-
-        if len(ids) != len(set(ids)):
-            raise ValueError("群聊白名单中的 QQ 群号不能重复")
-
-        return self
-
-
 class ModelRoutingSettings(PluginConfigBase):
     """MaiBot 任务路由名，而不是 Provider API Key。"""
 
@@ -1278,18 +937,6 @@ class ModelRoutingSettings(PluginConfigBase):
             13,
             label_en="Self-association Override",
             hint_en="Leave empty to inherit reasoning task.",
-        ),
-    )
-
-    group_judgment_task: str = Field(
-        default="",
-        description="群聊公开话题判断任务覆盖。",
-        json_schema_extra=_ui(
-            "群聊判断任务覆盖",
-            "留空继承快速任务。",
-            15,
-            label_en="Group Judgment Override",
-            hint_en="Leave empty to inherit fast task.",
         ),
     )
 
@@ -1517,17 +1164,6 @@ class MaiLifeSettings(PluginConfigBase):
         ),
     )
 
-    group: GroupChatSettings = Field(
-        default_factory=GroupChatSettings,
-        json_schema_extra=_ui(
-            "群聊设置",
-            "工作时段、回复概率、轮次注册、观察与转述。",
-            2,
-            label_en="Group Chat",
-            hint_en="Working hours, reply probability, observation and relay.",
-        ),
-    )
-
     environment: EnvironmentSettings = Field(
         default_factory=EnvironmentSettings,
         json_schema_extra=_ui(
@@ -1593,9 +1229,7 @@ class MaiLifeSettings(PluginConfigBase):
     @model_validator(mode="before")
     @classmethod
     def migrate_legacy_sections(cls, data: Any) -> Any:
-        """v1.24.0 设置大整合：旧 [social] 搬进 [group]、旧 [information]/[search_api]/[news]/[search]
-
-        合并进 [network]。旧 TOML 零丢失、无需手改；SDK extra=ignore 会忽略残留旧键。"""
+        """将旧版私聊工作时段、用户边界和联网配置合并到对应设置。"""
 
         if not isinstance(data, dict):
             return data
@@ -1624,22 +1258,6 @@ class MaiLifeSettings(PluginConfigBase):
                         proactive.setdefault(key, rest[key])
 
                 data["proactive"] = proactive
-
-        social = data.pop("social", None)
-
-        if isinstance(social, dict):
-            group = data.get("group") if isinstance(data.get("group"), dict) else {}
-
-            if "groups" in social and "profiles" not in group:
-                group["profiles"] = social.pop("groups")
-
-            if "enabled" in social and "relay_enabled" not in group:
-                group["relay_enabled"] = social.pop("enabled")
-
-            for key, value in social.items():
-                group.setdefault(key, value)
-
-            data["group"] = group
 
         net = data.get("network") if isinstance(data.get("network"), dict) else {}
 

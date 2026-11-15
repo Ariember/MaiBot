@@ -3,7 +3,7 @@
     "unavailable": "未找到内置麦日常，请确认主程序已更新后刷新。",
     "title": "麦日常",
     "chooseGroup": "选择设置页面",
-    "description": "管理麦麦的日常生活、私聊陪伴与群聊互动。",
+    "description": "管理麦麦的日常生活与私聊陪伴。",
     "builtin": "内置功能",
     "enable": "启用麦日常",
     "enableHint": "开关与其他设置一起保存，保存后自动应用。",
@@ -30,7 +30,7 @@
     "saveAndLeave": "保存并离开",
     "reset": "恢复默认设置",
     "resetTitle": "恢复麦日常默认设置？",
-    "resetHint": "这会重置所有设置，包括用户与群聊列表。当前配置将自动备份。",
+    "resetHint": "这会重置所有设置，包括用户列表。当前配置将自动备份。",
     "resetSuccess": "已恢复默认设置",
     "resetError": "恢复默认设置失败",
     "administrators": "管理员",
@@ -38,7 +38,6 @@
     "groups": {
       "general": { "title": "基础设置", "description": "设置管理员、所在城市与天气环境。" },
       "private": { "title": "私聊陪伴", "description": "管理陪伴用户、专属称呼与主动联系的时段和频率。" },
-      "group": { "title": "群聊互动", "description": "选择参与的群聊，调整回复、观察与转述方式。" },
       "memory": { "title": "生活记忆", "description": "记录重要日期，安排纪念日与生活提醒。" },
       "network": { "title": "联网见闻", "description": "管理联网搜索、新闻与主动探索。" },
       "models": { "title": "模型与用量", "description": "分配模型任务，调整输出限制与用量统计。" }

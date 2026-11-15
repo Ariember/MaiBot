@@ -59,7 +59,7 @@ class InformationService:
 
         safe_query = await self.search.sanitize_query(query)
         if not safe_query:
-            return {"success": False, "content": "查询词为空，或清除本地 QQ、昵称、群名后没有可搜索内容。"}
+            return {"success": False, "content": "查询词为空，或清除本地 QQ、昵称后没有可搜索内容。"}
         if not self.search.available():
             return {"success": False, "content": "宿主统一联网能力不可用（需要主程序 SDK 2.17+ 并启用 web.search）。"}
 
@@ -255,7 +255,7 @@ class InformationService:
     async def _plan_query(
         self, now: Any, personality: str, state: Dict[str, Any], schedule: Dict[str, Any], chat_topics: List[str]
     ) -> Dict[str, str]:
-        """在移除本地 QQ 号、昵称、群名后规划一个有限长度的探索查询。"""
+        """在移除本地 QQ 号、昵称后规划一个有限长度的探索查询。"""
         fallback = {"topic": "", "query": "", "reason": "模型不可用，跳过自主搜索"}
         safe_topics = (
             [await self.search.sanitize_query(topic) for topic in chat_topics[:5]]

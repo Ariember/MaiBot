@@ -28,17 +28,6 @@ def adapter_name(message: Mapping[str, Any]) -> str:
     return "unknown"
 
 
-def group_identity(message: Mapping[str, Any]) -> Tuple[str, str]:
-    """读取 Host 标准群资料；两套适配器的私有字段只用于来源诊断。"""
-    info = message.get("message_info")
-    if not isinstance(info, Mapping):
-        return "", ""
-    group = info.get("group_info")
-    if not isinstance(group, Mapping):
-        return "", ""
-    return str(group.get("group_id") or "").strip(), str(group.get("group_name") or "").strip()
-
-
 def sender_identity(message: Mapping[str, Any]) -> Tuple[str, str]:
     """读取 Host 标准发送者资料，不依赖 NapCat/SnowLuma 原始事件形状。"""
     info = message.get("message_info")

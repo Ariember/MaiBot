@@ -9,7 +9,6 @@ import {
   Loader2,
   Save,
   Settings2,
-  Users,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -53,7 +52,6 @@ import { cn } from '@/lib/utils'
 const settingGroups = [
   { id: 'general', icon: Settings2, sections: ['environment', 'plugin'] },
   { id: 'private', icon: Heart, sections: ['users', 'proactive'] },
-  { id: 'group', icon: Users, sections: ['group'] },
   { id: 'memory', icon: Brain, sections: ['memory'] },
   { id: 'network', icon: Globe, sections: ['network'] },
   { id: 'models', icon: Settings2, sections: ['models', 'usage'] },
@@ -64,14 +62,6 @@ const commonFields: Record<string, string[]> = {
   environment: ['weather_refresh_minutes'],
   users: ['profiles'],
   proactive: ['enabled', 'work_start', 'work_end', 'recent_user_silence_minutes'],
-  group: [
-    'profiles',
-    'gate_enabled',
-    'reply_probability',
-    'work_start',
-    'work_end',
-    'relay_enabled',
-  ],
   memory: ['enabled', 'important_dates_enabled', 'date_reminder_lead_days'],
   network: [
     'enabled',

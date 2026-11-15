@@ -56,35 +56,24 @@ class CommandReplyService:
         return str(value.get("stream_id") or value.get("session_id") or "").strip()
 
     @staticmethod
-    def _target_id(value: Dict[str, Any], kind: str) -> str:
-        direct = str(value.get(f"{kind}_id") or "").strip()
-        info = value.get(f"{kind}_info") if isinstance(value.get(f"{kind}_info"), dict) else {}
-        return direct or str(info.get(f"{kind}_id") or "").strip()
+    def _target_id(value: Dict[str, Any]) -> str:
+        direct = str(value.get("user_id") or "").strip()
+        info = value.get("user_info") if isinstance(value.get("user_info"), dict) else {}
+        return direct or str(info.get("user_id") or "").strip()
 
-    async def _exact_stream(self, user_id: str, group_id: str, platform: str) -> str:
+    async def _exact_stream(self, user_id: str, platform: str) -> str:
         try:
-            result = (
-                await self.ctx.chat.get_stream_by_group_id(group_id=group_id, platform=platform)
-                if group_id
-                else await self.ctx.chat.get_stream_by_user_id(user_id=user_id, platform=platform)
-            )
+            result = await self.ctx.chat.get_stream_by_user_id(user_id=user_id, platform=platform)
             return self._result_stream_id(result)
         except Exception:
             return ""
 
-    async def _scan_streams(self, user_id: str, group_id: str, platform: str) -> str:
-        """精确查询不可用时枚举对应会话类型，并按真实 QQ 目标过滤。"""
+    async def _scan_streams(self, user_id: str, platform: str) -> str:
+        """精确查询不可用时枚举私聊会话，并按真实 QQ 用户过滤。"""
         chat = getattr(self.ctx, "chat", None)
         if chat is None:
             return ""
-        methods = []
-        if group_id:
-            methods.append(getattr(chat, "get_group_streams", None))
-        elif user_id:
-            methods.append(getattr(chat, "get_private_streams", None))
-        methods.append(getattr(chat, "get_all_streams", None))
-        target = group_id or user_id
-        kind = "group" if group_id else "user"
+        methods = [getattr(chat, "get_private_streams", None), getattr(chat, "get_all_streams", None)]
         for method in methods:
             if not callable(method):
                 continue
@@ -93,46 +82,43 @@ class CommandReplyService:
             except Exception:
                 continue
             for item in self._stream_dicts(result):
-                if self._target_id(item, kind) == target and self._stream_id(item):
+                if item.get("is_group_session"):
+                    continue
+                if self._target_id(item) == user_id and self._stream_id(item):
                     return self._stream_id(item)
         return ""
 
-    async def _open_stream(self, user_id: str, group_id: str, platform: str) -> str:
+    async def _open_stream(self, user_id: str, platform: str) -> str:
         method = getattr(getattr(self.ctx, "chat", None), "open_session", None)
         if not callable(method):
             return ""
         try:
-            result = await method(
-                platform=platform, chat_type="group" if group_id else "private", group_id=group_id, user_id=user_id
-            )
+            result = await method(platform=platform, chat_type="private", user_id=user_id)
             return self._result_stream_id(result)
         except Exception:
             return ""
 
-    async def resolve_live_stream_id(
-        self, stream_id: str, user_id: str = "", group_id: str = "", platform: str = "qq"
-    ) -> str:
+    async def resolve_live_stream_id(self, stream_id: str, user_id: str = "", platform: str = "qq") -> str:
         """优先按真实 QQ 目标重新解析；传入 stream 只作为最终失败开放值。"""
         user = str(user_id or "").strip()
-        group = str(group_id or "").strip()
         platform = str(platform or "qq").strip() or "qq"
-        if user or group:
-            exact = await self._exact_stream(user, group, platform)
+        if user:
+            exact = await self._exact_stream(user, platform)
             if exact:
                 return exact
-            scanned = await self._scan_streams(user, group, platform)
+            scanned = await self._scan_streams(user, platform)
             if scanned:
                 return scanned
-            opened = await self._open_stream(user, group, platform)
+            opened = await self._open_stream(user, platform)
             if opened:
                 return opened
         return str(stream_id or "").strip()
 
     async def send_text_with_fallback(
-        self, text: str, stream_id: str, user_id: str = "", group_id: str = "", platform: str = "qq"
+        self, text: str, stream_id: str, user_id: str = "", platform: str = "qq"
     ) -> bool:
         """优先发送到实时解析的会话，失败后尝试原始会话。"""
-        resolved = await self.resolve_live_stream_id(stream_id, user_id, group_id, platform)
+        resolved = await self.resolve_live_stream_id(stream_id, user_id, platform=platform)
         if not resolved:
             return False
         try:

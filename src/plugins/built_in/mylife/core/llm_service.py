@@ -92,7 +92,6 @@ class LLMService:
             "news": models.news_task or models.fast_task,
             "search": models.search_task or models.reasoning_task,
             "relevance": models.relevance_task or models.reasoning_task,
-            "group_judgment": models.group_judgment_task or models.fast_task,
         }
         return str(routes.get(kind) or models.reasoning_task or "planner").strip()
 
@@ -109,9 +108,6 @@ class LLMService:
                 kinds.add("search")
             if self.config.network.association_enabled:
                 kinds.add("relevance")
-        # relay_summary 已并入群观察的单次 group_judgment 调用（v1.23.6），不再单列必查。
-        if self.config.group.relay_enabled:
-            kinds.add("group_judgment")
         return kinds
 
     async def refresh_health(self) -> Set[str]:

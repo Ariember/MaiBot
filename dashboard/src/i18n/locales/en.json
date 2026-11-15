@@ -3,7 +3,7 @@
     "unavailable": "Built-in Mai Life was not found. Update the application, then refresh.",
     "title": "Mai Life",
     "chooseGroup": "Choose settings page",
-    "description": "Manage Mai's daily life, private companionship, and group conversations.",
+    "description": "Manage Mai's daily life and private companionship.",
     "builtin": "Built-in feature",
     "enable": "Enable Mai Life",
     "enableHint": "Save the switch together with other settings to apply your changes.",
@@ -30,7 +30,7 @@
     "saveAndLeave": "Save and leave",
     "reset": "Restore defaults",
     "resetTitle": "Restore Mai Life defaults?",
-    "resetHint": "This resets all settings, including user and group lists. The current configuration will be backed up automatically.",
+    "resetHint": "This resets all settings, including the user list. The current configuration will be backed up automatically.",
     "resetSuccess": "Default settings restored",
     "resetError": "Failed to restore defaults",
     "administrators": "Administrators",
@@ -38,7 +38,6 @@
     "groups": {
       "general": { "title": "General", "description": "Set administrators, location, and weather preferences." },
       "private": { "title": "Private companionship", "description": "Manage users, exclusive names, and proactive contact hours and frequency." },
-      "group": { "title": "Group conversations", "description": "Choose groups and adjust replies, observation, and relaying." },
       "memory": { "title": "Life memories", "description": "Remember important dates and schedule anniversaries and reminders." },
       "network": { "title": "Online discovery", "description": "Manage web searches, news, and proactive exploration." },
       "models": { "title": "Models and usage", "description": "Assign model tasks and adjust output limits and usage tracking." }

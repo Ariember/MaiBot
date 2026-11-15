@@ -1,4 +1,4 @@
-"""离线验证工作时段、固定概率与旧配置迁移。"""
+"""离线验证主动私聊工作时段与旧配置迁移。"""
 
 from datetime import datetime, timedelta, timezone
 from pydantic import ValidationError
@@ -13,7 +13,7 @@ import pytest
 @pytest.fixture
 def modules(plugin_module):
 
-    names = ("config", "life.rest_gate", "social.group_observer", "core.llm_service")
+    names = ("config", "life.rest_gate", "core.llm_service")
 
     return SimpleNamespace(
         **{name.rsplit(".", 1)[-1]: importlib.import_module(f"src.plugins.built_in.mylife.{name}") for name in names}
@@ -21,17 +21,15 @@ def modules(plugin_module):
 
 
 @pytest.fixture
-def setup_gate(modules):
+def setup_runtime(modules):
 
     config = modules.config.MaiLifeSettings()
 
     store = SimpleNamespace()
 
-    gate = modules.rest_gate.RestGate(config)
-
     now = datetime(2026, 11, 5, 12, 0, tzinfo=timezone(timedelta(hours=8)))
 
-    return gate, config, store, now
+    return config, store, now
 
 
 @pytest.mark.parametrize(
@@ -55,72 +53,15 @@ def test_work_window(modules, start, end, current, expected):
 
 
 @pytest.mark.parametrize(
-    "probability,sample,expected", [(0, 0, False), (1, 0.999999, True), (0.18, 0.18, False), (0.18, 0.179, True)]
-)
-@pytest.mark.parametrize("text", ["普通消息", "救命，醒醒", "别回，继续睡", ""])
-def test_content_does_not_override_probability(setup_gate, monkeypatch, modules, probability, sample, expected, text):
-
-    gate, config, store, now = setup_gate
-
-    config.group.reply_probability = probability
-
-    monkeypatch.setattr(modules.rest_gate.random, "random", lambda: sample)
-
-    assert gate.decide_group(text, now)[0] is expected
-
-
-def test_work_hours_override_probability_but_commands_pass(setup_gate, monkeypatch, modules):
-
-    gate, config, store, now = setup_gate
-
-    config.group.work_start = "13:00"
-
-    config.group.work_end = "18:00"
-
-    config.group.reply_probability = 1
-
-    random = Mock(side_effect=AssertionError("outside hours must not sample"))
-
-    monkeypatch.setattr(modules.rest_gate.random, "random", random)
-
-    assert gate.decide_group("醒醒", now)[0] is False
-
-    assert gate.decide_group("/麦麦帮助", now)[0] is True
-
-
-def test_disabled_policy_and_hot_update(setup_gate, modules):
-
-    gate, config, store, now = setup_gate
-
-    replacement = modules.config.MaiLifeSettings(group={"gate_enabled": False, "reply_probability": 0})
-
-    gate.update_config(replacement)
-
-    assert gate.decide_group("消息", now)[0] is True
-
-    replacement.group.gate_enabled = True
-
-    assert gate.decide_group("消息", now)[0] is False
-
-
-@pytest.mark.parametrize("section", ["proactive", "group"])
-@pytest.mark.parametrize(
     "field,value", [("work_start", "9:00"), ("work_end", "24:00"), ("work_start", "12:60"), ("work_end", None)]
 )
-def test_invalid_config_rejected(modules, section, field, value):
+def test_invalid_config_rejected(modules, field, value):
 
     with pytest.raises(ValidationError):
-        modules.config.MaiLifeSettings(**{section: {field: value}})
+        modules.config.MaiLifeSettings(proactive={field: value})
 
 
-@pytest.mark.parametrize("value", [-0.01, 1.01])
-def test_invalid_group_probability_rejected(modules, value):
-
-    with pytest.raises(ValidationError):
-        modules.config.GroupChatSettings(reply_probability=value)
-
-
-def test_legacy_enabled_config_migrates_hours_and_probability(modules):
+def test_legacy_enabled_config_migrates_hours(modules):
 
     config = modules.config.MaiLifeSettings(
         rest_gate={
@@ -131,18 +72,13 @@ def test_legacy_enabled_config_migrates_hours_and_probability(modules):
             "night_end": "07:00",
             "awake_grace_minutes": 45,
         },
-        group={"gate_enabled": True, "gate_mode": "time_window", "night_start": "00:30", "night_end": "08:00"},
     )
 
     assert (config.proactive.work_start, config.proactive.work_end) == ("07:00", "23:00")
 
-    assert (config.group.work_start, config.group.work_end, config.group.reply_probability) == ("08:00", "00:30", 0.18)
-
     assert "state" not in config.model_dump()
 
     assert "rest_gate" not in config.model_dump()
-
-    assert "force_wake_terms" not in config.group.model_dump()
 
     assert "rest_wakeup_task" not in config.models.model_dump()
 
@@ -151,10 +87,7 @@ def test_legacy_disabled_and_schedule_modes(modules):
 
     config = modules.config.MaiLifeSettings(
         rest_gate={"enabled": False, "wake_probability": 0.18, "gate_mode": "time_window"},
-        group={"gate_enabled": False, "gate_mode": "schedule"},
     )
-
-    assert config.group.gate_enabled and config.group.reply_probability == 0.18
 
     assert config.proactive.work_start == config.proactive.work_end == "00:00"
 
@@ -208,28 +141,9 @@ def test_private_hours_move_to_proactive_without_changing_input(modules, enabled
     assert reloaded.proactive == config.proactive
 
 
-def test_group_observation_uses_window_without_random(setup_gate, modules, monkeypatch):
+def test_llm_usage_and_daily_counts_use_injected_time(setup_runtime, modules):
 
-    gate, config, store, now = setup_gate
-
-    config.group.work_start = "13:00"
-
-    config.group.work_end = "18:00"
-
-    observer = modules.group_observer.GroupObserver(store, config, Mock(), Mock())
-
-    monkeypatch.setattr(modules.rest_gate.random, "random", Mock(side_effect=AssertionError("second sample")))
-
-    assert asyncio.run(observer._group_quiet_now(now))
-
-    config.group.work_start = "12:00"
-
-    assert not asyncio.run(observer._group_quiet_now(now))
-
-
-def test_llm_usage_and_daily_counts_use_injected_time(setup_gate, modules):
-
-    gate, config, store, now = setup_gate
+    config, store, now = setup_runtime
 
     store.record_llm_usage = AsyncMock()
 

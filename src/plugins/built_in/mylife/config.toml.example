@@ -26,7 +26,7 @@
 
 [plugin]
 # 配置结构版本，请勿手动修改。
-config_version = "1.23.0"
+config_version = "1.24.0"
 
 # 插件总开关。关闭后保留数据库，但停止任务执行、状态维护和主动消息。
 enabled = false
@@ -69,9 +69,6 @@ initial_temperature = 30
 quiet_start = "00:00"
 quiet_end = "08:00"
 
-# 是否允许把白名单群聊中的公开话题低频转述到该用户私聊。朋友默认关闭。
-group_to_private_enabled = false
-
 # 主人示例：取消下面注释后填写。最多只能有一个 owner。
 # [[users.profiles]]
 # user_id = "987654321"
@@ -82,45 +79,6 @@ group_to_private_enabled = false
 # initial_temperature = 30
 # quiet_start = "00:00"
 # quiet_end = "08:00"
-
-
-[group]
-# ===== 群聊设置（独立于私聊）=====
-# 开启后所有群使用同一概率回复策略；关闭则交回 MaiBot 原有群聊触发逻辑。
-gate_enabled = true
-
-# 每条非命令消息只采样一次；0=不回复，1=每条放行，关键词/@/图片不加权。
-reply_probability = 0.18
-
-# 工作时间按主程序全局 environment.timezone，开始含、结束不含，支持跨午夜。
-# 起止相同表示全天；例如 "08:00" 到 "23:00" 表示每天8点至23点工作。
-work_start = "00:00"
-work_end = "00:00"
-
-# 群聊回复轮次注册：防止同一条群消息触发多次回复，按群号和发送者隔离。
-turn_enabled = true
-
-# ===== 观察与转述（原「社交转述」节并入）=====
-# 只处理白名单里开了「观察」的群；话题经观察判定后低频转述到白名单用户私聊。
-relay_enabled = false
-observation_wait_seconds = 3.0
-max_buffer_messages = 20
-interesting_threshold = 0.65
-summary_retention_hours = 72
-relay_pending_seconds = 120
-owner_group_to_private_enabled = true
-inactivity_hours = 6.0
-group_share_daily_max = 1
-group_share_min_interval_minutes = 360
-
-# ===== 群聊白名单（逐群开关，放在节尾的子表）=====
-# 启用=参与观察与转述；观察=收集公开话题；转述=可被转述到私聊。
-# 只填真实 QQ 群号，群名由 MaiBot 会话自动读取。需要多个群就整块复制。
-[[group.profiles]]
-group_id = ""
-enabled = false
-observe_enabled = false
-relay_target_enabled = false
 
 
 [environment]
@@ -191,7 +149,7 @@ max_results = 5
 max_attempts = 3
 
 # 本地搜索历史：记录联网工具、主动搜索和新闻阅读的查询词与结果摘要。
-# 查询词已做隐私清洗（QQ 号、昵称、群名），原始 Key 永不入库。
+# 查询词已做隐私清洗（QQ 号、昵称），原始 Key 永不入库。
 history_enabled = true
 history_retention_days = 30
 
