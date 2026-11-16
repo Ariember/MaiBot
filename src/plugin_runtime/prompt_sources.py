@@ -63,8 +63,15 @@ def collect_prompt_changes(
     previous_args = before.get("reply_tool_args")
     current_args = after.get("reply_tool_args")
     if hook == "maisaka.replyer.before_request" and isinstance(previous_args, dict) and isinstance(current_args, dict):
-        for name in ("reply_reference", "reply_style", "persona_style"):
+        for name in ("reply_reference", "reply_style"):
             previous, current = previous_args.get(name, ""), current_args.get(name, "")
             if isinstance(previous, str) and isinstance(current, str):
                 record(f"reply_tool_args.{name}", previous, current)
+        previous = previous_args.get("persona_expressions", [])
+        current = current_args.get("persona_expressions", [])
+        if (
+            isinstance(previous, list) and isinstance(current, list)
+            and all(isinstance(item, str) for item in previous + current)
+        ):
+            record("reply_tool_args.persona_expressions", "\n\n".join(previous), "\n\n".join(current))
     return changes

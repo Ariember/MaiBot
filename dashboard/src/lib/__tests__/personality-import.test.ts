@@ -11,13 +11,9 @@ describe('personality import', () => {
 
   it('accepts Chinese text and JSON code fences; defaults only optional fields', () => {
     const data = JSON.parse(PERSONALITY_IMPORT_EXAMPLE)
-    delete data.profile.multiple_reply_style
-    delete data.profile.multiple_probability
     delete data.profile.dialogue_examples
     const profile = parsePersonalityImport('```json\n' + JSON.stringify(data) + '\n```')
     expect(profile.name).toBe('温柔的麦麦')
-    expect(profile.multiple_reply_style).toEqual([])
-    expect(profile.multiple_probability).toBe(0)
     expect(profile.dialogue_examples).toEqual([])
     expect(profile.group_chat_prompt).toBe(data.profile.group_chat_prompt)
     expect(profile.private_chat_prompts).toBe(data.profile.private_chat_prompts)
@@ -37,10 +33,8 @@ describe('personality import', () => {
     (data: ImportFixture) => { delete data.profile.private_chat_prompts },
     (data: ImportFixture) => { data.profile.name = ' ' },
     (data: ImportFixture) => { delete data.profile.personality },
-    (data: ImportFixture) => { data.profile.multiple_probability = 2 },
-    (data: ImportFixture) => { data.profile.multiple_probability = '0.1' },
-    (data: ImportFixture) => { data.profile.multiple_reply_style = [false] },
-    (data: ImportFixture) => { data.profile.multiple_reply_style = null },
+    (data: ImportFixture) => { data.profile.multiple_probability = 0.1 },
+    (data: ImportFixture) => { data.profile.multiple_reply_style = ['简短'] },
     (data: ImportFixture) => { data.profile.dialogue_examples = [false] },
     (data: ImportFixture) => { data.profile.dialogue_examples = 'example' },
     (data: ImportFixture) => { data.profile.dialogue_examples = null },

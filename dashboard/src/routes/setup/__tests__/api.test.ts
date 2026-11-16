@@ -137,15 +137,14 @@ describe('loadBotBasicConfig', () => {
 })
 
 describe('loadPersonalityConfig', () => {
-  it('读取 personality 段并保留概率为 0 的显式配置', async () => {
+  it('读取 personality 段并保留场景与黑话表达', async () => {
     getMock.mockResolvedValue({
       config: {
         personality: {
           personality: '活泼开朗',
           behavior_style: '自然参与聊天',
           reply_style: '简短口语',
-          multiple_reply_style: ['风格A'],
-          multiple_probability: 0,
+          dialogue_examples: ['风格A'],
         },
       },
     })
@@ -154,23 +153,21 @@ describe('loadPersonalityConfig', () => {
       personality: '活泼开朗',
       behavior_style: '自然参与聊天',
       reply_style: '简短口语',
-      multiple_reply_style: ['风格A'],
-      multiple_probability: 0,
+      dialogue_examples: ['风格A'],
     })
     expect(getMock).toHaveBeenCalledWith('/api/webui/config/bot', {
       errorMessage: '读取人格配置失败',
     })
   })
 
-  it('配置缺少 personality 段时概率回退到 0.2', async () => {
+  it('配置缺少 personality 段时表达列表为空', async () => {
     getMock.mockResolvedValue({ config: {} })
 
     await expect(loadPersonalityConfig()).resolves.toEqual({
       personality: '',
       behavior_style: '',
       reply_style: '',
-      multiple_reply_style: [],
-      multiple_probability: 0.2,
+      dialogue_examples: [],
     })
   })
 
@@ -333,8 +330,7 @@ describe('saveBotBasicConfig / savePersonalityConfig', () => {
       personality: '活泼开朗',
       behavior_style: '自然参与聊天',
       reply_style: '简短口语',
-      multiple_reply_style: [],
-      multiple_probability: 0.2,
+      dialogue_examples: [],
     }
 
     await savePersonalityConfig(config)

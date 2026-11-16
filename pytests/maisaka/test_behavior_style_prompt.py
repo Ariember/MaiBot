@@ -4,7 +4,8 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.chat.replyer.maisaka_generator_base import BaseMaisakaReplyGenerator, MaisakaReplyContext
+from src.chat.replyer.document_generator import DocumentReplyGenerator
+from src.chat.replyer.maisaka_generator_base import BaseMaisakaReplyGenerator, MaisakaReplyContext, select_persona_expressions
 from src.common.data_models.llm_service_data_models import LLMResponseResult
 from src.common.i18n import use_locale
 from src.common.prompt_i18n import load_prompt
@@ -122,15 +123,17 @@ def test_planner_personality_precedes_behavior_style(
     assert prompt.index("核心人格测试标记") < prompt.index("行为风格测试标记")
 
 
-def test_reply_tool_offers_configured_persona_styles_only_when_enabled(monkeypatch):
+def test_reply_tool_offers_configured_scene_and_slang_choices(monkeypatch):
     monkeypatch.setattr(reply, "build_reply_extensions_schema", lambda context: None)
-    monkeypatch.setattr(global_config.personality, "multiple_reply_style", [" 轻松 ", "", "认真", "轻松"])
-    monkeypatch.setattr(global_config.personality, "multiple_probability", 0.5)
+    monkeypatch.setattr(global_config.personality, "dialogue_examples", [" 安慰朋友 ", "", "黑话：破防", "安慰朋友"])
     schema = reply.get_tool_spec().parameters_schema
-    assert schema["properties"]["persona_style"]["enum"] == ["轻松", "认真"]
-    assert "persona_style" not in schema["required"]
-    monkeypatch.setattr(global_config.personality, "multiple_probability", 0)
-    assert "persona_style" not in reply.get_tool_spec().parameters_schema["properties"]
+    choices = schema["properties"]["persona_expressions"]
+    assert choices["type"] == "array"
+    assert choices["items"]["enum"] == ["安慰朋友", "黑话：破防"]
+    assert "persona_expressions" not in schema["required"]
+    assert "persona_style" not in schema["properties"]
+    monkeypatch.setattr(global_config.personality, "dialogue_examples", [])
+    assert "persona_expressions" not in reply.get_tool_spec().parameters_schema["properties"]
 
 
 @pytest.mark.parametrize("locale,group_marker", [("en-US", "QQ group"), ("ja-JP", "QQ グループ")])
@@ -144,52 +147,73 @@ def test_replyer_template_does_not_assume_group_chat(locale, group_marker):
     assert all(marker in prompt for marker in ("PERSONA", "STYLE", "PRIVATE", "OUTPUT"))
 
 
-@pytest.mark.parametrize("requested", [None, "", "未配置风格", 3])
-def test_missing_or_unknown_persona_style_keeps_base_style(monkeypatch, requested):
-    monkeypatch.setattr(global_config.personality, "multiple_reply_style", ["轻松", "认真"])
-    monkeypatch.setattr(global_config.personality, "multiple_probability", 1)
-    random_sample = Mock()
-    monkeypatch.setattr("src.chat.replyer.maisaka_generator_base.random.random", random_sample)
-    assert BaseMaisakaReplyGenerator._select_temporary_reply_style({"persona_style": requested}) == ""
-    random_sample.assert_not_called()
+@pytest.mark.parametrize("requested", [None, "", "安慰朋友", 3, ["未配置表达"], [3]])
+def test_invalid_persona_expressions_are_rejected(monkeypatch, requested):
+    monkeypatch.setattr(global_config.personality, "dialogue_examples", ["安慰朋友", "黑话：破防"])
+    with pytest.raises(ValueError, match="persona_expressions"):
+        select_persona_expressions({"persona_expressions": requested})
 
 
-@pytest.mark.parametrize("retro", [False, True])
+def test_persona_expressions_keep_order_without_duplicates(monkeypatch):
+    monkeypatch.setattr(global_config.personality, "dialogue_examples", ["安慰朋友", "黑话：破防"])
+    assert select_persona_expressions() == []
+    assert select_persona_expressions({"persona_expressions": []}) == []
+    assert select_persona_expressions({"persona_expressions": [" 黑话：破防 ", "安慰朋友", "黑话：破防"]}) == [
+        "黑话：破防", "安慰朋友",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_reply_tool_rejects_unknown_persona_expressions(monkeypatch):
+    monkeypatch.setattr(global_config.personality, "dialogue_examples", ["安慰朋友"])
+    tool_ctx = SimpleNamespace(build_failure_result=Mock(return_value="invalid selection"))
+    result = await reply.execute_reply(
+        tool_ctx, {"reply_reference": "安慰当前朋友", "persona_expressions": ["未知"]}, call_id="test",
+    )
+    assert result == "invalid selection"
+    assert "persona_expressions" in tool_ctx.build_failure_result.call_args.args[1]
+
+
+@pytest.mark.parametrize("mode", ["modern", "retro", "document"])
+@pytest.mark.parametrize("selected", [False, True])
 @pytest.mark.parametrize(
     "locale,example_notice", [("zh-CN", "不是真实聊天记录"), ("en-US", "not actual chat history"), ("ja-JP", "実際の会話履歴")],
 )
-def test_dialogue_examples_are_persona_context_not_chat_history(monkeypatch, retro, locale, example_notice):
+def test_only_selected_scene_and_slang_reach_replyer(monkeypatch, mode, selected, locale, example_notice):
     sample = "情境：拒绝\n用户：帮我写作业\n麦麦：我可以陪你理思路，代写就算啦"
-    monkeypatch.setattr(global_config.personality, "dialogue_examples", [sample])
-    monkeypatch.setattr(global_config.debug, "replyer_retro_prompt", retro)
+    slang = "黑话：破防，形容心态受到冲击"
+    unselected = "情景：祝贺升职"
+    monkeypatch.setattr(global_config.personality, "dialogue_examples", [sample, slang, unselected])
+    monkeypatch.setattr(global_config.personality, "reply_style", "基础表达标记")
+    monkeypatch.setattr(global_config.debug, "replyer_retro_prompt", mode == "retro")
     monkeypatch.setattr(
         "src.chat.replyer.maisaka_generator_base.get_chat_type_and_target_info", lambda session_id: (False, None),
     )
-    generator = object.__new__(BaseMaisakaReplyGenerator)
+    generator = object.__new__(DocumentReplyGenerator if mode == "document" else BaseMaisakaReplyGenerator)
     generator.chat_stream = SimpleNamespace(is_group_session=False)
     generator._load_prompt = load_prompt
     sources = []
     with use_locale(locale):
         items = generator._build_request_messages(
-            chat_history=[], reply_message=None, reply_reason="", stream_id="test", prompt_sources=sources,
+            chat_history=[], reply_message=None, reply_reason="回答当前问题", stream_id="test", prompt_sources=sources,
+            reply_requirements="直接回答",
+            reply_tool_args={"persona_expressions": [sample, slang]} if selected else {},
         )
-    assert sample in get_item_text(items[0])
-    assert example_notice in get_item_text(items[0])
-    assert all(sample not in get_item_text(item) for item in items[1:])
-    assert [source["source"] for source in sources].count("personality.dialogue_examples") == 1
-    assert not any(source["source"] == "personality.multiple_reply_style" for source in sources)
+    text = "\n".join(get_item_text(item) for item in items)
+    assert "基础表达标记" in text
+    assert unselected not in text
+    assert (sample in text) == selected
+    assert (slang in text) == selected
+    assert (example_notice in text) == selected
+    assert [source["source"] for source in sources].count("personality.dialogue_examples") == int(selected)
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("sample,expected_style", [(0.1, "认真"), (0.9, "")])
 @pytest.mark.parametrize("record_sources", [False, True])
-async def test_persona_style_is_sampled_once_across_builds_and_retry(monkeypatch, sample, expected_style, record_sources):
-    monkeypatch.setattr(global_config.personality, "multiple_reply_style", ["轻松", "认真"])
-    monkeypatch.setattr(global_config.personality, "multiple_probability", 0.5)
+async def test_persona_expressions_stay_consistent_across_builds_and_retry(monkeypatch, record_sources):
+    monkeypatch.setattr(global_config.personality, "dialogue_examples", ["安慰朋友", "黑话：破防"])
     monkeypatch.setattr(global_config.debug, "replyer_retro_prompt", False)
     monkeypatch.setattr(global_config.debug, "save_maisaka_reasoning", record_sources)
-    random_sample = Mock(return_value=sample)
-    monkeypatch.setattr("src.chat.replyer.maisaka_generator_base.random.random", random_sample)
     monkeypatch.setattr(
         "src.chat.replyer.maisaka_generator_base.get_chat_type_and_target_info", lambda session_id: (False, None),
     )
@@ -230,13 +254,15 @@ async def test_persona_style_is_sampled_once_across_builds_and_retry(monkeypatch
     generate = AsyncMock(side_effect=generate_response)
     generator.express_model = SimpleNamespace(task_name="replyer", generate_response_with_context=generate)
     success, result = await generator.generate_reply_with_context(
-        chat_history=[], stream_id="test", reply_tool_args={"persona_style": "认真"},
+        chat_history=[], stream_id="test", reply_tool_args={"persona_expressions": ["安慰朋友", "黑话：破防"]},
     )
     assert success, result.error_message
     assert generate.await_count == 2
-    random_sample.assert_called_once()
     assert build_request.call_count == 6
-    assert {call.kwargs["temporary_reply_style"] for call in build_request.call_args_list} == {expected_style}
+    selected_prompts = {call.kwargs["persona_expressions_prompt"] for call in build_request.call_args_list}
+    assert len(selected_prompts) == 1
+    selected_prompt = next(iter(selected_prompts))
+    assert "安慰朋友" in selected_prompt and "黑话：破防" in selected_prompt
     if record_sources:
         assert [source["source"] for source in result.prompt_sources].count("personality.personality") == 1
         plugin_sources = [source for source in result.prompt_sources if source["source"] == "test.plugin"]

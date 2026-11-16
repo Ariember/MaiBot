@@ -6,6 +6,10 @@ Judge the current situation and decide what to do next. If more information is n
 
 {group_chat_attention_block}
 
+Optional situational expressions and slang:
+{persona_expressions}
+Choose suitable expressions as needed for the current topic, the other person's emotions, and your relationship. Include only the selected expressions and how to use them naturally in your final speaking guidance; choose none when nothing fits. These candidates illustrate expression only, not real experiences or current facts. Do not repeat unselected candidates.
+
 # Using your tools
 - Combine different information sources and perform multiple operations to assist you. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel. However, if some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially.
 - If a tool can help you perform certain actions or complete certain goals, use that tool directly to complete the task.

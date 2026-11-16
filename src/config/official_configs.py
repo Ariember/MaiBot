@@ -186,15 +186,11 @@ class PersonalityProfile(ConfigBase):
     reply_style: str
     """表达风格。"""
     dialogue_examples: List[str] = Field(default_factory=list)
-    """情境与对话样例，仅用于示范表达方式。"""
+    """供 Planner 按需选择的场景与黑话表达，仅用于示范表达方式。"""
     group_chat_prompt: str
     """群聊提示词。"""
     private_chat_prompts: str
     """私聊提示词。"""
-    multiple_reply_style: List[str] = Field(default_factory=list)
-    """备用表达风格。"""
-    multiple_probability: float = Field(default=0, ge=0, le=1)
-    """选中备用表达风格后的采用概率。"""
 
 
 class PersonalityConfig(ConfigBase):
@@ -270,52 +266,15 @@ class PersonalityConfig(ConfigBase):
         default_factory=list,
         json_schema_extra={
             "label": {
-                "zh_CN": "对话样例",
-                "en_US": "Dialogue examples",
-                "ja_JP": "会話例",
-                "ko_KR": "대화 예시",
+                "zh_CN": "场景与黑话表达",
+                "en_US": "Situational expressions and slang",
+                "ja_JP": "場面別の表現とスラング",
+                "ko_KR": "상황별 표현과 은어",
             },
             "x-widget": "custom",
         },
     )
-    """每项填写一个情境、对方发言和麦麦回应，建议保留 3–5 个短样例；样例只示范表达，不作为真实聊天经历。"""
-
-    multiple_reply_style: list[str] = Field(
-        default_factory=lambda: [
-            "你的风格平淡但不失讽刺，很简短,很白话。可以参考贴吧，微博的回复风格。",
-            "用1-2个字进行回复",
-            "用1-2个符号进行回复",
-            "言辭凝練古雅，穿插《論語》經句卻不晦澀，以文言短句為基，輔以淺白語意，持長者溫和風範，全用繁體字表達，具先秦儒者談吐韻致。",
-            "带点翻译腔，但不要太长",
-        ],
-        json_schema_extra={
-            "label": {
-                "zh_CN": "备用表达风格",
-                "en_US": "Alternate reply styles",
-                "ja_JP": "代替返信スタイル",
-            },
-            "advanced": True,
-            "x-widget": "custom",
-        },
-    )
-    """供 Planner 按当前情境选择的备用说话风格；不适合时沿用基础风格。"""
-
-    multiple_probability: float = Field(
-        default=0,
-        ge=0,
-        le=1,
-        json_schema_extra={
-            "label": {
-                "zh_CN": "备用风格采用概率",
-                "en_US": "Alternate style adoption chance",
-                "ja_JP": "代替スタイルの採用確率",
-            },
-            "advanced": True,
-            "x-widget": "slider",
-            "step": 0.1,
-        },
-    )
-    """Planner 选中备用风格后的采用概率；同一轮回复与重试保持一致，0 表示始终使用基础风格。"""
+    """每项填写适用场景、表达方式或黑话用法，也可附对话样例；Planner 每轮按需选择多项，未选中的不参与回复，内容不作为真实聊天经历。"""
 
 
 class ImageCacheCleanupConfig(ConfigBase):

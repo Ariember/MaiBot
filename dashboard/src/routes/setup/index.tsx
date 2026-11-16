@@ -88,13 +88,7 @@ function SetupPageContent() {
     personality: t('setupPage.defaults.personality.personality'),
     behavior_style: t('setupPage.defaults.personality.behaviorStyle'),
     reply_style: t('setupPage.defaults.personality.replyStyle'),
-    multiple_reply_style: [
-      t('setupPage.defaults.personality.multipleReplyStyles.plain'),
-      t('setupPage.defaults.personality.multipleReplyStyles.shortText'),
-      t('setupPage.defaults.personality.multipleReplyStyles.shortSymbol'),
-      t('setupPage.defaults.personality.multipleReplyStyles.translation'),
-    ],
-    multiple_probability: 0.2,
+    dialogue_examples: [],
   })
   const [currentStep, setCurrentStep] = useState(0)
   const [isCompleting, setIsCompleting] = useState(false)

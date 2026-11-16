@@ -20,7 +20,6 @@ export {
   HiddenFieldHook,
   MCPRootItemsHook,
   MCPServersHook,
-  MultipleReplyStyleHook,
   PrivateReplyPauseRulesHook,
   RegexRulesHook,
 } from './complexFieldHooks'

@@ -151,8 +151,7 @@ export async function loadPersonalityConfig(): Promise<PersonalityConfig> {
     personality: personalityConfig.personality || '',
     behavior_style: personalityConfig.behavior_style ?? '',
     reply_style: personalityConfig.reply_style || '',
-    multiple_reply_style: personalityConfig.multiple_reply_style || [],
-    multiple_probability: personalityConfig.multiple_probability ?? 0.2,
+    dialogue_examples: personalityConfig.dialogue_examples || [],
   }
 }
 

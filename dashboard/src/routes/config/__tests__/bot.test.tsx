@@ -245,7 +245,7 @@ const EXPECTED_FIELD_HOOKS: Array<[string, 'replace' | 'wrapper' | 'hidden']> = 
   ['bot.alias_names', 'replace'],
   ['bot.qq_account', 'hidden'],
   ['bot.platforms', 'hidden'],
-  ['personality.multiple_reply_style', 'replace'],
+  ['personality.dialogue_examples', 'replace'],
   ['chat.reply_style.chat_prompts', 'replace'],
   ['chat.reply_timing.talk_value_rules', 'replace'],
   ['experimental.focus_chat_whitelist', 'replace'],

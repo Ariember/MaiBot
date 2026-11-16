@@ -2542,15 +2542,6 @@ export const AliasNamesHook: FieldHookComponent = (props) => {
   )
 }
 
-export const MultipleReplyStyleHook = createStringListHook({
-  addLabel: '添加表达风格',
-  borderless: true,
-  emptyText: '暂无备用表达风格。',
-  label: '备用表达风格',
-  multiline: true,
-  placeholder: '输入一种备用表达风格',
-})
-
 export const DialogueExamplesHook = createStringListHook((t) => ({
   addLabel: t('personalityExamples.add'),
   emptyText: t('personalityExamples.empty'),

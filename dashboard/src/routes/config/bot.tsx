@@ -41,7 +41,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ThinkingIllustration } from '@/components/ui/thinking-illustration'
@@ -85,7 +84,6 @@ import {
   HiddenFieldHook,
   MCPRootItemsHook,
   MCPServersHook,
-  MultipleReplyStyleHook,
   DialogueExamplesHook,
   PrivateReplyPauseRulesHook,
   RegexRulesHook,
@@ -362,7 +360,6 @@ function BotConfigPageContent() {
       ['bot.alias_names', AliasNamesHook],
       ['bot.qq_account', HiddenFieldHook, 'hidden'],
       ['bot.platforms', HiddenFieldHook, 'hidden'],
-      ['personality.multiple_reply_style', MultipleReplyStyleHook],
       ['personality.dialogue_examples', DialogueExamplesHook],
       ['chat.reply_style.chat_prompts', ChatPromptsHook],
       ['chat.reply_timing.talk_value_rules', ChatTalkValueRulesHook],
@@ -1031,7 +1028,6 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
   const initialActiveTab = tabGroups[0]?.id ?? ''
   const [expandedSubtabGroups, setExpandedSubtabGroups] = useState<Record<string, boolean>>({})
   const [activeSubtabByGroup, setActiveSubtabByGroup] = useState<Record<string, string>>({})
-  const [alternateStylesOpen, setAlternateStylesOpen] = useState(false)
   const [experimentalNoticeOpen, setExperimentalNoticeOpen] = useState(
     () =>
       initialActiveTab === 'experimental' &&
@@ -1065,9 +1061,6 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
     const frameId = window.requestAnimationFrame(() => {
       setActiveTab(targetTab.id)
       setAdvancedVisible(true)
-      if (searchFieldPath === 'personality.multiple_probability' || searchFieldPath === 'personality.multiple_reply_style') {
-        setAlternateStylesOpen(true)
-      }
 
       if (subcategoryName) {
         const isChatSettingsField = [
@@ -1111,7 +1104,7 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
         window.cancelAnimationFrame(nestedFrameId)
       }
     }
-  }, [activeSubtabByGroup, activeTab, advancedVisible, alternateStylesOpen, searchFieldPath])
+  }, [activeSubtabByGroup, activeTab, advancedVisible, searchFieldPath])
 
   if (tabGroups.length === 0 || !configSchema?.nested) {
     return null
@@ -1177,16 +1170,6 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
   } : null
   const personalitySchema = configSchema.nested.personality
   const hasPersonalitySchema = Boolean(personalitySchema)
-  const alternateStyleFieldNames = ['multiple_probability', 'multiple_reply_style']
-  // 备用风格集中放在表达风格后的浮层中，不再依赖全局高级设置。
-  const alternateStyleSchema: ConfigSchema | null = personalitySchema ? {
-    ...personalitySchema,
-    fields: alternateStyleFieldNames.flatMap((name) => {
-      const field = personalitySchema.fields.find((item) => item.name === name)
-      return field ? [{ ...field, advanced: false }] : []
-    }),
-    nested: {},
-  } : null
   const identitySchema: ConfigSchema | null = botSchema ? {
     ...botSchema,
     fields: botSchema.fields
@@ -1266,31 +1249,6 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
   const fieldTrailingContent = {
     'personality.reply_style': (
       <div className="space-y-4">
-        {alternateStyleSchema && alternateStyleSchema.fields.length > 0 && (
-          <div className="flex justify-end">
-            <Popover open={alternateStylesOpen} onOpenChange={setAlternateStylesOpen}>
-              <PopoverTrigger asChild>
-                <Button type="button" variant="outline" size="sm">
-                  备用表达风格
-                  <ChevronDown className={cn('ml-2 h-4 w-4 transition-transform', alternateStylesOpen && 'rotate-180')} />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="end"
-                className="max-h-[min(24rem,var(--radix-popover-content-available-height))] w-md max-w-[calc(100vw-2rem)] overflow-y-auto p-3"
-                aria-label="备用表达风格设置"
-              >
-                <DynamicConfigForm
-                  schema={alternateStyleSchema}
-                  values={sectionValues.personality ?? {}}
-                  onChange={(field, value) => updateSectionValueByPath('personality', [field], value)}
-                  basePath="personality"
-                  hooks={fieldHooks}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
         {basicChatPromptSchema && (
           <div className="space-y-3">
             <ConfigGroupDivider label="聊天提示词" />
@@ -1318,7 +1276,7 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
         ...schema,
         uiLabel: '身份与人格',
         fields: schema.fields
-          .filter((field) => ![...alternateStyleFieldNames, 'profiles', 'selected_profile'].includes(field.name))
+          .filter((field) => !['profiles', 'selected_profile'].includes(field.name))
           .map((field) => (personalityStyleFieldNames.has(field.name) ? { ...field, 'x-row': 'personality-style' } : field)),
         nested: Object.fromEntries(Object.entries(schema.nested ?? {}).filter(([name]) => name !== 'profiles')),
       }

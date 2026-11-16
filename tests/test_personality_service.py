@@ -19,8 +19,6 @@ personality = "edited current"
 behavior_style = "current behavior"
 reply_style = "current reply"
 dialogue_examples = ["current example"]
-multiple_reply_style = ["current alternate"]
-multiple_probability = 0.2
 selected_profile = "old"
 [[personality.profiles]]
 name = "old"
@@ -35,8 +33,6 @@ personality = "new identity"
 behavior_style = "new behavior"
 reply_style = "new reply"
 dialogue_examples = ["new example"]
-multiple_reply_style = ["new alternate"]
-multiple_probability = 0.7
 group_chat_prompt = "new group"
 private_chat_prompts = "new private"
 [chat.reply_style]
@@ -54,7 +50,6 @@ def test_switch_preserves_current_edits_and_other_sections(tmp_path):
     assert data["bot"]["nickname"] == "unchanged"
     assert path.read_text(encoding="utf-8").startswith("# preserve me")
     assert data["personality"]["personality"] == "new identity"
-    assert data["personality"]["multiple_probability"] == 0.7
     assert data["personality"]["dialogue_examples"] == ["new example"]
     assert data["personality"]["profiles"][0]["dialogue_examples"] == ["current example"]
     assert data["personality"]["profiles"][0]["personality"] == "edited current"

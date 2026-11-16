@@ -6,6 +6,10 @@
 
 {group_chat_attention_block}
 
+選択できる場面別の表現とスラング：
+{persona_expressions}
+現在の話題、相手の感情、人物関係に合わせて、必要な表現を選んでください。選んだ表現と使い方だけを、最終的な発言指針に自然に含めてください。適切なものがなければ選ばなくてかまいません。候補は表現の例であり、実際の経験や現在の事実ではありません。選ばなかった候補を繰り返さないでください。
+
 # Using your tools
 - 複数の情報源を組み合わせ、複数の操作であなたを補助してください。If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel. However, if some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially.
 - ある行動の実行や目標の達成を助けるツールが存在する場合は、そのツールを直接使ってタスクを完了してください。

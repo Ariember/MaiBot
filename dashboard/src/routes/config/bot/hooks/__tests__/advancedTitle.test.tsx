@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { BotPlatformAccountsHook, ExpressionGroupsHook, MultipleReplyStyleHook } from '../complexFieldHooks'
+import { BotPlatformAccountsHook, DialogueExamplesHook, ExpressionGroupsHook } from '../complexFieldHooks'
 import { createJsonFieldHook } from '../JsonFieldHookFactory'
 import { createListItemEditorHook } from '../ListItemEditorHookFactory'
 import { getChatStreams, type ChatStream } from '@/lib/chat-management-api'
@@ -132,8 +132,8 @@ describe('custom bot config hooks', () => {
 
   it('colors string-list hook titles for advanced fields', () => {
     const { container } = render(
-      <MultipleReplyStyleHook
-        fieldPath="personality.multiple_reply_style"
+      <DialogueExamplesHook
+        fieldPath="personality.dialogue_examples"
         onChange={vi.fn()}
         schema={advancedSchema}
         value={[]}

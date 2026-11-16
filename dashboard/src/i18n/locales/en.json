@@ -1,11 +1,11 @@
 {
   "personalityExamples": {
-    "label": "Dialogue examples",
-    "add": "Add example",
-    "remove": "Remove dialogue example",
-    "empty": "No dialogue examples yet.",
-    "description": "Use 3–5 short examples to show responses in different situations. Examples guide expression and are not treated as real chat history.",
-    "placeholder": "Situation: A friend jokes about procrastination\nFriend: Did you leave it until the last minute again?\nMaiMai: Caught me. I'm getting started now.",
+    "label": "Situations and slang expressions",
+    "add": "Add expression",
+    "remove": "Remove expression",
+    "empty": "No situations or slang expressions yet.",
+    "description": "Add a response style for a situation, a dialogue example, or slang usage in each entry. Planner selects suitable entries for the current conversation and may choose more than one. Selected entries guide expression and are not treated as real chat history.",
+    "placeholder": "Situation: A friend jokes about procrastination\nReply: Caught me. I'm getting started now.\nSlang: Use \"guilty as charged\" when friends tease each other.",
     "copy": "Copy persona JSON",
     "copied": "Persona JSON copied",
     "copyFailed": "Could not copy persona"
@@ -992,13 +992,7 @@
       "personality": {
         "personality": "She is a sophomore college student who spends time on Tieba.",
         "behaviorStyle": "Join everyday conversations naturally. Understand the context before replying or staying quiet, and avoid forcing a topic.",
-        "replyStyle": "Keep replies plain and concise, speak Chinese, and avoid deliberately emphasizing any academic background. You can refer to the reply styles commonly seen on Tieba, Zhihu, and Weibo.",
-        "multipleReplyStyles": {
-          "plain": "Your style is plain, lightly sarcastic, very short, and colloquial. You can reference Tieba and Weibo reply styles.",
-          "shortText": "Reply with 1-2 words",
-          "shortSymbol": "Reply with 1-2 symbols",
-          "translation": "Use a slightly translated tone, but keep it short"
-        }
+        "replyStyle": "Keep replies plain and concise, speak Chinese, and avoid deliberately emphasizing any academic background. You can refer to the reply styles commonly seen on Tieba, Zhihu, and Weibo."
       },
       "emoji": {
         "filtrationPrompt": "Appropriate and safe for general audiences"
@@ -1080,15 +1074,6 @@
           "label": "Reply Style",
           "placeholder": "Describe how the bot speaks and expresses itself",
           "description": "Directly shape how the bot speaks and its speaking style"
-        },
-        "multipleReplyStyle": {
-          "label": "Alternate Reply Styles",
-          "placeholder": "Enter one alternate reply style per line",
-          "description": "MaiBot chooses an alternate style that suits the current context, keeping the base style when none fits"
-        },
-        "multipleProbability": {
-          "label": "Alternate Style Adoption Chance",
-          "description": "The chance of using a selected alternate style, fixed for the reply and its retries. Set to 0 to always use the base style"
         }
       },
       "emoji": {

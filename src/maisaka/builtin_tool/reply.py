@@ -8,6 +8,7 @@ import json
 import traceback
 
 from src.chat.replyer.replyer_manager import replyer_manager
+from src.chat.replyer.maisaka_generator_base import select_persona_expressions
 from src.chat.message_receive.message import SessionMessage
 from src.chat.utils.utils import is_bot_self
 from src.cli.maisaka_cli_sender import CLI_PLATFORM_NAME, render_cli_message
@@ -144,15 +145,16 @@ def get_tool_spec(context: Optional[ToolAvailabilityContext] = None) -> ToolSpec
         },
     }
     personality = config_module.global_config.personality
-    persona_styles = list(dict.fromkeys(style.strip() for style in personality.multiple_reply_style if style.strip()))
-    if personality.multiple_probability > 0 and persona_styles:
-        properties["persona_style"] = {
-            "type": "string",
-            "enum": persona_styles,
+    persona_expressions = list(dict.fromkeys(item.strip() for item in personality.dialogue_examples if item.strip()))
+    if persona_expressions:
+        properties["persona_expressions"] = {
+            "type": "array",
+            "items": {"type": "string", "enum": persona_expressions},
+            "uniqueItems": True,
             "description": (
-                "可选。从当前人设的备用表达风格中选择最适合本轮的一项。"
-                "结合话题、对方情绪、人物关系和最近语气，避免突然变调；没有合适的就省略，沿用基础风格。"
-                "该选择按人设配置的概率采用，不改变回复事实或人物身份。"
+                "可选。从当前人设的场景与黑话表达中选择适合本轮的条目，可选择多项。"
+                "结合话题、对方情绪、人物关系和最近语气，不合适时省略。"
+                "只参考选中条目的表达方式，不把其中的场景或对话样例当成真实经历。"
             ),
         }
     if _use_expression_intent():
@@ -425,6 +427,10 @@ async def execute_reply(
             "reply 工具必须提供非空字符串 `reply_reference`，请填写本次回复的上下文关键信息与回复方向后重新调用。",
         )
     invocation_arguments["reply_reference"] = reply_reference.strip()
+    try:
+        select_persona_expressions(invocation_arguments)
+    except ValueError as exc:
+        return tool_ctx.build_failure_result("reply", str(exc))
     target_message_id = str(invocation_arguments.get("msg_id") or "").strip()
     if invocation_arguments.get("attach_at") and not config_module.global_config.chat.enable_reply_at:
         return tool_ctx.build_failure_result("reply", "回复时 @ 用户已关闭，不能使用 attach_at。")

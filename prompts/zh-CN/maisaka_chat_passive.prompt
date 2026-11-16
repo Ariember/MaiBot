@@ -6,6 +6,10 @@
 
 {group_chat_attention_block}
 
+可选的场景与黑话表达：
+{persona_expressions}
+根据当前话题、对方情绪和人物关系，按需选择合适的表达，并将选中的表达及使用意图自然写进最终发言指导；没有合适的就不选。候选只示范表达，不代表真实经历或当前事实，不要复述未选候选。
+
 # Using your tools
 - 聚合不同的信息源，进行多种操作来辅助你。If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel.  However, if some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially.
 - 如果存在工具可以帮助你执行某些动作，完成某些目标，直接使用该工具来完成任务

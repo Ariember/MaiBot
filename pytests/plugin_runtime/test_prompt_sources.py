@@ -30,12 +30,12 @@ def test_prompt_changes_follow_item_identity_without_copying_history_or_images()
 
 def test_prompt_changes_distinguish_replacement_from_append_and_skip_non_text_fields():
     changes = collect_prompt_changes(
-        {"extra_prompt": "先前要求", "reply_tool_args": {"persona_style": "活泼"}, "model_name": "a"},
-        {"extra_prompt": "新要求", "reply_tool_args": {"persona_style": "平静"}, "model_name": "b"},
+        {"extra_prompt": "先前要求", "reply_tool_args": {"persona_expressions": ["活泼"]}, "model_name": "a"},
+        {"extra_prompt": "新要求", "reply_tool_args": {"persona_expressions": ["平静"]}, "model_name": "b"},
         source="test.plugin", hook="maisaka.replyer.before_request",
     )
     assert [(entry["target"], entry["operation"], entry["text"]) for entry in changes] == [
-        ("extra_prompt", "replace", "新要求"), ("reply_tool_args.persona_style", "replace", "平静"),
+        ("extra_prompt", "replace", "新要求"), ("reply_tool_args.persona_expressions", "replace", "平静"),
     ]
     removed = collect_prompt_changes(
         {"extra_prompt": "前一个插件的要求"}, {}, source="p", hook="maisaka.replyer.before_request",
@@ -44,14 +44,14 @@ def test_prompt_changes_distinguish_replacement_from_append_and_skip_non_text_fi
 
 
 @pytest.mark.parametrize("hook,expected", [
-    ("maisaka.replyer.before_request", ["extra_prompt", "reply_tool_args.persona_style"]),
+    ("maisaka.replyer.before_request", ["extra_prompt", "reply_tool_args.persona_expressions"]),
     ("maisaka.replyer.before_model_request", ["items[0]"]),
     ("maisaka.planner.before_request", ["items[0]"]),
 ])
 def test_sources_only_include_fields_consumed_at_each_hook(hook, expected):
     changes = collect_prompt_changes(
         {"items": [], "extra_prompt": "", "reply_tool_args": {}},
-        {"items": [_item("new", "实际提示词")], "extra_prompt": "补充", "reply_tool_args": {"persona_style": "活泼"}},
+        {"items": [_item("new", "实际提示词")], "extra_prompt": "补充", "reply_tool_args": {"persona_expressions": ["活泼"]}},
         source="test.plugin", hook=hook,
     )
     assert [change["target"] for change in changes] == expected

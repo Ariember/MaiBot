@@ -32,7 +32,7 @@ class DocumentReplyGenerator(MaisakaReplyGenerator):
         enable_visual_message: bool = False,
         reply_tool_args: Optional[Dict[str, Any]] = None,
         think_level: int = 1,
-        temporary_reply_style: str = "",
+        persona_expressions_prompt: Optional[str] = None,
         prompt_sources: Optional[List[Dict[str, str]]] = None,
     ) -> List[ContextItem]:
         """写作不套用聊天/复古短回复模板，材料和最终输出要求独立传入。"""
@@ -40,17 +40,21 @@ class DocumentReplyGenerator(MaisakaReplyGenerator):
         reference = self._build_reply_reference_message(
             reply_reason, str((reply_tool_args or {}).get("reply_reference", "")),
         )
-        reply_style = temporary_reply_style or self._select_reply_style()
+        reply_style = self._select_reply_style()
+        if persona_expressions_prompt is None:
+            persona_expressions_prompt = self._build_persona_expressions_prompt(reply_tool_args)
         system_prompt = self._load_prompt(
-            "maisaka_replyer_document", identity=self._build_personality_prompt(prompt_sources),
+            "maisaka_replyer_document",
+            identity="\n\n".join(filter(None, (self._build_personality_prompt(prompt_sources), persona_expressions_prompt))),
             reply_style=reply_style, expression_habits=expression_habits,
         )
         if prompt_sources is not None:
             for source, target, text in (
                 (
-                    "personality.multiple_reply_style" if temporary_reply_style else "personality.reply_style",
+                    "personality.reply_style",
                     "system", reply_style,
                 ),
+                ("personality.dialogue_examples", "system", persona_expressions_prompt),
                 ("expression_learning", "system", expression_habits),
                 ("planner.reply_reference", "user", reference),
                 ("reply_requirements", "user", reply_requirements),

@@ -829,6 +829,9 @@ class MaisakaChatLoopService:
             "bot_nickname_notice": f"\n{bot_nickname_notice}" if bot_nickname_notice else "",
             "personality": global_config.personality.personality.strip(),
             "behavior_style": self.behavior_style_prompt,
+            "persona_expressions": "\n\n".join(dict.fromkeys(
+                example.strip() for example in global_config.personality.dialogue_examples if example.strip()
+            )),
             "file_tools_section": tools_section,
             "group_chat_attention_block": self._build_group_chat_attention_block(),
             "planner_idle_focus_rule": self._build_planner_idle_focus_rule(),

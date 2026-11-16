@@ -107,7 +107,6 @@ async def test_failure_and_empty_output_are_reported(generation, success, text, 
 def test_actual_replyer_prompts_keep_personality_materials_and_post_format(monkeypatch, retro):
     monkeypatch.setattr(global_config.debug, "replyer_retro_prompt", retro)
     monkeypatch.setattr(global_config.personality, "personality", "喜欢游戏和观察社区的测试人格")
-    monkeypatch.setattr(global_config.personality, "multiple_probability", 0)
     session = SimpleNamespace(is_group_session=True, platform="xiaoheihe", group_id="post:123:thread:browse", user_id="")
     monkeypatch.setattr(chat_manager, "get_session_by_session_id", Mock(return_value=session))
     monkeypatch.setattr(chat_manager, "get_existing_session_by_session_id", Mock(return_value=session))

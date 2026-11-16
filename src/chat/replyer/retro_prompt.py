@@ -117,7 +117,7 @@ class RetroReplyPromptMixin:
         think_level: int = 1,
         reply_tool_args: Optional[Dict[str, Any]] = None,
         enable_visual_message: bool = False,
-        temporary_reply_style: str = "",
+        persona_expressions_prompt: str = "",
         prompt_sources: Optional[List[Dict[str, str]]] = None,
     ) -> List[ContextItem]:
         """构建首条人设与注意事项 system 消息，以及复古模板 user 消息。
@@ -156,6 +156,7 @@ class RetroReplyPromptMixin:
             block.strip()
             for block in (
                 self._build_personality_prompt(prompt_sources),
+                persona_expressions_prompt,
             )
             if block.strip()
         )
@@ -166,12 +167,16 @@ class RetroReplyPromptMixin:
             reply_reference=str((reply_tool_args or {}).get("reply_reference") or ""),
             expression_habits=expression_habits,
             reply_requirements=reply_requirements,
-            temporary_reply_style=temporary_reply_style,
         )
         if prompt_sources is not None:
+            if persona_expressions_prompt:
+                prompt_sources.append({
+                    "source": "personality.dialogue_examples", "target": "system",
+                    "operation": "base", "text": persona_expressions_prompt,
+                })
             for source, text in (
                 (
-                    "personality.multiple_reply_style" if temporary_reply_style else "personality.reply_style",
+                    "personality.reply_style",
                     template_context["reply_style"],
                 ),
                 ("planner.reply_reference", template_context["planner_reasoning"]),
@@ -343,13 +348,11 @@ class RetroReplyPromptMixin:
         reply_reference: str,
         expression_habits: str,
         reply_requirements: str,
-        temporary_reply_style: str = "",
     ) -> Dict[str, str]:
         """按旧版的块顺序准备模板占位符内容。"""
 
         combined_reference = self._build_reply_reference_message(reply_reason, reply_reference)
-        # 复古模板在原位置使用本轮选定的备用风格，未采用时保留基础表达风格。
-        reply_style = temporary_reply_style or self._select_reply_style()
+        reply_style = self._select_reply_style()
         return {
             "bot_name": global_config.bot.nickname,
             "sender_name": self._build_retro_sender_name(chat_history, reply_message),

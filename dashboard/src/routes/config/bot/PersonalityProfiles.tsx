@@ -24,8 +24,6 @@ function snapshot(values: Record<string, unknown>, name: string): Profile {
     dialogue_examples: (values.dialogue_examples ?? []) as string[],
     group_chat_prompt: values.group_chat_prompt as string,
     private_chat_prompts: values.private_chat_prompts as string,
-    multiple_reply_style: values.multiple_reply_style as string[],
-    multiple_probability: values.multiple_probability as number,
   }
 }
 
@@ -106,14 +104,9 @@ export function PersonalityProfiles({ values, onChange }: {
       toast({ title: '请输入未使用的人设名称', variant: 'destructive' })
       return
     }
-    if (!Number.isFinite(draft.multiple_probability) || draft.multiple_probability < 0 || draft.multiple_probability > 1) {
-      toast({ title: '备用表达风格概率应在 0 到 1 之间', variant: 'destructive' })
-      return
-    }
     const saved = {
       ...draft, name,
       dialogue_examples: draft.dialogue_examples.filter((example) => example.trim()),
-      multiple_reply_style: draft.multiple_reply_style.filter((style) => style.trim()),
     }
     const nextProfiles = originalName === null
       ? [...profiles, saved]
@@ -220,14 +213,6 @@ export function PersonalityProfiles({ values, onChange }: {
                   value={draft.dialogue_examples}
                   onChange={(value) => setDraft({ ...draft, dialogue_examples: value as string[] })}
                 />
-                <div className="space-y-2">
-                  <Label htmlFor="profile-alternate">备用表达风格（每行一条）</Label>
-                  <Textarea id="profile-alternate" rows={3} value={draft.multiple_reply_style.join('\n')} onChange={(event) => setDraft({ ...draft, multiple_reply_style: event.target.value.split('\n') })} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-probability">{t('setupPage.forms.personality.multipleProbability.label')}</Label>
-                  <Input id="profile-probability" type="number" min={0} max={1} step={0.1} value={Number.isNaN(draft.multiple_probability) ? '' : draft.multiple_probability} onChange={(event) => setDraft({ ...draft, multiple_probability: event.target.valueAsNumber })} />
-                </div>
               </>}
             </div>
           </DialogBody>

@@ -21,8 +21,7 @@ export interface PersonalityConfig {
   personality: string
   behavior_style: string
   reply_style: string
-  multiple_reply_style: string[]
-  multiple_probability: number
+  dialogue_examples: string[]
 }
 
 // 步骤3：API 提供商配置

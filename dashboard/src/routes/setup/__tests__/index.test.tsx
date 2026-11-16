@@ -121,8 +121,7 @@ const defaultPersonality: PersonalityConfig = {
   personality: '活泼开朗',
   behavior_style: '自然参与聊天',
   reply_style: '简短口语',
-  multiple_reply_style: [],
-  multiple_probability: 0.2,
+  dialogue_examples: [],
 }
 
 const defaultApiProvider: ApiProviderSetupConfig = {
