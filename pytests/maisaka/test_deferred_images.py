@@ -154,7 +154,7 @@ def test_retro_replyer_resizes_only_retained_images(monkeypatch, limit, mode, qu
     # 仅隔离模板和 IM 来源依赖，保留实际入口、图片筛选、缩放及延迟编码链路。
     monkeypatch.setattr(service, "_is_replyer_filtered_history_message", lambda message: False)
     monkeypatch.setattr(service, "_select_retro_prompt_name", lambda **kwargs: "test")
-    monkeypatch.setattr(service, "_build_personality_prompt", lambda: "persona")
+    monkeypatch.setattr(service, "_build_personality_prompt", lambda prompt_sources=None: "persona")
     monkeypatch.setattr(service, "_build_retro_template_context", lambda **kwargs: {})
     monkeypatch.setattr(service, "_load_prompt", lambda name, **kwargs: kwargs["dialogue_prompt"] + "\nreply", raising=False)
     monkeypatch.setattr(service, "_render_retro_history_line", lambda message, history_by_id: message.visible_text)

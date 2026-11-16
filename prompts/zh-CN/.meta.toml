@@ -46,7 +46,12 @@ description = "独立时间感知关闭时使用的 Maisaka 主规划模板，�
 [maisaka_replyer]
 display_name = "回复"
 advanced = false
-description = "Maisaka 回复生成模板，负责根据人格、表达风格、群聊注意事项和待回复上下文生成最终回复。"
+description = "Maisaka 回复生成模板，负责根据人格、表达风格、聊天注意事项和待回复上下文生成最终回复。"
+
+[persona_dialogue_examples]
+display_name = "人设对话样例"
+advanced = true
+description = "将人设中的情境与回应样例作为表达示范，并区分样例与真实聊天经历。"
 
 [maisaka_expression_selector]
 display_name = "回复表达选择"

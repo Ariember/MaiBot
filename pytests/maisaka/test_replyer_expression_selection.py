@@ -45,12 +45,13 @@ async def test_reply_context_skips_expression_selection_only_for_retro(monkeypat
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("fine", [False, True], ids=["fast", "fine"])
-async def test_expression_mode_controls_vector_and_llm_calls(monkeypatch, fine: bool) -> None:
+@pytest.mark.parametrize("candidate_count", [0, 1, 3, 9, 12])
+async def test_expression_mode_controls_vector_and_llm_calls(monkeypatch, fine: bool, candidate_count: int) -> None:
     selector = MaisakaExpressionSelector()
     event_loop_thread = get_ident()
     candidates = [
         {"id": index, "situation": f"情景{index}", "style": f"表达{index}", "count": index + 2}
-        for index in range(12)
+        for index in range(candidate_count)
     ]
     monkeypatch.setattr(global_config.expression, "use_vector_expression", fine)
     monkeypatch.setattr(selector, "_can_use_expressions", lambda session_id: True)
@@ -73,22 +74,34 @@ async def test_expression_mode_controls_vector_and_llm_calls(monkeypatch, fine: 
         return SimpleNamespace(aborted=False, kwargs=kwargs)
 
     monkeypatch.setattr(selector, "_get_runtime_manager", lambda: SimpleNamespace(invoke_hook=invoke_hook))
-    runner = AsyncMock(return_value='{"selected_ids":[1]}')
+    runner = AsyncMock(return_value='{"selected_ids":[0]}')
 
     result = await selector.select_for_reply(
         session_id="test-session", chat_history=[], reply_message=None,
         reply_reason="测试回复", sub_agent_runner=runner,
     )
 
+    if not candidates:
+        vector_select.assert_not_awaited()
+        runner.assert_not_awaited()
+        update_activity.assert_not_called()
+        assert result == MaisakaExpressionSelectionResult()
+        return
+
     if fine:
         vector_select.assert_awaited_once()
         runner.assert_awaited_once()
-        assert result.selected_expression_ids == [1]
+        assert result.selected_expression_ids == [0]
     else:
         vector_select.assert_not_awaited()
         runner.assert_not_awaited()
-        assert 5 <= len(result.selected_expression_ids) <= 10
+        if candidate_count < 10:
+            assert len(result.selected_expression_ids) == min(candidate_count, 5)
+        else:
+            assert 5 <= len(result.selected_expression_ids) <= 10
         assert len(set(result.selected_expression_ids)) == len(result.selected_expression_ids)
+    assert set(result.selected_expression_ids) <= {candidate["id"] for candidate in candidates}
+    assert result.selected_expressions == [candidates[index] for index in result.selected_expression_ids]
     assert result.expression_habits
     assert update_activity.call_args.args[0] == result.selected_expression_ids
 

@@ -27,6 +27,7 @@ from src.common.logger import get_logger
 from src.common.shutdown import is_shutdown_requested
 from src.config.config import global_config
 from src.plugin_runtime.protocol.errors import ErrorCode, RPCError
+from src.plugin_runtime.prompt_sources import PROMPT_SOURCE_HOOKS, collect_prompt_changes
 
 from .circuit_breaker import get_plugin_circuit_breaker
 from .hook_spec_registry import HookSpec, HookSpecRegistry
@@ -72,6 +73,7 @@ class HookDispatchResult:
         stopped_by: 若被中止，记录触发中止的完整处理器名称。
         custom_results: 阻塞处理器返回的附加结果列表。
         errors: 本次调用中记录到的错误信息列表。
+        prompt_sources: 启用请求记录时，各处理器对提示词文本的改动。
     """
 
     hook_name: str
@@ -80,6 +82,7 @@ class HookDispatchResult:
     stopped_by: Optional[str] = None
     custom_results: List[Any] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
+    prompt_sources: List[Dict[str, str]] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -575,6 +578,15 @@ class HookDispatcher:
 
         if execution_result.modified_kwargs is not None:
             if hook_spec.allow_kwargs_mutation:
+                if global_config.debug.save_maisaka_reasoning and dispatch_result.hook_name in PROMPT_SOURCE_HOOKS:
+                    dispatch_result.prompt_sources.extend(
+                        collect_prompt_changes(
+                            dispatch_result.kwargs,
+                            execution_result.modified_kwargs,
+                            source=target.entry.full_name,
+                            hook=dispatch_result.hook_name,
+                        )
+                    )
                 dispatch_result.kwargs = dict(execution_result.modified_kwargs)
             else:
                 error_message = (

@@ -1,4 +1,15 @@
 {
+  "personalityExamples": {
+    "label": "Dialogue examples",
+    "add": "Add example",
+    "remove": "Remove dialogue example",
+    "empty": "No dialogue examples yet.",
+    "description": "Use 3–5 short examples to show responses in different situations. Examples guide expression and are not treated as real chat history.",
+    "placeholder": "Situation: A friend jokes about procrastination\nFriend: Did you leave it until the last minute again?\nMaiMai: Caught me. I'm getting started now.",
+    "copy": "Copy persona JSON",
+    "copied": "Persona JSON copied",
+    "copyFailed": "Could not copy persona"
+  },
   "mylife": {
     "unavailable": "Built-in Mai Life was not found. Update the application, then refresh.",
     "title": "Mai Life",
@@ -1073,11 +1084,11 @@
         "multipleReplyStyle": {
           "label": "Alternate Reply Styles",
           "placeholder": "Enter one alternate reply style per line",
-          "description": "When this list is not empty, MaiBot may randomly inject one of these styles as a one-time reply hint"
+          "description": "MaiBot chooses an alternate style that suits the current context, keeping the base style when none fits"
         },
         "multipleProbability": {
-          "label": "Temporary Style Injection Probability",
-          "description": "The chance of injecting a one-time alternate style hint each time a reply is built"
+          "label": "Alternate Style Adoption Chance",
+          "description": "The chance of using a selected alternate style, fixed for the reply and its retries. Set to 0 to always use the base style"
         }
       },
       "emoji": {

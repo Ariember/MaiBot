@@ -12,7 +12,7 @@ from .config_base import AttributeData
 from .official_configs import ChatReplyStyleConfig, PersonalityConfig, PersonalityProfile
 
 _switch_lock = asyncio.Lock()
-_FIELDS = {"personality", "behavior_style", "reply_style", "multiple_reply_style", "multiple_probability"}
+_FIELDS = {"personality", "behavior_style", "reply_style", "dialogue_examples", "multiple_reply_style", "multiple_probability"}
 _CHAT_FIELDS = {"group_chat_prompt", "private_chat_prompts"}
 
 

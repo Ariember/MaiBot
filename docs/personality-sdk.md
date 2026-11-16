@@ -27,7 +27,7 @@ result = await self.ctx.personality.switch("温柔的麦麦")
 | `get_current()` | `personality.get_current` | 当前人设对象 |
 | `switch(name)` | `personality.switch`，参数 `{"name": "人设名称"}` | `{"changed": true, "current": 人设对象}` |
 
-人设对象含 `name`、`personality`、`behavior_style`、`reply_style`、`group_chat_prompt`、`private_chat_prompts`、`multiple_reply_style`、`multiple_probability`。当前人设未命名时 `name` 为空字符串。列表与当前查询读取运行时快照；WebUI 的配置保存和热重载完成后可读到最新内容。
+人设对象含 `name`、`personality`、`behavior_style`、`reply_style`、`dialogue_examples`、`group_chat_prompt`、`private_chat_prompts`、`multiple_reply_style`、`multiple_probability`。`dialogue_examples` 是可多行的字符串数组，未配置时为空；样例随人设一起切换，只用于表达参考。当前人设未命名时 `name` 为空字符串。列表与当前查询读取运行时快照；WebUI 的配置保存和热重载完成后可读到最新内容。
 
 切换按名称精确匹配，作用于全局所有会话。先将切换前的已保存编辑留在人设库中，再写入目标人设并热重载。尚未入库的当前人设自动以“切换前人设”留档。切换到当前名称不覆盖当前编辑，返回 `changed: false`，仍检查热重载是否成功。浏览器中尚未保存的编辑不会被 SDK 读取。
 

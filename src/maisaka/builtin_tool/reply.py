@@ -143,6 +143,18 @@ def get_tool_spec(context: Optional[ToolAvailabilityContext] = None) -> ToolSpec
             "enum": ["简短表达", "正常回复", "长回复"],
         },
     }
+    personality = config_module.global_config.personality
+    persona_styles = list(dict.fromkeys(style.strip() for style in personality.multiple_reply_style if style.strip()))
+    if personality.multiple_probability > 0 and persona_styles:
+        properties["persona_style"] = {
+            "type": "string",
+            "enum": persona_styles,
+            "description": (
+                "可选。从当前人设的备用表达风格中选择最适合本轮的一项。"
+                "结合话题、对方情绪、人物关系和最近语气，避免突然变调；没有合适的就省略，沿用基础风格。"
+                "该选择按人设配置的概率采用，不改变回复事实或人物身份。"
+            ),
+        }
     if _use_expression_intent():
         properties["expression_intent"] = {
             "type": "object",

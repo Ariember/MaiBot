@@ -13,14 +13,23 @@ describe('personality import', () => {
     const data = JSON.parse(PERSONALITY_IMPORT_EXAMPLE)
     delete data.profile.multiple_reply_style
     delete data.profile.multiple_probability
+    delete data.profile.dialogue_examples
     const profile = parsePersonalityImport('```json\n' + JSON.stringify(data) + '\n```')
     expect(profile.name).toBe('温柔的麦麦')
     expect(profile.multiple_reply_style).toEqual([])
     expect(profile.multiple_probability).toBe(0)
+    expect(profile.dialogue_examples).toEqual([])
     expect(profile.group_chat_prompt).toBe(data.profile.group_chat_prompt)
     expect(profile.private_chat_prompts).toBe(data.profile.private_chat_prompts)
   })
 
+
+  it('preserves multiline dialogue examples in an exported profile', () => {
+    const data = JSON.parse(PERSONALITY_IMPORT_EXAMPLE)
+    const profile = parsePersonalityImport(JSON.stringify(data))
+    expect(profile.dialogue_examples).toEqual(data.profile.dialogue_examples)
+    expect(parsePersonalityImport(JSON.stringify({ format: 'maibot.personality', version: 1, profile }))).toEqual(profile)
+  })
 
   it.each([
     (data: ImportFixture) => { data.version = 2 },
@@ -32,6 +41,9 @@ describe('personality import', () => {
     (data: ImportFixture) => { data.profile.multiple_probability = '0.1' },
     (data: ImportFixture) => { data.profile.multiple_reply_style = [false] },
     (data: ImportFixture) => { data.profile.multiple_reply_style = null },
+    (data: ImportFixture) => { data.profile.dialogue_examples = [false] },
+    (data: ImportFixture) => { data.profile.dialogue_examples = 'example' },
+    (data: ImportFixture) => { data.profile.dialogue_examples = null },
     (data: ImportFixture) => { data.profile.token = 'secret' },
     (data: ImportFixture) => { data.profile.group_chat_prompt = null },
     (data: ImportFixture) => { data.profile.private_chat_prompts = [] },

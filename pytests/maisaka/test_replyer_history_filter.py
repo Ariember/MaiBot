@@ -105,7 +105,7 @@ def test_request_history_excludes_internal_messages(monkeypatch, retro: bool, vi
     if retro:
         # 替换模板与展示依赖，保留真实的复古入口过滤和图文上下文组装。
         monkeypatch.setattr(generator, "_select_retro_prompt_name", lambda **kwargs: "test")
-        monkeypatch.setattr(generator, "_build_personality_prompt", lambda: "测试人设")
+        monkeypatch.setattr(generator, "_build_personality_prompt", lambda prompt_sources=None: "测试人设")
         monkeypatch.setattr(generator, "_build_retro_template_context", lambda **kwargs: {
             "dialogue_prompt": "\n".join(message.processed_plain_text for message in kwargs["chat_history"]),
         })

@@ -34,6 +34,15 @@ export type ProviderResponsePayload = Record<string, unknown> & {
   output?: unknown[]
 }
 
+export type PromptSource = {
+  source: string
+  target: string
+  operation: 'base' | 'append' | 'replace' | 'remove'
+  text: string
+  hook?: string
+  item_id?: string
+}
+
 export type StructuredPromptLlmCall = {
   inference_stage: string
   request?: {
@@ -56,6 +65,7 @@ export type StructuredPromptLlmCall = {
     session_id?: string | null
     status?: string
     updated_at?: string
+    prompt_sources?: PromptSource[]
   }
   request_items: ContextItemSnapshot[]
   output_items: ContextItemSnapshot[]
@@ -81,6 +91,7 @@ export type StructuredPromptPayload = {
     session_id?: string | null
     status?: string
     updated_at?: string
+    prompt_sources?: PromptSource[]
   }
   presentation?: {
     output_title?: string

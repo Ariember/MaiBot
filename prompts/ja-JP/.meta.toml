@@ -46,7 +46,12 @@ description = "独立したタイミング判断を使わない場合の Maisaka
 [maisaka_replyer]
 display_name = "Replyer"
 advanced = false
-description = "Maisaka の返信生成テンプレート。人格、表現スタイル、グループチャット上の注意点、返信対象の文脈から最終返信を生成する。"
+description = "Maisaka の返信生成テンプレート。人格、表現スタイル、チャット上の注意点、返信対象の文脈から最終返信を生成する。"
+
+[persona_dialogue_examples]
+display_name = "人物設定の対話例"
+advanced = true
+description = "人物設定の場面と応答例を表現の参考として示し、実際の会話履歴や体験と区別します。"
 
 [maisaka_expression_selector]
 display_name = "返信表現の選択"

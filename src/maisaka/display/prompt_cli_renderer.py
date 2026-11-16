@@ -147,6 +147,13 @@ class PromptCLIVisualizer:
             return {}
 
         normalized: dict[str, Any] = {}
+        prompt_sources = metadata.get("prompt_sources")
+        if isinstance(prompt_sources, list):
+            normalized["prompt_sources"] = [
+                {key: value for key, value in entry.items() if isinstance(value, str)}
+                for entry in prompt_sources
+                if isinstance(entry, dict) and all(isinstance(entry.get(key), str) for key in ("source", "target", "operation", "text"))
+            ]
         model_name = str(metadata.get("model_name") or metadata.get("model") or "").strip()
         if model_name:
             normalized["model_name"] = model_name

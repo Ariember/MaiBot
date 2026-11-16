@@ -139,7 +139,7 @@ class MaisakaExpressionSelector:
         return all_candidates
 
     def _sample_legacy_expression_candidates(self, all_candidates: List[dict[str, Any]]) -> List[dict[str, Any]]:
-        if len(all_candidates) < 10:
+        if not all_candidates:
             return []
 
         high_count_candidates = [item for item in all_candidates if (item.get("count", 1) or 1) > 1]
@@ -593,8 +593,8 @@ class MaisakaExpressionSelector:
             return MaisakaExpressionSelectionResult()
 
         all_candidates = await asyncio.to_thread(self._load_all_expression_candidates, session_id)
-        if len(all_candidates) < 10:
-            logger.info(f"表达方式选择已跳过：本地候选不足，session_id={session_id}")
+        if not all_candidates:
+            logger.info(f"表达方式选择已跳过：本地候选为空，session_id={session_id}")
             return MaisakaExpressionSelectionResult()
 
         candidates = await self._build_expression_candidate_pool(

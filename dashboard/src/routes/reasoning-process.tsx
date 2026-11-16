@@ -74,6 +74,7 @@ import {
 import {
   ContextItemTimeline,
   NaturalLanguageText,
+  PromptSourcesCollapsible,
   ToolDefinitionsCollapsible,
   buildStructuredPromptCopyText,
   extractBotSelfNames,
@@ -1863,6 +1864,8 @@ export function ReasoningProcessPage({
                                           )}
                                         </div>
 
+                                        <PromptSourcesCollapsible sources={llmCall.metadata?.prompt_sources} />
+
                                         <ContextItemTimeline
                                           title="请求 Items"
                                           items={llmCall.request_items}
@@ -1886,6 +1889,8 @@ export function ReasoningProcessPage({
                                   )}
                                 </div>
                               )}
+
+                            <PromptSourcesCollapsible sources={structuredPrompt.metadata?.prompt_sources} />
 
                             <ContextItemTimeline
                               title="请求 Items"

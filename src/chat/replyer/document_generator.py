@@ -32,16 +32,31 @@ class DocumentReplyGenerator(MaisakaReplyGenerator):
         enable_visual_message: bool = False,
         reply_tool_args: Optional[Dict[str, Any]] = None,
         think_level: int = 1,
+        temporary_reply_style: str = "",
+        prompt_sources: Optional[List[Dict[str, str]]] = None,
     ) -> List[ContextItem]:
         """写作不套用聊天/复古短回复模板，材料和最终输出要求独立传入。"""
         del chat_history, reply_message, stream_id, enable_visual_message, think_level
         reference = self._build_reply_reference_message(
             reply_reason, str((reply_tool_args or {}).get("reply_reference", "")),
         )
+        reply_style = temporary_reply_style or self._select_reply_style()
         system_prompt = self._load_prompt(
-            "maisaka_replyer_document", identity=self._build_personality_prompt(),
-            reply_style=self._select_reply_style(), expression_habits=expression_habits,
+            "maisaka_replyer_document", identity=self._build_personality_prompt(prompt_sources),
+            reply_style=reply_style, expression_habits=expression_habits,
         )
+        if prompt_sources is not None:
+            for source, target, text in (
+                (
+                    "personality.multiple_reply_style" if temporary_reply_style else "personality.reply_style",
+                    "system", reply_style,
+                ),
+                ("expression_learning", "system", expression_habits),
+                ("planner.reply_reference", "user", reference),
+                ("reply_requirements", "user", reply_requirements),
+            ):
+                if text.strip():
+                    prompt_sources.append({"source": source, "target": target, "operation": "base", "text": text})
         return [
             ContextItemBuilder().set_role(RoleType.System).add_text_content(system_prompt).build(),
             ContextItemBuilder().set_role(RoleType.User).add_text_content(reference).build(),

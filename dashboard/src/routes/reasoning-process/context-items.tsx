@@ -18,6 +18,7 @@ import {
   isRecord,
   stringifyPromptContent,
   stringifyStructuredValue,
+  type PromptSource,
   type StructuredPromptPayload,
 } from './schema'
 
@@ -28,6 +29,16 @@ const NATURAL_LANGUAGE_TEXT_STYLE: CSSProperties = {
 
 const ITEM_JSON_PANEL_STYLE: CSSProperties = {
   backgroundColor: 'hsl(var(--color-background))',
+}
+
+const PROMPT_SOURCES_DESCRIPTION =
+  '展示主程序构造的提示词片段与插件改动。插件改动按执行顺序列出，最终内容以请求 Items 为准。'
+
+const PROMPT_SOURCE_OPERATIONS: Record<PromptSource['operation'], string> = {
+  base: '基础内容',
+  append: '追加',
+  replace: '替换',
+  remove: '移除',
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -343,6 +354,12 @@ export function buildStructuredPromptCopyText(payload: StructuredPromptPayload |
     })
     sections.push(
       `[${payload.presentation?.output_title || '输出 Items'}]\n${outputSections.join('\n\n')}`
+    )
+  }
+
+  if (payload.metadata?.prompt_sources?.length) {
+    sections.push(
+      `[提示词来源]\n${PROMPT_SOURCES_DESCRIPTION}\n${stringifyStructuredValue(payload.metadata.prompt_sources)}`
     )
   }
 
@@ -766,6 +783,49 @@ export function NaturalLanguageText({
         )
       })}
     </div>
+  )
+}
+
+export function PromptSourcesCollapsible({ sources }: { sources?: PromptSource[] }) {
+  if (!sources?.length) return null
+
+  return (
+    <Collapsible className="min-w-0 rounded-md border">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="hover:bg-muted/50 flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left text-sm transition-colors sm:px-3 [&[data-state=open]>svg]:rotate-180"
+        >
+          <span className="font-medium">提示词来源 · {sources.length} 条</span>
+          <ChevronDown className="h-4 w-4 shrink-0 transition-transform" />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="min-w-0 border-t">
+        <div className="space-y-3 p-2.5 sm:p-3">
+          <p className="text-muted-foreground text-xs leading-5">{PROMPT_SOURCES_DESCRIPTION}</p>
+          <ol className="space-y-2">
+            {sources.map((source, index) => (
+              <li key={index} className="bg-background/70 min-w-0 rounded-md border p-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-muted-foreground text-xs">#{index + 1}</span>
+                  <Badge variant="secondary" className="max-w-full break-all whitespace-normal">
+                    {source.source}
+                  </Badge>
+                  <Badge variant="outline">{PROMPT_SOURCE_OPERATIONS[source.operation]}</Badge>
+                  <span className="text-muted-foreground break-all font-mono text-xs">{source.target}</span>
+                </div>
+                {source.hook && (
+                  <p className="text-muted-foreground mt-2 break-all font-mono text-xs">{source.hook}</p>
+                )}
+                <pre className="bg-muted/20 mt-2 rounded-md border p-2 text-xs leading-5 break-words whitespace-pre-wrap">
+                  {source.text}
+                </pre>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 

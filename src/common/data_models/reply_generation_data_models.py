@@ -134,6 +134,10 @@ class ReplyGenerationResult(BaseDataModel):
         default_factory=list,
         metadata={"description": "本次 replyer 的预览用 Context Item 快照列表。"},
     )
+    prompt_sources: List[Dict[str, str]] = field(
+        default_factory=list,
+        metadata={"description": "本次请求的人格、表达与插件注入来源。"},
+    )
     output_items: List[PromptMessage] = field(
         default_factory=list,
         metadata={"description": "本次 replyer 的预览用输出 Item 快照列表。"},
@@ -225,6 +229,8 @@ def build_reply_monitor_detail(result: ReplyGenerationResult) -> Dict[str, Any]:
         detail["output_items"] = result.output_items
     if result.generation_attempts:
         detail["generation_attempts"] = result.generation_attempts
+    if result.prompt_sources:
+        detail["prompt_sources"] = result.prompt_sources
 
     metrics: Dict[str, Any] = {}
     if result.completion.model_name.strip():

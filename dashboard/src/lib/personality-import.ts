@@ -3,6 +3,7 @@ export interface PersonalityProfile {
   personality: string
   behavior_style: string
   reply_style: string
+  dialogue_examples: string[]
   group_chat_prompt: string
   private_chat_prompts: string
   multiple_reply_style: string[]
@@ -21,6 +22,7 @@ export const PERSONALITY_IMPORT_EXAMPLE = JSON.stringify({
     personality: '温柔、好奇，喜欢和朋友分享日常。',
     behavior_style: '自然参与聊天，认真倾听，不强行找话题。',
     reply_style: '简短自然，语气温和。',
+    dialogue_examples: ['情境：朋友拿拖延开玩笑\n对方：你是不是又拖到最后一刻了？\n麦麦：被你发现了，我这就开工。'],
     group_chat_prompt: '留意群友之间的互动，适时参与，不必逐条回复。',
     private_chat_prompts: '关注对方的想法，保持自然连贯的一对一交流。',
     multiple_reply_style: ['偶尔用一句俏皮话回复'],
@@ -46,7 +48,7 @@ export function parsePersonalityImport(text: string): PersonalityProfile {
   }
   const profile = data.profile
   if (!object(profile)) throw new Error('profile 必须是人设对象')
-  const fields = ['name', 'personality', 'behavior_style', 'reply_style', 'group_chat_prompt', 'private_chat_prompts', 'multiple_reply_style', 'multiple_probability']
+  const fields = ['name', 'personality', 'behavior_style', 'reply_style', 'dialogue_examples', 'group_chat_prompt', 'private_chat_prompts', 'multiple_reply_style', 'multiple_probability']
   if (Object.keys(profile).some((key) => !fields.includes(key))) throw new Error('profile 中包含不支持的字段')
   for (const key of ['name', 'personality', 'behavior_style', 'reply_style']) {
     if (typeof profile[key] !== 'string') throw new Error(`${key} 必须是字符串`)
@@ -56,6 +58,10 @@ export function parsePersonalityImport(text: string): PersonalityProfile {
     if (typeof profile[key] !== 'string') throw new Error(`${key} 必须是字符串`)
   }
   if (!name) throw new Error('人设名称不能为空')
+  const examples = profile.dialogue_examples === undefined ? [] : profile.dialogue_examples
+  if (!Array.isArray(examples) || !examples.every((example) => typeof example === 'string')) {
+    throw new Error('dialogue_examples 必须是字符串数组')
+  }
   const styles = profile.multiple_reply_style === undefined ? [] : profile.multiple_reply_style
   if (!Array.isArray(styles) || !styles.every((style) => typeof style === 'string')) {
     throw new Error('multiple_reply_style 必须是字符串数组')
@@ -69,6 +75,7 @@ export function parsePersonalityImport(text: string): PersonalityProfile {
     personality: profile.personality as string,
     behavior_style: profile.behavior_style as string,
     reply_style: profile.reply_style as string,
+    dialogue_examples: examples,
     group_chat_prompt: profile.group_chat_prompt as string,
     private_chat_prompts: profile.private_chat_prompts as string,
     multiple_reply_style: styles,

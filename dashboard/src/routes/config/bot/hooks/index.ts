@@ -9,6 +9,7 @@ export {
   BotPlatformAccountsHook,
   ChatPromptsHook,
   ChatTalkValueRulesHook,
+  DialogueExamplesHook,
   ExpressionGroupsHook,
   ExpressionLearningListHook,
   FocusGroupsHook,

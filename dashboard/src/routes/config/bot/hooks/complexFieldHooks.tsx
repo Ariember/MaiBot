@@ -1,6 +1,8 @@
 import { TimeRangeTrack, TimeRangeTicks } from '@/components/ui/time-range-track'
 import { formatTalkTimeRange, getTimelineSegments, parseTalkTimeRange, type TimelineRange } from '@/lib/time-range'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 
 import {
   AlertCircle,
@@ -2426,10 +2428,14 @@ interface StringListHookOptions {
   label: string
   multiline?: boolean
   placeholder?: string
+  helperText?: string
+  removeLabel?: string
 }
 
-function createStringListHook(options: StringListHookOptions): FieldHookComponent {
+function createStringListHook(configuration: StringListHookOptions | ((t: TFunction) => StringListHookOptions)): FieldHookComponent {
   return ({ onChange, schema, value }) => {
+    const { t } = useTranslation()
+    const options = typeof configuration === 'function' ? configuration(t) : configuration
     const items = Array.isArray(value) ? value.map((item) => String(item ?? '')) : []
 
     const updateItems = (nextItems: string[]) => {
@@ -2462,6 +2468,7 @@ function createStringListHook(options: StringListHookOptions): FieldHookComponen
           </Button>
         </div>
 
+        {options.helperText && <p className="text-sm text-muted-foreground">{options.helperText}</p>}
         {items.length === 0 ? (
           <div className="rounded-md border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
             {options.emptyText}
@@ -2485,7 +2492,7 @@ function createStringListHook(options: StringListHookOptions): FieldHookComponen
                     type="button"
                     size="icon"
                     variant="ghost"
-                    aria-label={`删除${options.label} ${itemIndex + 1}`}
+                    aria-label={`${options.removeLabel ?? `删除${options.label}`} ${itemIndex + 1}`}
                     onClick={() => removeItem(itemIndex)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -2543,6 +2550,16 @@ export const MultipleReplyStyleHook = createStringListHook({
   multiline: true,
   placeholder: '输入一种备用表达风格',
 })
+
+export const DialogueExamplesHook = createStringListHook((t) => ({
+  addLabel: t('personalityExamples.add'),
+  emptyText: t('personalityExamples.empty'),
+  helperText: t('personalityExamples.description'),
+  label: t('personalityExamples.label'),
+  multiline: true,
+  placeholder: t('personalityExamples.placeholder'),
+  removeLabel: t('personalityExamples.remove'),
+}))
 
 const GroupTalkValueRulesHook = createListItemEditorHook({
   addLabel: '添加发言频率规则',

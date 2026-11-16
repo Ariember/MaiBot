@@ -102,7 +102,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             session_id=getattr(chat_stream, "session_id", "") if chat_stream is not None else "",
         )
 
-    def _build_personality_prompt(self) -> str:
+    def _build_personality_prompt(self, prompt_sources: Optional[List[Dict[str, str]]] = None) -> str:
         """构建 replyer 使用的人设提示。"""
         try:
             bot_name = global_config.bot.nickname
@@ -113,7 +113,16 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             if not prompt_personality:
                 prompt_personality = "是人类。"
 
-            return f"你的名字是{bot_name}{bot_aliases}。\n{prompt_personality}"
+            identity = f"你的名字是{bot_name}{bot_aliases}。\n{prompt_personality}"
+            examples = [example.strip() for example in global_config.personality.dialogue_examples if example.strip()]
+            examples_prompt = ""
+            if examples:
+                examples_prompt = self._load_prompt("persona_dialogue_examples", examples="\n\n".join(examples))
+            if prompt_sources is not None:
+                for source, text in (("personality.personality", identity), ("personality.dialogue_examples", examples_prompt)):
+                    if text:
+                        prompt_sources.append({"source": source, "target": "system", "operation": "base", "text": text})
+            return identity + ("\n\n" + examples_prompt if examples_prompt else "")
         except Exception as exc:
             logger.warning(f"构建 Maisaka 人设提示词失败: {exc}")
             return "你的名字是麦麦。\n是人类。"
@@ -124,21 +133,25 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         return global_config.personality.reply_style
 
     @staticmethod
-    def _select_temporary_reply_style() -> str:
-        """按配置概率选择本次回复的一次性备用表达风格。"""
+    def _select_temporary_reply_style(reply_tool_args: Optional[Dict[str, Any]] = None) -> str:
+        """按配置概率采用 Planner 为当前情境选择的备用表达风格。"""
         personality_config = global_config.personality
+        requested_style = (reply_tool_args or {}).get("persona_style", "")
+        if not isinstance(requested_style, str) or not requested_style.strip():
+            return ""
+        requested_style = requested_style.strip()
         candidate_styles = [style.strip() for style in personality_config.multiple_reply_style if style.strip()]
-
-        if not candidate_styles:
+        if requested_style not in candidate_styles:
+            logger.warning("reply 工具选择的备用表达风格不在当前人设候选中，本轮使用基础表达风格")
             return ""
 
         probability = personality_config.multiple_probability
         if probability <= 0:
             return ""
-        if random.random() > probability:
+        if random.random() >= probability:
             return ""
 
-        return random.choice(candidate_styles)
+        return requested_style
 
     @staticmethod
     def _normalize_content(content: str, limit: int = 500) -> str:
@@ -535,6 +548,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         reply_reason: str,
         expression_habits: str = "",
         stream_id: Optional[str] = None,
+        prompt_sources: Optional[List[Dict[str, str]]] = None,
     ) -> str:
         del reply_message
         del reply_reason
@@ -542,20 +556,33 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         session_id = self._resolve_session_id(stream_id)
 
         try:
+            chat_prompt = self._build_group_chat_attention_block(session_id)
+            reply_style = self._select_reply_style()
+            identity_sources: List[Dict[str, str]] = []
             system_prompt = self._load_prompt(
                 "maisaka_replyer",
                 bot_name=global_config.bot.nickname,
-                group_chat_attention_block=self._build_group_chat_attention_block(session_id),
+                group_chat_attention_block=chat_prompt,
                 replyer_output_instruction=self._build_replyer_output_instruction(),
-                identity=self._build_personality_prompt(),
-                reply_style=self._select_reply_style(),
+                identity=self._build_personality_prompt(identity_sources if prompt_sources is not None else None),
+                reply_style=reply_style,
             )
+            if prompt_sources is not None:
+                prompt_sources.extend(identity_sources)
+                for source, text in (("personality.reply_style", reply_style), ("chat.reply_style", chat_prompt)):
+                    if text.strip():
+                        prompt_sources.append({"source": source, "target": "system", "operation": "base", "text": text})
         except Exception:
             system_prompt = "你是一个友好的 AI 助手，请根据聊天记录自然回复。"
 
         is_group_chat, _ = get_chat_type_and_target_info(session_id)
         if attention_drift := build_attention_drift_prompt_block(is_group_chat):
             system_prompt += f"\n\n{attention_drift}"
+            if prompt_sources is not None:
+                prompt_sources.append({
+                    "source": "experimental.attention_drift", "target": "system", "operation": "base",
+                    "text": attention_drift,
+                })
         return system_prompt
 
     def _build_reply_instruction(self) -> str:
@@ -692,6 +719,8 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         enable_visual_message: bool = False,
         reply_tool_args: Optional[Dict[str, Any]] = None,
         think_level: int = 1,
+        temporary_reply_style: str = "",
+        prompt_sources: Optional[List[Dict[str, str]]] = None,
     ) -> List[ContextItem]:
         # 复古模式将人设与注意事项放在首条 system 消息，其余模板作为一条 user 消息发送
         if self._uses_retro_prompt():
@@ -705,6 +734,8 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                 think_level=think_level,
                 reply_tool_args=reply_tool_args,
                 enable_visual_message=enable_visual_message,
+                temporary_reply_style=temporary_reply_style,
+                prompt_sources=prompt_sources,
             )
 
         items: List[ContextItem] = []
@@ -717,6 +748,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             reply_reason=reply_reason,
             expression_habits=expression_habits,
             stream_id=stream_id,
+            prompt_sources=prompt_sources,
         )
         final_user_message = self._build_final_user_message(
             chat_history=chat_history,
@@ -725,7 +757,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             keywords_reaction_prompt=keywords_reaction_prompt,
             reply_tool_args=reply_tool_args,
         )
-        temporary_reply_style_message = self._build_temporary_reply_style_message(self._select_temporary_reply_style())
+        temporary_reply_style_message = self._build_temporary_reply_style_message(temporary_reply_style)
         reply_reference_message = self._build_reply_reference_message(
             reply_reason,
             str((reply_tool_args or {}).get("reply_reference") or ""),
@@ -733,6 +765,17 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         requested_reply_style_message = self._build_requested_reply_style_message(
             str((reply_tool_args or {}).get("reply_style") or "")
         )
+        if prompt_sources is not None:
+            for source, text in (
+                ("expression_learning", expression_habits.strip()),
+                ("personality.multiple_reply_style", temporary_reply_style_message),
+                ("planner.reply_reference", reply_reference_message),
+                ("reply_requirements", reply_requirements.strip()),
+                ("keywords_reaction", keywords_reaction_prompt.strip()),
+                ("reply.reply_style", requested_reply_style_message),
+            ):
+                if text:
+                    prompt_sources.append({"source": source, "target": "user", "operation": "base", "text": text})
 
         items.append(ContextItemBuilder().set_role(RoleType.System).add_text_content(system_prompt).build())
         items.extend(self._build_history_messages(chat_history, enable_visual_message))
@@ -772,6 +815,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         reply_reason: str,
         selected_expression_ids: List[int],
         reply_tool_args: Dict[str, Any],
+        prompt_sources: Optional[List[Dict[str, str]]] = None,
     ) -> List[ContextItem]:
         """触发 replyer 模型请求前 Hook，允许插件按 Item 改写请求。"""
 
@@ -803,12 +847,15 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             return request_messages
 
         try:
-            return deserialize_prompt_items(
+            modified_items = deserialize_prompt_items(
                 raw_items,
                 item_schema_version=hook_result.kwargs.get("item_schema_version"),
                 mode=ContextProtocolMode.REQUEST_CONTEXT,
                 original_items=request_messages,
             )
+            if prompt_sources is not None:
+                prompt_sources.extend(hook_result.prompt_sources)
+            return modified_items
         except Exception as exc:
             logger.warning(f"Hook maisaka.replyer.before_model_request 返回的 items 无法反序列化，已忽略: {exc}")
             return request_messages
@@ -1006,6 +1053,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                 request_kind=self.request_type,
                 selection_reason=reply_reason,
                 output_items=result.output_items,
+                metadata={"prompt_sources": result.prompt_sources},
                 generation_attempts=result.generation_attempts,
                 keep_base64=False,
             )
@@ -1116,9 +1164,11 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         reasoning_continuation_count = 0
         reasoning_regeneration_requested = False
         retro_period_regeneration_requested = False
+        temporary_reply_style: Optional[str] = None
         default_task_name = str(getattr(self.express_model, "task_name", "") or "replyer").strip() or "replyer"
 
         while True:
+            before_request_sources: List[Dict[str, str]] = []
             try:
                 from src.common.runtime_loop import run_on_main_loop
                 from src.desktop_pet.service import desktop_pet_service
@@ -1140,11 +1190,16 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                     reply_tool_args=dict(active_reply_tool_args),
                 )
                 before_request_kwargs = before_request_result.kwargs
+                before_request_sources = before_request_result.prompt_sources
                 if isinstance(before_request_kwargs.get("reply_tool_args"), dict):
                     active_reply_tool_args = dict(before_request_kwargs["reply_tool_args"])
             except Exception as exc:
                 logger.warning(f"Maisaka 回复器 before_request Hook 调用失败，将继续使用当前请求参数: {exc}")
                 before_request_kwargs = {"extra_prompt": plugin_reply_prompt}
+
+            # 同一回复的预览、模型切换和重试共用已选风格，不在请求重建时重新抽样。
+            if temporary_reply_style is None:
+                temporary_reply_style = self._select_temporary_reply_style(active_reply_tool_args)
 
             active_task_name = str(before_request_kwargs.get("task_name") or default_task_name).strip()
             if not active_task_name:
@@ -1156,6 +1211,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             )
 
             prompt_started_at = time.perf_counter()
+            prompt_sources: Optional[List[Dict[str, str]]] = [] if global_config.debug.save_maisaka_reasoning else None
             try:
                 request_messages = self._build_request_messages(
                     chat_history=filtered_history,
@@ -1166,6 +1222,8 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                     stream_id=stream_id,
                     reply_tool_args=active_reply_tool_args,
                     think_level=think_level,
+                    temporary_reply_style=temporary_reply_style,
+                    prompt_sources=prompt_sources,
                 )
             except Exception as exc:
                 import traceback
@@ -1177,6 +1235,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                 )
                 return finalize(False)
 
+            result.prompt_sources = (prompt_sources + before_request_sources) if prompt_sources is not None else []
             prompt_ms = round((time.perf_counter() - prompt_started_at) * 1000, 2)
             prompt_preview = PromptCLIVisualizer.build_prompt_dump_text(request_messages)
 
@@ -1191,6 +1250,8 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                 retry_count_for_attempt: int = retry_count,
                 selected_expression_ids_for_attempt: tuple[int, ...] = tuple(result.selected_expression_ids),
                 reply_tool_args_for_attempt: tuple[tuple[str, Any], ...] = tuple(active_reply_tool_args.items()),
+                temporary_reply_style_for_attempt: str = temporary_reply_style,
+                before_request_sources_for_attempt: tuple[Dict[str, str], ...] = tuple(before_request_sources),
             ) -> List[ContextItem]:
                 nonlocal active_client_type, prompt_ms, prompt_preview, request_messages
                 api_provider = getattr(_client, "api_provider", None)
@@ -1208,6 +1269,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                         message for message in chat_history if self._should_keep_replyer_history_message(message)
                     ]
                 # 视觉请求构建会解码、缩放和编码图片，在工作线程中执行，避免阻塞聊天事件循环。
+                request_sources: Optional[List[Dict[str, str]]] = [] if global_config.debug.save_maisaka_reasoning else None
                 built_request_messages = await asyncio.to_thread(
                     self._build_request_messages,
                     chat_history=filtered_history,
@@ -1219,7 +1281,11 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                     enable_visual_message=enable_visual_message,
                     reply_tool_args=dict(reply_tool_args_for_attempt),
                     think_level=think_level,
+                    temporary_reply_style=temporary_reply_style_for_attempt,
+                    prompt_sources=request_sources,
                 )
+                if request_sources is not None:
+                    request_sources.extend(before_request_sources_for_attempt)
                 request_messages = await self._invoke_before_model_request_hook(
                     request_messages=built_request_messages,
                     session_id=preview_chat_id,
@@ -1232,7 +1298,9 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                     reply_reason=reply_reason or "",
                     selected_expression_ids=list(selected_expression_ids_for_attempt),
                     reply_tool_args=dict(reply_tool_args_for_attempt),
+                    prompt_sources=request_sources,
                 )
+                result.prompt_sources = request_sources if request_sources is not None else []
                 prompt_ms = round((time.perf_counter() - prompt_started_at) * 1000, 2)
                 prompt_preview = PromptCLIVisualizer.build_prompt_dump_text(request_messages)
                 return request_messages

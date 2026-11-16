@@ -28,6 +28,18 @@ def test_reasoning_item_is_displayed_as_independent_item_content() -> None:
     assert "reasoning_content" not in payload[0]
 
 
+def test_prompt_sources_survive_preview_metadata_without_becoming_model_items() -> None:
+    source = {"source": "personality.personality", "target": "system", "operation": "base", "text": "测试人格"}
+    item = UserMessageItem(meta=ContextItemMeta.create(), parts=(ContextTextPart("当前消息"),))
+    payload = PromptCLIVisualizer._build_structured_preview_payload(
+        [item], request_kind="replyer", selection_reason="", tool_definitions=None,
+        output_title="输出", output_items=(), metadata={"prompt_sources": [source]},
+        generation_attempts=(), keep_base64=False,
+    )
+    assert payload["metadata"]["prompt_sources"] == [source]
+    assert payload["request_items"][0]["parts"] == [{"type": "text", "text": "当前消息"}]
+
+
 def test_structured_preview_keeps_output_items_independent_and_ordered() -> None:
     reasoning = ReasoningItem(
         meta=ContextItemMeta.create(

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Download, Plus, Wrench } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ import {
   clearPersonalityImport, parsePersonalityImport, PERSONALITY_IMPORT_EVENT, PERSONALITY_IMPORT_EXAMPLE,
   readPersonalityImport, type PersonalityProfile as Profile,
 } from '@/lib/personality-import'
+import { DialogueExamplesHook } from './hooks/complexFieldHooks'
 
 function snapshot(values: Record<string, unknown>, name: string): Profile {
   return {
@@ -19,6 +21,7 @@ function snapshot(values: Record<string, unknown>, name: string): Profile {
     personality: values.personality as string,
     behavior_style: values.behavior_style as string,
     reply_style: values.reply_style as string,
+    dialogue_examples: (values.dialogue_examples ?? []) as string[],
     group_chat_prompt: values.group_chat_prompt as string,
     private_chat_prompts: values.private_chat_prompts as string,
     multiple_reply_style: values.multiple_reply_style as string[],
@@ -36,7 +39,10 @@ export function PersonalityProfiles({ values, onChange }: {
   const [originalName, setOriginalName] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const { toast } = useToast()
-  const profiles = (values.profiles ?? []) as Profile[]
+  const { t } = useTranslation()
+  const profiles = ((values.profiles ?? []) as Profile[]).map((profile) => ({
+    ...profile, dialogue_examples: profile.dialogue_examples ?? [],
+  }))
   const selected = profiles.find((profile) => profile.name === values.selected_profile)
 
   const imported = useMemo(() => {
@@ -104,7 +110,11 @@ export function PersonalityProfiles({ values, onChange }: {
       toast({ title: '备用表达风格概率应在 0 到 1 之间', variant: 'destructive' })
       return
     }
-    const saved = { ...draft, name, multiple_reply_style: draft.multiple_reply_style.filter((style) => style.trim()) }
+    const saved = {
+      ...draft, name,
+      dialogue_examples: draft.dialogue_examples.filter((example) => example.trim()),
+      multiple_reply_style: draft.multiple_reply_style.filter((style) => style.trim()),
+    }
     const nextProfiles = originalName === null
       ? [...profiles, saved]
       : profiles.map((profile) => profile.name === originalName ? saved : profile)
@@ -125,6 +135,17 @@ export function PersonalityProfiles({ values, onChange }: {
     setDraft(null)
     setOriginalName(null)
     setConfirmDelete(false)
+  }
+
+  const copyProfile = async () => {
+    if (!draft) return
+    try {
+      const profile = parsePersonalityImport(JSON.stringify({ format: 'maibot.personality', version: 1, profile: draft }))
+      await navigator.clipboard.writeText(JSON.stringify({ format: 'maibot.personality', version: 1, profile }, null, 2))
+      toast({ title: t('personalityExamples.copied') })
+    } catch (error) {
+      toast({ title: t('personalityExamples.copyFailed'), description: (error as Error).message, variant: 'destructive' })
+    }
   }
 
   return (
@@ -194,12 +215,17 @@ export function PersonalityProfiles({ values, onChange }: {
                   <Label htmlFor={'profile-' + field}>{label}</Label>
                   <Textarea id={'profile-' + field} rows={3} value={draft[field]} onChange={(event) => setDraft({ ...draft, [field]: event.target.value })} />
                 </div>)}
+                <DialogueExamplesHook
+                  fieldPath="personality.dialogue_examples"
+                  value={draft.dialogue_examples}
+                  onChange={(value) => setDraft({ ...draft, dialogue_examples: value as string[] })}
+                />
                 <div className="space-y-2">
                   <Label htmlFor="profile-alternate">备用表达风格（每行一条）</Label>
                   <Textarea id="profile-alternate" rows={3} value={draft.multiple_reply_style.join('\n')} onChange={(event) => setDraft({ ...draft, multiple_reply_style: event.target.value.split('\n') })} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="profile-probability">备用表达风格触发概率</Label>
+                  <Label htmlFor="profile-probability">{t('setupPage.forms.personality.multipleProbability.label')}</Label>
                   <Input id="profile-probability" type="number" min={0} max={1} step={0.1} value={Number.isNaN(draft.multiple_probability) ? '' : draft.multiple_probability} onChange={(event) => setDraft({ ...draft, multiple_probability: event.target.valueAsNumber })} />
                 </div>
               </>}
@@ -209,8 +235,9 @@ export function PersonalityProfiles({ values, onChange }: {
             <p className="mr-auto text-sm">删除“{originalName}”？当前生效的设定会保留。</p>
             <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}>取消</Button>
             <Button type="button" variant="destructive" onClick={deleteProfile}>确认删除</Button>
-          </div> : <div className="flex items-center justify-end gap-2">
+          </div> : <div className="flex flex-wrap items-center justify-end gap-2">
             {originalName !== null && <Button type="button" variant="destructive" className="mr-auto" onClick={() => setConfirmDelete(true)}>删除人设</Button>}
+            {draft && <Button type="button" variant="outline" onClick={() => void copyProfile()}>{t('personalityExamples.copy')}</Button>}
             <Button type="button" variant="outline" onClick={closePanel}>取消</Button>
             {panel === 'import' && <Button type="button" disabled={!imported.profile} onClick={() => {
               if (!imported.profile) return

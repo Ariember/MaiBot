@@ -18,6 +18,7 @@ nickname = "unchanged"
 personality = "edited current"
 behavior_style = "current behavior"
 reply_style = "current reply"
+dialogue_examples = ["current example"]
 multiple_reply_style = ["current alternate"]
 multiple_probability = 0.2
 selected_profile = "old"
@@ -33,6 +34,7 @@ name = "new"
 personality = "new identity"
 behavior_style = "new behavior"
 reply_style = "new reply"
+dialogue_examples = ["new example"]
 multiple_reply_style = ["new alternate"]
 multiple_probability = 0.7
 group_chat_prompt = "new group"
@@ -53,6 +55,8 @@ def test_switch_preserves_current_edits_and_other_sections(tmp_path):
     assert path.read_text(encoding="utf-8").startswith("# preserve me")
     assert data["personality"]["personality"] == "new identity"
     assert data["personality"]["multiple_probability"] == 0.7
+    assert data["personality"]["dialogue_examples"] == ["new example"]
+    assert data["personality"]["profiles"][0]["dialogue_examples"] == ["current example"]
     assert data["personality"]["profiles"][0]["personality"] == "edited current"
     assert data["chat"]["reply_style"]["group_chat_prompt"] == "new group"
     assert data["chat"]["reply_style"]["private_chat_prompts"] == "new private"
@@ -60,6 +64,7 @@ def test_switch_preserves_current_edits_and_other_sections(tmp_path):
     assert persist_switch(path, "old")
     assert tomlkit.parse(path.read_text(encoding="utf-8"))["personality"]["personality"] == "edited current"
     restored = tomlkit.parse(path.read_text(encoding="utf-8"))
+    assert restored["personality"]["dialogue_examples"] == ["current example"]
     assert restored["chat"]["reply_style"]["group_chat_prompt"] == "current group"
     assert restored["chat"]["reply_style"]["private_chat_prompts"] == "current private"
 
@@ -101,6 +106,7 @@ def test_reload_failure_is_reported_and_retry_can_succeed(tmp_path, monkeypatch)
     assert result["changed"] is False
     assert result["current"]["name"] == "new"
     assert result["current"]["personality"] == "new identity"
+    assert result["current"]["dialogue_examples"] == ["new example"]
     assert result["current"]["group_chat_prompt"] == "new group"
     assert result["current"]["private_chat_prompts"] == "new private"
     manager.reload_config.assert_awaited_with(changed_scopes=["bot"], changed_sections=["personality", "chat.reply_style"])
@@ -112,6 +118,14 @@ def test_explicit_empty_prompt_clears(tmp_path):
     path.write_text(content.replace('group_chat_prompt = "new group"', 'group_chat_prompt = ""'), encoding="utf-8")
     persist_switch(path, "new")
     assert tomlkit.parse(path.read_text(encoding="utf-8"))["chat"]["reply_style"]["group_chat_prompt"] == ""
+
+
+def test_profile_without_examples_clears_current_examples(tmp_path):
+    path = make_config(tmp_path)
+    content = path.read_text(encoding="utf-8")
+    path.write_text(content.replace('dialogue_examples = ["new example"]\n', ''), encoding="utf-8")
+    persist_switch(path, "new")
+    assert tomlkit.parse(path.read_text(encoding="utf-8"))["personality"]["dialogue_examples"] == []
 
 
 def test_capability_requires_explicit_permission():

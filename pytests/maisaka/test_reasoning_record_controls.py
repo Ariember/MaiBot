@@ -7,8 +7,10 @@ import json
 import pytest
 
 from src.common.data_models.llm_service_data_models import LLMResponseResult
+from src.common.data_models.reply_generation_data_models import ReplyGenerationResult, build_reply_monitor_detail
 from src.config.config import global_config
 from src.llm_models.payload_content.context_item import ContextItemMeta, ContextTextPart, UserMessageItem
+from src.llm_models.payload_content.context_snapshot import serialize_context_item_snapshot
 from src.maisaka.chat_loop_service import MaisakaChatLoopService
 from src.maisaka.display.prompt_preview_logger import PromptPreviewLogger
 from src.maisaka.display.runtime_mixin import MaisakaRuntimeDisplayMixin
@@ -69,6 +71,22 @@ def test_tool_records_and_webui_links_are_independent_of_console(monkeypatch, sa
         assert len(serialized["detail"]["additional_prompt_html_uris"]) == 1
     else:
         assert "prompt_html_uri" not in serialized
+
+
+def test_reply_sources_reach_the_preview_opened_from_tool_results(monkeypatch, saved_records):
+    monkeypatch.setattr(global_config.debug, "save_maisaka_reasoning", True)
+    source = {"source": "test.plugin", "target": "system", "operation": "append", "text": "本轮表达要求"}
+    item = UserMessageItem(meta=ContextItemMeta.create(), parts=(ContextTextPart("当前消息"),))
+    result = ReplyGenerationResult(
+        request_messages=[serialize_context_item_snapshot(item)], prompt_sources=[source],
+    )
+    tools = [{"tool_name": "reply", "tool_call_id": "call-1", "detail": build_reply_monitor_detail(result)}]
+    runtime = MaisakaRuntimeDisplayMixin()
+    runtime.session_id = "test-session"
+    runtime._prepare_tool_prompt_records(tools)
+    payload = json.loads(saved_records[0].read_text(encoding="utf-8"))
+    assert payload["metadata"]["prompt_sources"] == [source]
+    assert _serialize_tool_results(tools)[0]["prompt_html_uri"]
 
 
 @pytest.mark.asyncio

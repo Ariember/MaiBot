@@ -3,7 +3,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 import asyncio
 import time
@@ -1256,6 +1256,16 @@ class MaisakaChatLoopService:
         }
 
         serialized_items = serialize_prompt_items(built_messages)
+        prompt_sources: List[Dict[str, str]] = []
+        if global_config.debug.save_maisaka_reasoning:
+            for item in serialized_items:
+                if item.get("item_type") == "SystemMessageItem":
+                    prompt_sources.append({
+                        "source": "planner.system",
+                        "target": "system",
+                        "operation": "base",
+                        "text": "\n".join(part["text"] for part in item["parts"] if part.get("type") == "text"),
+                    })
         before_request_result = await self._get_runtime_manager().invoke_hook(
             "maisaka.planner.before_request",
             items=deepcopy(serialized_items),
@@ -1279,6 +1289,7 @@ class MaisakaChatLoopService:
                 # 协议校验只检查 call/output 配对，hook 替换后的请求仍需满足锚点约束
                 self._validate_function_call_context_anchors(hook_messages)
                 built_messages = hook_messages
+                prompt_sources.extend(before_request_result.prompt_sources)
             except Exception as exc:
                 logger.warning(f"Hook maisaka.planner.before_request 返回的 items 无效，已忽略: {exc}")
         if enable_visual_message:
@@ -1406,6 +1417,7 @@ class MaisakaChatLoopService:
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": total_tokens,
+            "prompt_sources": prompt_sources,
         }
         if global_config.debug.save_maisaka_reasoning:
             prompt_section_result = await asyncio.to_thread(

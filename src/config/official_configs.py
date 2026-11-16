@@ -185,6 +185,8 @@ class PersonalityProfile(ConfigBase):
     """行为风格。"""
     reply_style: str
     """表达风格。"""
+    dialogue_examples: List[str] = Field(default_factory=list)
+    """情境与对话样例，仅用于示范表达方式。"""
     group_chat_prompt: str
     """群聊提示词。"""
     private_chat_prompts: str
@@ -192,7 +194,7 @@ class PersonalityProfile(ConfigBase):
     multiple_reply_style: List[str] = Field(default_factory=list)
     """备用表达风格。"""
     multiple_probability: float = Field(default=0, ge=0, le=1)
-    """备用表达风格触发概率。"""
+    """选中备用表达风格后的采用概率。"""
 
 
 class PersonalityConfig(ConfigBase):
@@ -264,6 +266,20 @@ class PersonalityConfig(ConfigBase):
     )
     """麦麦平时说话的风格，例如简短、温和、吐槽或正式。"""
 
+    dialogue_examples: List[str] = Field(
+        default_factory=list,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "对话样例",
+                "en_US": "Dialogue examples",
+                "ja_JP": "会話例",
+                "ko_KR": "대화 예시",
+            },
+            "x-widget": "custom",
+        },
+    )
+    """每项填写一个情境、对方发言和麦麦回应，建议保留 3–5 个短样例；样例只示范表达，不作为真实聊天经历。"""
+
     multiple_reply_style: list[str] = Field(
         default_factory=lambda: [
             "你的风格平淡但不失讽刺，很简短,很白话。可以参考贴吧，微博的回复风格。",
@@ -282,7 +298,7 @@ class PersonalityConfig(ConfigBase):
             "x-widget": "custom",
         },
     )
-    """备用说话风格；触发后只影响本次回复。"""
+    """供 Planner 按当前情境选择的备用说话风格；不适合时沿用基础风格。"""
 
     multiple_probability: float = Field(
         default=0,
@@ -290,16 +306,16 @@ class PersonalityConfig(ConfigBase):
         le=1,
         json_schema_extra={
             "label": {
-                "zh_CN": "临时风格注入概率",
-                "en_US": "Temporary style injection chance",
-                "ja_JP": "一時スタイル注入確率",
+                "zh_CN": "备用风格采用概率",
+                "en_US": "Alternate style adoption chance",
+                "ja_JP": "代替スタイルの採用確率",
             },
             "advanced": True,
             "x-widget": "slider",
             "step": 0.1,
         },
     )
-    """随机启用备用风格的概率；0 表示不随机切换。"""
+    """Planner 选中备用风格后的采用概率；同一轮回复与重试保持一致，0 表示始终使用基础风格。"""
 
 
 class ImageCacheCleanupConfig(ConfigBase):
