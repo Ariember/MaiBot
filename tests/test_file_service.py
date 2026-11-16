@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
 from aiohttp import web
+from sqlalchemy import event
 from sqlmodel import SQLModel, create_engine
 
 import asyncio
@@ -14,7 +15,7 @@ import time
 import pytest
 
 from src.files.config import FilesConfig
-from src.files.models import FileAsset
+from src.files.models import FileAsset, FileBinding, FileParse
 from src.files.network import download_chunks, validate_url
 from src.files.service import FileService, disk_call
 from src.files.store import FileBusyError, FileLimitError, FileStore
@@ -49,6 +50,49 @@ def test_upload_authorization_and_snapshot(store):
     store.lease(asset.file_ref, "a")
     with pytest.raises(FileBusyError):
         store.remove(asset.file_ref)
+
+
+@pytest.mark.parametrize(("session_id", "admin", "offset", "limit", "expected_refs"), [
+    (None, True, 0, 50, ["c", "a", "b", "e"]),
+    (None, True, 1, 2, ["a", "b"]),
+    ("a", True, 0, 50, ["a", "b"]),
+    ("a", False, 0, 50, ["a", "b"]),
+    ("b", False, 0, 50, ["c", "a"]),
+    ("missing", False, 0, 50, []),
+    (None, True, 4, 50, []),
+])
+def test_list_batches_metadata_and_preserves_scope(store, session_id, admin, offset, limit, expected_refs):
+    bindings = {"a": ["a", "b"], "b": ["a"], "c": ["b"], "d": ["a"], "e": []}
+    with store.transaction() as session:
+        for file_ref, created_at in [("a", 10), ("b", 10), ("c", 20), ("d", 30), ("e", 5)]:
+            session.add(FileAsset(file_ref=file_ref, name=f"{file_ref}.txt", created_at=created_at,
+                                  accessed_at=created_at, state="deleted" if file_ref == "d" else "ready"))
+            for bound_session_id in bindings[file_ref]:
+                session.add(FileBinding(file_ref=file_ref, session_id=bound_session_id, created_at=created_at))
+        session.add(FileParse(file_ref="a", state="ready", updated_at=10))
+        session.add(FileParse(file_ref="b", state="failed", error="decode failed", updated_at=10))
+
+    statements = []
+    def record_query(_connection, _cursor, statement, _parameters, _context, _executemany):
+        statements.append(statement)
+    event.listen(store.engine, "before_cursor_execute", record_query)
+    try:
+        items = store.list(session_id, admin=admin, offset=offset, limit=limit)
+    finally:
+        event.remove(store.engine, "before_cursor_execute", record_query)
+
+    assert len(statements) == (2 if admin and expected_refs else 1)
+    assert [item["file_ref"] for item in items] == expected_refs
+    parsed = {"a": ("ready", ""), "b": ("failed", "decode failed")}
+    for item in items:
+        file_ref = item["file_ref"]
+        assert item["name"] == f"{file_ref}.txt"
+        assert (item["parse_state"], item["parse_error"]) == parsed.get(file_ref, ("pending", ""))
+        assert "source" not in item
+        if admin:
+            assert item["session_ids"] == bindings[file_ref]
+        else:
+            assert "session_ids" not in item
 
 
 def test_actual_size_limit_releases_reservation(store):

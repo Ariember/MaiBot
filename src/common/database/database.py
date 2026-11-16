@@ -96,6 +96,10 @@ _RUNTIME_PERFORMANCE_INDEXES = (
         "CREATE INDEX IF NOT EXISTS ix_mai_messages_session_id_timestamp "
         "ON mai_messages (session_id, timestamp DESC)",
     ),
+    (
+        "ix_mai_messages_timestamp",
+        "CREATE INDEX IF NOT EXISTS ix_mai_messages_timestamp ON mai_messages (timestamp)",
+    ),
     # 发送回执回填消息 ID 时需同步更新引用，避免持有写锁扫描全部历史消息。
     (
         "ix_mai_messages_reply_to",

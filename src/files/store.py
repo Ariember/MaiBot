@@ -6,7 +6,7 @@ from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional
 
 from sqlalchemy import delete, func
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 import hashlib
 import json
@@ -113,16 +113,22 @@ class FileStore:
         if offset < 0 or not 1 <= limit <= 100:
             raise ValueError("分页参数无效")
         with Session(self.engine) as session:
-            query = select(FileAsset).where(FileAsset.state != "deleted")
+            query = select(FileAsset, FileParse).outerjoin(FileParse).where(FileAsset.state != "deleted")
             if session_id:
-                query = query.join(FileBinding).where(FileBinding.session_id == session_id)
-            assets = session.exec(query.order_by(FileAsset.created_at.desc(), FileAsset.file_ref).offset(offset).limit(limit)).all()
+                query = query.join(FileBinding, FileBinding.file_ref == FileAsset.file_ref).where(FileBinding.session_id == session_id)
+            rows = session.exec(query.order_by(FileAsset.created_at.desc(), FileAsset.file_ref).offset(offset).limit(limit)).all()
+            session_ids_by_ref: Dict[str, List[str]] = {asset.file_ref: [] for asset, _ in rows}
+            if admin and rows:
+                bindings = session.exec(select(FileBinding.file_ref, FileBinding.session_id).where(
+                    col(FileBinding.file_ref).in_(session_ids_by_ref)
+                )).all()
+                for file_ref, bound_session_id in bindings:
+                    session_ids_by_ref[file_ref].append(bound_session_id)
             results = []
-            for asset in assets:
+            for asset, parsed in rows:
                 item = self.public(asset)
                 if admin:
-                    item["session_ids"] = list(session.exec(select(FileBinding.session_id).where(FileBinding.file_ref == asset.file_ref)).all())
-                parsed = session.get(FileParse, asset.file_ref)
+                    item["session_ids"] = session_ids_by_ref[asset.file_ref]
                 item["parse_state"] = parsed.state if parsed is not None else "pending"
                 item["parse_error"] = parsed.error if parsed is not None else ""
                 results.append(item)

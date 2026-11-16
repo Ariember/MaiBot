@@ -3,6 +3,7 @@ from importlib import import_module
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 import pytest
@@ -38,14 +39,73 @@ def test_private_target_does_not_include_old_group_sender(session_database):
             [
                 ChatSession(session_id="group", platform="qq", group_id="100", user_id="200"),
                 ChatSession(session_id="private", platform="qq", user_id="200"),
+                ChatSession(session_id="private-empty-group", platform="qq", group_id="", user_id="200"),
             ]
         )
         session.commit()
     manager = ChatManager()
 
     for _ in range(2):
-        assert manager.resolve_session_ids_by_target(platform="qq", target_id="200", chat_type="private") == {"private"}
+        assert manager.resolve_session_ids_by_target(platform="qq", target_id="200", chat_type="private") == {
+            "private",
+            "private-empty-group",
+        }
         assert manager.resolve_session_ids_by_target(platform="qq", target_id="100", chat_type="group") == {"group"}
+
+
+@pytest.mark.parametrize("chat_type", ["group", "private"])
+@pytest.mark.parametrize("target_id", ["200", "room_%/"])
+def test_target_lookup_loads_only_candidates_and_preserves_routes(session_database, monkeypatch, chat_type, target_id):
+    target_attr = "group_id" if chat_type == "group" else "user_id"
+    with Session(session_database) as session:
+        session.add_all(
+            [
+                ChatSession(session_id="cached", platform="qq", account_id="bot-a", **{target_attr: target_id}),
+                ChatSession(
+                    session_id="stored",
+                    platform="qq",
+                    account_id="bot-b",
+                    scope="adapter",
+                    **{target_attr: f"\t {target_id} \n"},
+                ),
+                ChatSession(session_id="other-target", platform="qq", **{target_attr: "unrelated"}),
+                ChatSession(session_id="partial-match", platform="qq", **{target_attr: f"prefix{target_id}suffix"}),
+                ChatSession(session_id="other-platform", platform="other", **{target_attr: target_id}),
+                ChatSession(session_id="wildcard-match", platform="qq", **{target_attr: "room-x/"}),
+                ChatSession(session_id="group-sender", platform="qq", group_id="other-group", user_id=target_id),
+            ]
+        )
+        session.commit()
+
+    loaded_ids = []
+
+    @contextmanager
+    def get_session():
+        with Session(session_database) as session:
+            event.listen(
+                session, "loaded_as_persistent", lambda _session, instance: loaded_ids.append(instance.session_id)
+            )
+            yield session
+
+    monkeypatch.setattr(session_module, "get_db_session", get_session)
+    manager = ChatManager()
+    cached = BotChatSession(session_id="cached", platform="qq", account_id="bot-a", **{target_attr: target_id})
+    memory_only = BotChatSession(session_id="memory-only", platform="qq", **{target_attr: target_id})
+    manager.sessions = {item.session_id: item for item in (cached, memory_only)}
+    message = SimpleNamespace()
+    manager.last_messages["stored"] = message
+
+    result = manager.resolve_sessions_by_target(
+        platform=" qq ", target_id=f" {target_id}\t", chat_type=f" {chat_type} "
+    )
+
+    assert [item.session_id for item in result] == ["cached", "memory-only", "stored"]
+    assert result[0] is cached
+    assert result[1] is memory_only
+    assert (result[2].account_id, result[2].scope) == ("bot-b", "adapter")
+    assert result[2].context.message is message
+    assert manager.sessions["stored"] is result[2]
+    assert set(loaded_ids) == {"cached", "stored", "partial-match"}
 
 
 @pytest.mark.asyncio

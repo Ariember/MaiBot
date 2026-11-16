@@ -6,7 +6,7 @@ import asyncio
 import threading
 
 from rich.traceback import install
-from sqlmodel import select
+from sqlmodel import col, or_, select
 
 from src.common.data_models.chat_session_data_model import MaiChatSession
 from src.common.database.database import get_db_session
@@ -490,7 +490,14 @@ class ChatManager:
 
         try:
             with get_db_session() as db_session:
-                statement = select(ChatSession).filter_by(platform=normalized_platform)
+                target_column = ChatSession.group_id if normalized_chat_type == "group" else ChatSession.user_id
+                # 先缩小候选范围，再沿用下方 strip 精确匹配，兼容已存储 ID 两端的空白。
+                statement = select(ChatSession).where(
+                    ChatSession.platform == normalized_platform,
+                    col(target_column).contains(normalized_target_id, autoescape=True),
+                )
+                if normalized_chat_type == "private":
+                    statement = statement.where(or_(col(ChatSession.group_id).is_(None), ChatSession.group_id == ""))
                 for db_instance in db_session.exec(statement).all():
                     if (normalized_chat_type == "group") != bool(db_instance.group_id):
                         continue

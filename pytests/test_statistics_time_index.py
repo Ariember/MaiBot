@@ -69,6 +69,59 @@ def test_runtime_index_preserves_statistics_time_and_avoids_full_scan(tmp_path, 
 
 
 @pytest.mark.parametrize("existing_rows", [True, False])
+@pytest.mark.parametrize("existing_index", [True, False])
+def test_global_timestamp_index_preserves_queries(tmp_path, monkeypatch, existing_rows, existing_index):
+    engine = create_engine(f"sqlite:///{tmp_path / 'timestamps.db'}")
+    monkeypatch.setattr(database, "engine", engine)
+    records = [
+        (1, "message-1", "2026-11-12 12:00:00.000000"),
+        (2, "message-2", "2026-11-12 12:00:00.000001"),
+        (3, "message-3", "2026-11-12 12:00:00.000001"),
+        (4, "notice", "2026-11-12 12:00:00.000001"),
+        (5, "message-5", "2026-11-12 12:00:00.000002"),
+    ]
+    insert_sql = "INSERT INTO mai_messages (id, message_id, timestamp) VALUES (?, ?, ?)"
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "CREATE TABLE jargons (id INTEGER PRIMARY KEY, is_jargon INTEGER, is_global INTEGER, "
+            "is_complete INTEGER, count INTEGER)"
+        )
+        connection.exec_driver_sql(
+            "CREATE TABLE mai_messages (id INTEGER PRIMARY KEY, message_id TEXT, session_id TEXT, "
+            "timestamp DATETIME, received_at DATETIME, reply_to TEXT)"
+        )
+        connection.exec_driver_sql("CREATE TABLE tool_records (tool_name TEXT, timestamp DATETIME)")
+        if existing_rows:
+            connection.exec_driver_sql(insert_sql, records)
+        if existing_index:
+            connection.exec_driver_sql("CREATE INDEX ix_mai_messages_timestamp ON mai_messages(timestamp)")
+
+    timestamp = message_time_expression()
+    boundary = datetime(2026, 11, 12, 12, 0, 0, 1)
+    query = select(Messages.id).where(Messages.message_id != "notice")
+    queries = [
+        (query.where(timestamp >= boundary, timestamp <= boundary).order_by(timestamp, Messages.id), [2, 3]),
+        (query.where(timestamp < boundary).order_by(timestamp.desc(), Messages.id.desc()).limit(2), [1]),
+        (query.where(timestamp >= boundary).order_by(timestamp, Messages.id).limit(2), [2, 3]),
+        (query.where(timestamp <= boundary).order_by(timestamp.desc(), Messages.id.desc()).limit(2), [3, 2]),
+    ]
+    database.ensure_runtime_performance_indexes()
+    database.ensure_runtime_performance_indexes()
+    with engine.begin() as connection:
+        if not existing_rows:
+            connection.exec_driver_sql(insert_sql, records)
+        assert connection.exec_driver_sql("SELECT id, message_id, timestamp FROM mai_messages ORDER BY id").all() == records
+        for statement, expected in queries:
+            assert connection.execute(statement).scalars().all() == expected
+            sql = str(statement.compile(engine, compile_kwargs={"literal_binds": True}))
+            plan = str(connection.exec_driver_sql("EXPLAIN QUERY PLAN " + sql).all())
+            assert "SEARCH mai_messages USING INDEX ix_mai_messages_timestamp" in plan
+            assert "SCAN mai_messages" not in plan
+            assert "USE TEMP B-TREE" not in plan
+    engine.dispose()
+
+
+@pytest.mark.parametrize("existing_rows", [True, False])
 def test_reply_target_index_preserves_lookup_and_updates(tmp_path, monkeypatch, existing_rows):
     engine = create_engine(f"sqlite:///{tmp_path / 'reply_targets.db'}")
     monkeypatch.setattr(database, "engine", engine)
