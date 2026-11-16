@@ -452,7 +452,8 @@ class RuntimeDataCapabilityMixin:
         from src.services import message_service 
 
         try:
-            messages = message_service.get_messages_by_time(
+            messages = await asyncio.to_thread(
+                message_service.get_messages_by_time,
                 start_time=float(args.get("start_time", 0.0)),
                 end_time=float(args.get("end_time", 0.0)),
                 limit=args.get("limit", 0),
@@ -461,7 +462,8 @@ class RuntimeDataCapabilityMixin:
             )
             return {
                 "success": True,
-                "messages": self._serialize_messages(
+                "messages": await asyncio.to_thread(
+                    self._serialize_messages,
                     messages,
                     include_binary_data=bool(args.get("include_binary_data", False)),
                 ),
@@ -478,7 +480,8 @@ class RuntimeDataCapabilityMixin:
             return {"success": False, "error": "缺少必要参数 chat_id"}
 
         try:
-            messages = message_service.get_messages_by_time_in_chat(
+            messages = await asyncio.to_thread(
+                message_service.get_messages_by_time_in_chat,
                 chat_id=chat_id,
                 start_time=float(args.get("start_time", 0.0)),
                 end_time=float(args.get("end_time", 0.0)),
@@ -489,7 +492,8 @@ class RuntimeDataCapabilityMixin:
             )
             return {
                 "success": True,
-                "messages": self._serialize_messages(
+                "messages": await asyncio.to_thread(
+                    self._serialize_messages,
                     messages,
                     include_binary_data=bool(args.get("include_binary_data", False)),
                 ),
@@ -510,7 +514,8 @@ class RuntimeDataCapabilityMixin:
             if hours < 0:
                 return {"success": False, "error": "hours 不能是负数"}
             current_time = time.time()
-            messages = message_service.get_messages_by_time_in_chat(
+            messages = await asyncio.to_thread(
+                message_service.get_messages_by_time_in_chat,
                 chat_id=chat_id,
                 start_time=current_time - hours * 3600,
                 end_time=current_time,
@@ -520,7 +525,8 @@ class RuntimeDataCapabilityMixin:
             )
             return {
                 "success": True,
-                "messages": self._serialize_messages(
+                "messages": await asyncio.to_thread(
+                    self._serialize_messages,
                     messages,
                     include_binary_data=bool(args.get("include_binary_data", False)),
                 ),
@@ -539,7 +545,8 @@ class RuntimeDataCapabilityMixin:
         try:
             since = args.get("since")
             start_time = float(since) if since is not None else float(args.get("start_time", 0.0))
-            count = message_service.count_new_messages(
+            count = await asyncio.to_thread(
+                message_service.count_new_messages,
                 chat_id=chat_id,
                 start_time=start_time,
                 end_time=args.get("end_time"),
@@ -557,16 +564,18 @@ class RuntimeDataCapabilityMixin:
             if messages is None:
                 if not (chat_id := args.get("chat_id", "")):
                     return {"success": False, "error": "缺少必要参数: messages 或 chat_id"}
-                messages = message_service.get_messages_by_time_in_chat(
+                messages = await asyncio.to_thread(
+                    message_service.get_messages_by_time_in_chat,
                     chat_id=chat_id,
                     start_time=float(args.get("start_time", 0.0)),
                     end_time=float(args.get("end_time", 0.0)),
                     limit=args.get("limit", 0),
                 )
             else:
-                messages = self._deserialize_messages(messages)
+                messages = await asyncio.to_thread(self._deserialize_messages, messages)
 
-            readable = message_service.build_readable_messages(
+            readable = await asyncio.to_thread(
+                message_service.build_readable_messages,
                 messages=messages,
                 replace_bot_name=args.get("replace_bot_name", True),
                 timestamp_mode=args.get("timestamp_mode", "relative"),

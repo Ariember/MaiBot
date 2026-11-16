@@ -1,0 +1,219 @@
+{
+  "created_at_utc": "2026-11-16T13:09:37.407541+00:00",
+  "baseline_sha": "e2071319866982982142a91533d90e379fafecaa",
+  "working_tree_head": "e2071319866982982142a91533d90e379fafecaa",
+  "environment": {
+    "python": "3.13.6 (main, Aug 14 2025, 16:22:54) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "sqlite": "3.49.1",
+    "sqlmodel": "0.0.48",
+    "sqlalchemy": "2.1.8",
+    "pydantic": "2.14.3",
+    "fastapi": "0.162.0"
+  },
+  "method": {
+    "warmup_rounds": 2,
+    "measurement_rounds": 9,
+    "order": "alternating AB/BA",
+    "timing": "warm-cache median via perf_counter; output serialization/equality excluded",
+    "memory": "separate tracemalloc peak; Python allocations only",
+    "scope": "AST-extracted actual functions/classes; synthetic data; isolated in-memory SQLite",
+    "sqlite_settings": "actual set_sqlite_pragma; no production database access",
+    "expression_scope": "actual query/response functions; cached chat names and fixed config",
+    "jargon_scope": "matching/scoring and candidate loading measured separately",
+    "message_loop_scope": "actual get_by_time handler; simulated 50 ms synchronous query; empty serialization"
+  },
+  "results": [
+    {
+      "scenario": "jargon_matching",
+      "messages": 50,
+      "candidates": 3000,
+      "duplicate_candidates": 20,
+      "high_frequency_terms": 30,
+      "limit": 10,
+      "before": {
+        "median_ms": 35.0590000007287,
+        "samples_ms": [
+          34.22070000033273,
+          33.77760000057606,
+          35.10310000001482,
+          35.906400000385474,
+          36.276799999541254,
+          35.0590000007287,
+          34.87129999939498,
+          33.744299999852956,
+          35.44679999959044
+        ],
+        "peak_python_bytes": 373010
+      },
+      "after": {
+        "median_ms": 28.44920000006823,
+        "samples_ms": [
+          27.58189999985916,
+          28.95269999953598,
+          28.095599999687693,
+          28.382499999679567,
+          29.66019999985292,
+          29.042899999694782,
+          28.44920000006823,
+          28.39529999982915,
+          29.1402000002563
+        ],
+        "peak_python_bytes": 298706
+      },
+      "speedup": 1.2323369374409339,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "jargon_candidate_loading",
+      "candidates": 3000,
+      "evidence_bytes_per_row": 4096,
+      "before": {
+        "median_ms": 102.18650000024354,
+        "samples_ms": [
+          102.18650000024354,
+          103.17789999953675,
+          102.36800000075164,
+          102.28980000010779,
+          149.3841000001339,
+          99.19719999925292,
+          100.04060000028403,
+          101.47420000066631,
+          102.17019999981858
+        ],
+        "peak_python_bytes": 18970135
+      },
+      "after": {
+        "median_ms": 26.773900000080175,
+        "samples_ms": [
+          25.91640000082407,
+          26.732799999990675,
+          26.773900000080175,
+          28.066199999557284,
+          25.443499999710184,
+          26.96860000014567,
+          28.723500000523927,
+          27.69799999987299,
+          26.498999999603257
+        ],
+        "peak_python_bytes": 1367276
+      },
+      "speedup": 3.816646062020757,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "expression_chat_list",
+      "chats": 100,
+      "query_counts": {
+        "before": 104,
+        "after": 5
+      },
+      "before": {
+        "median_ms": 44.85790000035195,
+        "samples_ms": [
+          44.85790000035195,
+          45.03940000086004,
+          42.704800000137766,
+          48.672899999473884,
+          44.166499999846565,
+          45.979600000464416,
+          40.32259999985399,
+          41.48270000041521,
+          46.88179999993736
+        ],
+        "peak_python_bytes": 306819
+      },
+      "after": {
+        "median_ms": 9.922599999299564,
+        "samples_ms": [
+          9.548099999847182,
+          10.207700000137265,
+          9.93930000004184,
+          9.517800000139687,
+          10.935999999674095,
+          10.725799999818264,
+          9.59340000008524,
+          9.182400000099733,
+          9.922599999299564
+        ],
+        "peak_python_bytes": 470930
+      },
+      "speedup": 4.520780844085065,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "expression_chat_list",
+      "chats": 1000,
+      "query_counts": {
+        "before": 1004,
+        "after": 5
+      },
+      "before": {
+        "median_ms": 436.0753000000841,
+        "samples_ms": [
+          459.65439999963564,
+          436.84119999943505,
+          473.7566000003426,
+          451.640000000225,
+          427.4488000000929,
+          428.45239999951445,
+          422.544499999276,
+          436.0753000000841,
+          424.9129999998331
+        ],
+        "peak_python_bytes": 2553651
+      },
+      "after": {
+        "median_ms": 81.88299999983428,
+        "samples_ms": [
+          80.28019999983371,
+          81.22110000022076,
+          87.33870000014576,
+          87.78669999992417,
+          127.046400000836,
+          81.88299999983428,
+          84.96350000041275,
+          81.55270000042947,
+          81.09169999988808
+        ],
+        "peak_python_bytes": 4444260
+      },
+      "speedup": 5.325590171353842,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "plugin_message_event_loop",
+      "simulated_query_ms": 50,
+      "heartbeat_interval_ms": 5,
+      "outputs_equal": true,
+      "before": {
+        "heartbeat_lateness_median_ms": 45.44869999983348,
+        "samples_ms": [
+          45.58069999995496,
+          45.47019999983604,
+          45.20239999976184,
+          45.44869999983348,
+          45.78770000000077,
+          45.27489999974932,
+          45.22869999993418,
+          45.50889999984065,
+          45.44310000084806
+        ]
+      },
+      "after": {
+        "heartbeat_lateness_median_ms": 12.894800000249232,
+        "samples_ms": [
+          13.372999999883175,
+          9.134400000330059,
+          16.667200000592857,
+          13.116199999894887,
+          3.036500000343949,
+          12.894800000249232,
+          1.6471999998611864,
+          13.98269999946933,
+          4.691799999927753
+        ]
+      }
+    }
+  ]
+}

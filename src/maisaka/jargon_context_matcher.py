@@ -140,41 +140,44 @@ def match_jargons_for_context(
         return []
 
     high_frequency_terms = _load_high_frequency_terms(session_id)
-    normalized_candidates = [(_normalize_match_text(candidate.content), candidate) for candidate in candidates]
-    matches_by_content: dict[str, _JargonMatch] = {}
-    for message_index, text in enumerate(user_texts):
-        normalized_text = _normalize_match_text(text)
-        if not normalized_text:
-            continue
+    normalized_texts = [_normalize_match_text(text) for text in user_texts]
+    candidates_by_content: dict[str, _JargonCandidate] = {}
+    for candidate in candidates:
+        content_key = _normalize_match_text(candidate.content)
+        if content_key:
+            candidates_by_content.setdefault(content_key, candidate)
 
-        for content_key, candidate in normalized_candidates:
-            if not content_key or content_key in matches_by_content:
-                continue
+    matches: list[_JargonMatch] = []
+    for content_key, candidate in candidates_by_content.items():
+        for message_index, normalized_text in enumerate(normalized_texts):
             if not _contains_mechanical_match(normalized_text, content_key):
                 continue
 
             high_frequency_term = high_frequency_terms.get(content_key)
             high_frequency_rank = high_frequency_term.rank if high_frequency_term else 0
             high_frequency_count = high_frequency_term.occurrence_count if high_frequency_term else 0
-            matches_by_content[content_key] = _JargonMatch(
-                content=candidate.content,
-                meaning=candidate.meaning,
-                score=_calculate_match_score(
-                    candidate_count=candidate.count,
+            matches.append(
+                _JargonMatch(
+                    content=candidate.content,
+                    meaning=candidate.meaning,
+                    score=_calculate_match_score(
+                        candidate_count=candidate.count,
+                        first_message_index=message_index,
+                        high_frequency_rank=high_frequency_rank,
+                        high_frequency_count=high_frequency_count,
+                        hit_high_frequency=high_frequency_term is not None,
+                    ),
                     first_message_index=message_index,
+                    jargon_count=candidate.count,
+                    high_frequency_term=high_frequency_term.term if high_frequency_term else "",
                     high_frequency_rank=high_frequency_rank,
                     high_frequency_count=high_frequency_count,
-                    hit_high_frequency=high_frequency_term is not None,
-                ),
-                first_message_index=message_index,
-                jargon_count=candidate.count,
-                high_frequency_term=high_frequency_term.term if high_frequency_term else "",
-                high_frequency_rank=high_frequency_rank,
-                high_frequency_count=high_frequency_count,
+                )
             )
+            break
 
     return sorted(
-        matches_by_content.values(),
+        matches,
         key=lambda item: (
             -item.score,
             item.first_message_index,
@@ -190,26 +193,27 @@ def _load_scoped_jargon_candidates(session_id: str) -> list[_JargonCandidate]:
 
     with get_db_session(auto_commit=False) as session:
         records = session.exec(
-            select(Jargon)
+            select(Jargon.content, Jargon.meaning, Jargon.count, Jargon.is_global, Jargon.session_id_dict)
             .where(col(Jargon.is_jargon).is_(True))
             .where(col(Jargon.meaning) != "")
             .order_by(col(Jargon.count).desc(), col(Jargon.id).desc())
         ).all()
 
-    for record in records:
-        content = str(record.content or "").strip()
-        meaning = str(record.meaning or "").strip()
+    for content, meaning, count, is_global, session_id_dict in records:
+        content = str(content or "").strip()
+        meaning = str(meaning or "").strip()
+        session_id_dict = str(session_id_dict or "{}")
         if not content or not meaning:
             continue
-        if not record.is_global and not _jargon_in_scope(str(record.session_id_dict or "{}"), related_session_ids):
+        if not is_global and not _jargon_in_scope(session_id_dict, related_session_ids):
             continue
         candidates.append(
             _JargonCandidate(
                 content=content,
                 meaning=meaning,
-                count=int(record.count or 0),
-                is_global=bool(record.is_global),
-                session_id_dict=str(record.session_id_dict or "{}"),
+                count=int(count or 0),
+                is_global=bool(is_global),
+                session_id_dict=session_id_dict,
             )
         )
 

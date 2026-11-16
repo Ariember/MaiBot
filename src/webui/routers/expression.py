@@ -1023,12 +1023,17 @@ def get_chat_list(
                 .where(col(Expression.session_id).in_(expression_chat_ids))
                 .group_by(col(Expression.session_id))
             ).all())
+            chat_sessions_by_id = {
+                chat_session.session_id: chat_session
+                for chat_session in session.exec(
+                    select(ChatSession).where(col(ChatSession.session_id).in_(expression_chat_ids))
+                ).all()
+            }
             for session_id in expression_chat_ids:
-                chat_session = session.exec(select(ChatSession).where(col(ChatSession.session_id) == session_id)).first()
                 chat_by_id[session_id] = build_chat_info(
                     session_id,
                     session,
-                    chat_session,
+                    chat_sessions_by_id.get(session_id),
                     expression_count=expression_counts.get(session_id, 0),
                 )
 
