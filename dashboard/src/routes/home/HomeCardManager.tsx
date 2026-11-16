@@ -19,7 +19,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { ExternalLink, GripVertical, Maximize2, Pencil, Plus, RotateCcw, X } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useTranslation } from 'react-i18next'
+
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -38,6 +38,26 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { PluginHomeCard, PluginHomeCardContent, PluginHomeCardWidth } from '@/lib/plugin-api'
 import { cn } from '@/lib/utils'
+
+const HOME_CARDS_CATEGORIES_LABELS: Record<string, string> = {
+  "status": "运行状态",
+  "statistics": "统计图表",
+  "analysis": "模型分析",
+  "plugin": "插件卡片",
+}
+
+const HOME_CARDS_STYLES_TITLE_LABELS: Record<string, string> = {
+  "default": "默认样式",
+  "orange": "橙色底背景色字",
+  "borderless": "无边框无底纹",
+}
+
+const HOME_CARDS_STYLES_DESCRIPTION_LABELS: Record<string, string> = {
+  "default": "使用当前主题的标准卡片外观。",
+  "orange": "使用主题橙色作为底色，背景色作为文字颜色。",
+  "borderless": "移除卡片边框、底色、底纹和阴影。",
+}
+
 
 const HOME_CARD_LAYOUT_STORAGE_KEY = 'maibot-home-card-layout-v1'
 const LEGACY_HITOKOTO_STYLE_STORAGE_KEY = 'maibot-home-hitokoto-style'
@@ -580,7 +600,6 @@ function SortableHomeCard({
   onHide: (id: string) => void
   onResize: (id: string) => void
 }) {
-  const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
     disabled: !editing,
@@ -589,7 +608,7 @@ function SortableHomeCard({
     transform: CSS.Translate.toString(transform),
     transition,
   }
-  const editLabel = t('home.cards.editCard', { title: card.title })
+  const editLabel = `编辑卡片：${card.title}`
 
   return (
     <div
@@ -658,7 +677,7 @@ function SortableHomeCard({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                aria-label={t('home.cards.editCard', { title: card.title })}
+                aria-label={`编辑卡片：${card.title}`}
                 onClick={() => onEdit(card.id)}
               >
                 <Pencil className="h-4 w-4" />
@@ -698,7 +717,6 @@ function SortableHomeCard({
 }
 
 export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCardManagerProps) {
-  const { t } = useTranslation()
   const [layout, setLayout] = useState<HomeCardLayout>(loadHomeCardLayout)
   const [editing, setEditing] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -954,11 +972,11 @@ export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCa
     <div className="flex flex-wrap items-center justify-end gap-2">
       <Button variant="outline" size="sm" onClick={resetLayout} className="gap-2">
         <RotateCcw className="h-4 w-4" />
-        {t('home.cards.reset')}
+        {'恢复默认'}
       </Button>
       <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)} className="gap-2">
         <Plus className="h-4 w-4" />
-        {t('home.cards.add')}
+        {'新增卡片'}
       </Button>
       <Button
         variant={editing ? 'default' : 'outline'}
@@ -967,7 +985,7 @@ export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCa
         className="gap-2"
       >
         <GripVertical className="h-4 w-4" />
-        {editing ? t('home.cards.done') : t('home.cards.edit')}
+        {editing ? '完成编辑' : '编辑卡片'}
       </Button>
     </div>
   )
@@ -991,7 +1009,7 @@ export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCa
                   style={{ top: row.top + 8 }}
                   onClick={() => toggleRowMode(row.index)}
                 >
-                  {row.mode === 'high' ? t('home.cards.row.high') : t('home.cards.row.low')}
+                  {row.mode === 'high' ? '高行' : '低行'}
                 </Button>
               ))}
             </div>
@@ -1033,23 +1051,23 @@ export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCa
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t('home.cards.dialog.title')}</DialogTitle>
-              <DialogDescription>{t('home.cards.dialog.description')}</DialogDescription>
+              <DialogTitle>{'管理首页卡片'}</DialogTitle>
+              <DialogDescription>{'添加插件或内置提供的卡片，或恢复默认布局。'}</DialogDescription>
             </DialogHeader>
             <DialogBody viewportClassName="max-h-[62vh]">
               <div className="space-y-5 pr-1">
                 <div className="space-y-2">
-                  <div className="text-sm font-medium">{t('home.cards.dialog.hiddenCards')}</div>
+                  <div className="text-sm font-medium">{'可添加卡片'}</div>
                   {hiddenCards.length === 0 ? (
                     <div className="text-muted-foreground rounded-md border border-dashed p-3 text-sm">
-                      {t('home.cards.dialog.noHiddenCards')}
+                      {'暂无可添加卡片'}
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {hiddenCardsByCategory.map(([category, categoryCards]) => (
                         <div key={category} className="space-y-2">
                           <div className="text-muted-foreground text-xs font-medium">
-                            {t(`home.cards.categories.${category}`)}
+                            {HOME_CARDS_CATEGORIES_LABELS[category]}
                           </div>
                           {categoryCards.map((card) => (
                             <div
@@ -1069,7 +1087,7 @@ export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCa
                                 size="sm"
                                 onClick={() => restoreCard(card.id)}
                               >
-                                {t('home.cards.dialog.restore')}
+                                {'添加'}
                               </Button>
                             </div>
                           ))}
@@ -1083,10 +1101,10 @@ export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCa
             <DialogFooter>
               <Button variant="outline" onClick={resetLayout} className="mr-auto gap-2">
                 <RotateCcw className="h-4 w-4" />
-                {t('home.cards.dialog.reset')}
+                {'恢复默认布局'}
               </Button>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                {t('home.cards.dialog.cancel')}
+                {'关闭'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1101,9 +1119,9 @@ export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCa
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {t('home.cards.styleDialog.title', { title: editingCard?.title ?? '' })}
+                {`编辑「${editingCard?.title ?? ''}」`}
               </DialogTitle>
-              <DialogDescription>{t('home.cards.styleDialog.description')}</DialogDescription>
+              <DialogDescription>{'选择这张卡片在首页中的显示样式。'}</DialogDescription>
             </DialogHeader>
             <DialogBody>
               {editingCard && (
@@ -1124,14 +1142,14 @@ export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCa
                         )}
                         onClick={() => updateCardStyle(editingCard.id, style)}
                       >
-                        <span className="font-medium">{t(`home.cards.styles.${style}.title`)}</span>
+                        <span className="font-medium">{HOME_CARDS_STYLES_TITLE_LABELS[style]}</span>
                         <span
                           className={cn(
                             'mt-2 block text-xs',
                             style === 'orange' ? 'text-background/80' : 'text-muted-foreground'
                           )}
                         >
-                          {t(`home.cards.styles.${style}.description`)}
+                          {HOME_CARDS_STYLES_DESCRIPTION_LABELS[style]}
                         </span>
                       </button>
                     )
@@ -1142,11 +1160,11 @@ export function HomeCardManager({ cards, pluginCards, controlsPortalId }: HomeCa
             <DialogFooter>
               {editingCard?.onEdit && (
                 <Button variant="outline" onClick={editCardContent} className="mr-auto">
-                  {editingCard.editLabel ?? t('home.cards.editContent')}
+                  {editingCard.editLabel ?? '编辑卡片内容'}
                 </Button>
               )}
               <Button onClick={() => setEditingCardId(null)}>
-                {t('home.cards.styleDialog.done')}
+                {'完成'}
               </Button>
             </DialogFooter>
           </DialogContent>

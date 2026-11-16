@@ -6,13 +6,7 @@ import type { RestartContextValue, RestartState } from '@/lib/restart-context'
 import { RestartOverlay } from '../restart-overlay'
 
 // t 在 vi.mock 工厂内建一次，保持稳定引用；带插值参数时拼接 current/max 便于断言
-vi.mock('react-i18next', () => {
-  const t = (key: string, opts?: Record<string, unknown>) =>
-    opts && 'current' in opts ? `${key} ${String(opts.current)}/${String(opts.max)}` : key
-  return {
-    useTranslation: () => ({ t, i18n: { language: 'zh-CN' } }),
-  }
-})
+
 
 // 用可控的 useRestart 桩驱动组件的 Provider 模式 / 独立模式两个分支
 const { useRestartMock } = vi.hoisted(() => ({
@@ -72,12 +66,12 @@ describe('RestartOverlay（Provider 模式）', () => {
 
     render(<RestartOverlay />)
 
-    expect(screen.getByText('restart.restarting')).toBeInTheDocument()
-    expect(screen.getByText('restart.restartingDesc')).toBeInTheDocument()
-    expect(screen.getByText('restart.restartingTip')).toBeInTheDocument()
+    expect(screen.getByText('正在重启麦麦')).toBeInTheDocument()
+    expect(screen.getByText('请稍候，麦麦正在重启中...')).toBeInTheDocument()
+    expect(screen.getByText('配置已保存，正在重启主程序...')).toBeInTheDocument()
     expect(screen.getByText('42%')).toBeInTheDocument()
     // 65 秒格式化为 1:05
-    expect(screen.getByText('restart.elapsed 1:05')).toBeInTheDocument()
+    expect(screen.getByText('已用时: 1:05')).toBeInTheDocument()
   })
 
   it('自定义标题与描述覆盖默认文案', () => {
@@ -87,8 +81,8 @@ describe('RestartOverlay（Provider 模式）', () => {
 
     expect(screen.getByText('正在升级')).toBeInTheDocument()
     expect(screen.getByText('请勿关闭页面')).toBeInTheDocument()
-    expect(screen.queryByText('restart.restarting')).not.toBeInTheDocument()
-    expect(screen.queryByText('restart.restartingDesc')).not.toBeInTheDocument()
+    expect(screen.queryByText('正在重启麦麦')).not.toBeInTheDocument()
+    expect(screen.queryByText('请稍候，麦麦正在重启中...')).not.toBeInTheDocument()
   })
 
   it('checking 状态描述包含当前检查次数', () => {
@@ -96,8 +90,8 @@ describe('RestartOverlay（Provider 模式）', () => {
 
     render(<RestartOverlay />)
 
-    expect(screen.getByText('restart.checking')).toBeInTheDocument()
-    expect(screen.getByText('restart.checkingDesc 3/60')).toBeInTheDocument()
+    expect(screen.getByText('检查服务状态')).toBeInTheDocument()
+    expect(screen.getByText('等待服务恢复... (3/60)')).toBeInTheDocument()
   })
 
   it('success 状态显示成功文案并触发 onComplete', () => {
@@ -106,8 +100,8 @@ describe('RestartOverlay（Provider 模式）', () => {
 
     render(<RestartOverlay onComplete={onComplete} />)
 
-    expect(screen.getByText('restart.success')).toBeInTheDocument()
-    expect(screen.getByText('restart.successTip')).toBeInTheDocument()
+    expect(screen.getByText('重启成功')).toBeInTheDocument()
+    expect(screen.getByText('配置已生效，服务运行正常')).toBeInTheDocument()
     expect(screen.getByText('100%')).toBeInTheDocument()
     expect(onComplete).toHaveBeenCalledTimes(1)
   })
@@ -123,14 +117,14 @@ describe('RestartOverlay（Provider 模式）', () => {
 
     render(<RestartOverlay onFailed={onFailed} />)
 
-    expect(screen.getByText('restart.failed')).toBeInTheDocument()
-    expect(screen.getByText('restart.failedTip')).toBeInTheDocument()
+    expect(screen.getByText('重启超时')).toBeInTheDocument()
+    expect(screen.getByText('如果长时间无响应，请尝试手动重启')).toBeInTheDocument()
     // 失败时不展示进度条
     expect(screen.queryByText('55%')).not.toBeInTheDocument()
     expect(onFailed).toHaveBeenCalledTimes(1)
 
-    expect(screen.getByRole('button', { name: 'restart.refreshPage' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'restart.retryCheck' }))
+    expect(screen.getByRole('button', { name: '刷新页面' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '重试检测' }))
     expect(retryHealthCheck).toHaveBeenCalledTimes(1)
   })
 
@@ -159,8 +153,8 @@ describe('RestartOverlay（独立模式，无 Provider）', () => {
 
     render(<RestartOverlay visible />)
 
-    expect(screen.getByText('restart.restarting')).toBeInTheDocument()
-    expect(screen.getByText('restart.restartingTip')).toBeInTheDocument()
+    expect(screen.getByText('正在重启麦麦')).toBeInTheDocument()
+    expect(screen.getByText('配置已保存，正在重启主程序...')).toBeInTheDocument()
   })
 
   it('3 秒后开始健康检查，成功后进入 success 并回调 onComplete', async () => {
@@ -181,7 +175,7 @@ describe('RestartOverlay（独立模式，无 Provider）', () => {
       '/api/webui/system/status',
       expect.objectContaining({ method: 'GET' }),
     )
-    expect(screen.getByText('restart.success')).toBeInTheDocument()
+    expect(screen.getByText('重启成功')).toBeInTheDocument()
     expect(onComplete).toHaveBeenCalledTimes(1)
   })
 })

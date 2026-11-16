@@ -1,6 +1,6 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { Info, Palette, Settings, Shield, SlidersHorizontal } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -15,7 +15,6 @@ const SETTINGS_TABS: SettingsTab[] = ['general', 'appearance', 'security', 'othe
 
 // 独立设置页，滚动由主内容区统一管理。
 export function SettingsPage() {
-  const { t } = useTranslation()
   const navigate = useNavigate()
   const search = useRouterState({ select: (state) => state.location.searchStr })
   const hash = useRouterState({ select: (state) => state.location.hash })
@@ -48,7 +47,7 @@ export function SettingsPage() {
               className="min-w-[5.5rem] gap-1 px-3 text-sm sm:min-w-0 sm:gap-2 sm:text-base"
             >
               <SlidersHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} fill="none" />
-              <span>{t('settings.tabs.general')}</span>
+              <span>{'通用'}</span>
             </TabsTrigger>
             <TabsTrigger
               data-dashboard-settings-tabs="true"
@@ -56,7 +55,7 @@ export function SettingsPage() {
               className="min-w-[5.5rem] gap-1 px-3 text-sm sm:min-w-0 sm:gap-2 sm:text-base"
             >
               <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} fill="none" />
-              <span>{t('settings.tabs.appearance')}</span>
+              <span>{'外观'}</span>
             </TabsTrigger>
             <TabsTrigger
               data-dashboard-settings-tabs="true"
@@ -64,7 +63,7 @@ export function SettingsPage() {
               className="min-w-[5.5rem] gap-1 px-3 text-sm sm:min-w-0 sm:gap-2 sm:text-base"
             >
               <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} fill="none" />
-              <span>{t('settings.tabs.security')}</span>
+              <span>{'安全'}</span>
             </TabsTrigger>
             <TabsTrigger
               data-dashboard-settings-tabs="true"
@@ -72,7 +71,7 @@ export function SettingsPage() {
               className="min-w-[5.5rem] gap-1 px-3 text-sm sm:min-w-0 sm:gap-2 sm:text-base"
             >
               <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} fill="none" />
-              <span>{t('settings.tabs.other')}</span>
+              <span>{'其他'}</span>
             </TabsTrigger>
             <TabsTrigger
               data-dashboard-settings-tabs="true"
@@ -80,7 +79,7 @@ export function SettingsPage() {
               className="min-w-[5.5rem] gap-1 px-3 text-sm sm:min-w-0 sm:gap-2 sm:text-base"
             >
               <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} fill="none" />
-              <span>{t('settings.tabs.about')}</span>
+              <span>{'关于'}</span>
             </TabsTrigger>
           </TabsList>
         </div>

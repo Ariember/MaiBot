@@ -1,10 +1,10 @@
 import { SchemaConfigField } from '@/components/SchemaConfigField'
-import { resolveLocalizedText } from '@/lib/schema-config-label'
+
 import { DataPanel, PageFrame } from '@/components/ui/surface'
 import { SegmentedMeter } from '@/components/ui/segmented-meter'
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useTranslation } from 'react-i18next'
+
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -109,17 +109,9 @@ function SectionRenderer({ sectionName, section, config, onChange, initiallyExpa
   const [isOpen, setIsOpen] = useState(
     resolvedSectionName !== 'plugin' && (initiallyExpanded || !section.collapsed)
   )
-  const { i18n } = useTranslation()
-  const language = i18n.resolvedLanguage || i18n.language || 'zh'
   const sectionConfig = getNestedRecord(config, resolvedSectionName)
-  const title = resolveLocalizedText(section.title, language, sectionName, section.i18n, 'title')
-  const description = resolveLocalizedText(
-    section.description,
-    language,
-    '',
-    section.i18n,
-    'description'
-  )
+  const title = (section.title || sectionName)
+  const description = (section.description || '')
 
   // 按 order 排序字段
   const sortedFields = Object.entries(section.fields)
@@ -872,9 +864,7 @@ interface PluginConfigEditorProps {
 }
 
 export function PluginConfigEditor({ plugin, onBack, initialTab }: PluginConfigEditorProps) {
-  const { i18n } = useTranslation()
   const isMobile = useMediaQuery('(max-width: 639px)')
-  const language = i18n.resolvedLanguage || i18n.language || 'zh'
   const [documentPanelOpen, setDocumentPanelOpen] = useState(false)
   const [configTabToolbar, setConfigTabToolbar] = useState<HTMLDivElement | null>(null)
 
@@ -941,7 +931,6 @@ export function PluginConfigEditor({ plugin, onBack, initialTab }: PluginConfigE
       ? sortedSections.map(([sectionName, section]) => ({
           id: sectionName,
           title: section.title,
-          i18n: section.i18n,
           sections: [sectionName],
           order: section.order,
         }))
@@ -954,7 +943,7 @@ export function PluginConfigEditor({ plugin, onBack, initialTab }: PluginConfigE
     <TabsList aria-label="配置分组" className={cn(isMobile && 'h-auto w-max justify-start')}>
       {configTabs.map((tab) => (
         <TabsTrigger key={tab.id} value={tab.id} className={cn(isMobile && 'shrink-0')}>
-          {resolveLocalizedText(tab.title, language, tab.id, tab.i18n, 'title')}
+          {(tab.title || tab.id)}
           {tab.badge && (
             <Badge variant="secondary" className="ml-2 text-xs">
               {tab.badge}
@@ -967,13 +956,7 @@ export function PluginConfigEditor({ plugin, onBack, initialTab }: PluginConfigE
 
   // 获取当前启用状态
   const isEnabled = !configError && (config.plugin as Record<string, unknown>)?.enabled !== false
-  const pluginName = resolveLocalizedText(
-    schema?.plugin_info.name,
-    language,
-    plugin.manifest.name,
-    schema?.plugin_info.i18n,
-    'name'
-  )
+  const pluginName = (schema?.plugin_info.name || plugin.manifest.name)
   const manifestUrls = plugin.manifest.urls as
     | {
         repository?: string

@@ -25,13 +25,7 @@ const mocks = vi.hoisted(() => ({
   })),
 }))
 
-vi.mock('react-i18next', () => {
-  const t = (key: string, variables?: Record<string, unknown>) =>
-    variables ? `${key}:${JSON.stringify(variables)}` : key
-  return {
-    useTranslation: () => ({ t }),
-  }
-})
+
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mocks.navigate,
@@ -122,19 +116,19 @@ describe('SecurityTab', () => {
     })
     render(<SecurityTab />)
 
-    fireEvent.click(screen.getAllByTitle('settings.security.show')[0])
-    expect(screen.getByLabelText('settings.security.newTokenLabel')).toHaveAttribute('type', 'text')
+    fireEvent.click(screen.getAllByTitle('显示')[0])
+    expect(screen.getByLabelText('新的访问令牌')).toHaveAttribute('type', 'text')
 
-    const input = screen.getByLabelText('settings.security.newTokenLabel')
+    const input = screen.getByLabelText('新的访问令牌')
     fireEvent.change(input, { target: { value: 'short' } })
     expect(screen.getByText('强度规则')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'settings.security.updateBtn' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '更新自定义 Token' })).toBeDisabled()
 
     fireEvent.change(input, { target: { value: 'ValidToken!123' } })
-    expect(screen.getByText('settings.security.tokenValid')).toBeInTheDocument()
+    expect(screen.getByText('Token 格式正确，可以使用')).toBeInTheDocument()
 
     vi.useFakeTimers()
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.updateBtn' }))
+    fireEvent.click(screen.getByRole('button', { name: '更新自定义 Token' }))
     await act(async () => {
       await Promise.resolve()
       await Promise.resolve()
@@ -147,7 +141,7 @@ describe('SecurityTab', () => {
       body: JSON.stringify({ new_token: 'ValidToken!123' }),
     })
     expect(mocks.toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'settings.security.updateSuccess' })
+      expect.objectContaining({ title: '更新成功' })
     )
 
     act(() => vi.advanceTimersByTime(1500))
@@ -156,18 +150,18 @@ describe('SecurityTab', () => {
 
   it('保留后端更新失败信息，并将网络异常归一为连接失败提示', async () => {
     render(<SecurityTab />)
-    const input = screen.getByLabelText('settings.security.newTokenLabel')
+    const input = screen.getByLabelText('新的访问令牌')
     fireEvent.change(input, { target: { value: 'ValidToken!123' } })
 
     fetchMock.mockResolvedValueOnce({
       ok: false,
       json: vi.fn().mockResolvedValue({ success: false, message: '后端拒绝更新' }),
     })
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.updateBtn' }))
+    fireEvent.click(screen.getByRole('button', { name: '更新自定义 Token' }))
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'settings.security.updateFailed',
+          title: '更新失败',
           description: '后端拒绝更新',
           variant: 'destructive',
         })
@@ -175,10 +169,10 @@ describe('SecurityTab', () => {
     )
 
     fetchMock.mockRejectedValueOnce(new Error('offline'))
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.updateBtn' }))
+    fireEvent.click(screen.getByRole('button', { name: '更新自定义 Token' }))
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
-        expect.objectContaining({ description: 'settings.security.updateFailedConn' })
+        expect.objectContaining({ description: '连接服务器失败' })
       )
     )
   })
@@ -191,7 +185,7 @@ describe('SecurityTab', () => {
     clipboardWrite.mockResolvedValue(undefined)
     render(<SecurityTab />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.confirmGenerate' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认生成' }))
     expect(await screen.findByText('generated-token')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/api/webui/auth/regenerate', {
       method: 'POST',
@@ -199,12 +193,12 @@ describe('SecurityTab', () => {
       credentials: 'include',
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.copyToken' }))
+    fireEvent.click(screen.getByRole('button', { name: '复制 Token' }))
     await waitFor(() => expect(clipboardWrite).toHaveBeenCalledWith('generated-token'))
-    expect(screen.getByRole('button', { name: 'settings.security.copied' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '已复制' })).toBeInTheDocument()
 
     vi.useFakeTimers()
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.savedClose' }))
+    fireEvent.click(screen.getByRole('button', { name: '我已保存，关闭' }))
     act(() => vi.advanceTimersByTime(500))
 
     expect(screen.queryByTestId('token-dialog')).not.toBeInTheDocument()
@@ -219,13 +213,13 @@ describe('SecurityTab', () => {
     clipboardWrite.mockRejectedValue(new Error('clipboard denied'))
     render(<SecurityTab />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.confirmGenerate' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认生成' }))
     await screen.findByText('generated-token')
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.copyToken' }))
+    fireEvent.click(screen.getByRole('button', { name: '复制 Token' }))
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'settings.security.copyFailed',
+          title: '复制失败',
           variant: 'destructive',
         })
       )
@@ -235,11 +229,11 @@ describe('SecurityTab', () => {
       ok: false,
       json: vi.fn().mockResolvedValue({ success: false, message: '无法重新生成' }),
     })
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.confirmGenerate' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认生成' }))
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'settings.security.generateFailed',
+          title: '生成失败',
           description: '无法重新生成',
         })
       )
@@ -254,11 +248,11 @@ describe('SecurityTab', () => {
     clipboardWrite.mockResolvedValue(undefined)
     render(<SecurityTab />)
 
-    expect(screen.queryByRole('button', { name: 'settings.security.copyToken' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '复制 Token' })).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.confirmGenerate' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认生成' }))
     await screen.findByText('generated-token')
-    const currentCopyButton = screen.getByRole('button', { name: 'settings.security.copyToken' })
+    const currentCopyButton = screen.getByRole('button', { name: '复制 Token' })
     expect(currentCopyButton).toBeEnabled()
 
     vi.useFakeTimers()
@@ -269,12 +263,12 @@ describe('SecurityTab', () => {
 
     expect(clipboardWrite).toHaveBeenCalledWith('generated-token')
     expect(mocks.toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'settings.security.copySuccess' })
+      expect.objectContaining({ title: '复制成功' })
     )
     expect(currentCopyButton.querySelector('.lucide-check')).not.toBeNull()
 
-    expect(currentCopyButton).toHaveTextContent('settings.security.copied')
-    expect(screen.queryByLabelText('settings.security.yourToken')).not.toBeInTheDocument()
+    expect(currentCopyButton).toHaveTextContent('已复制')
+    expect(screen.queryByLabelText('您的访问令牌')).not.toBeInTheDocument()
   })
 
   it('复制生成的 Token 失败时给出破坏性提示', async () => {
@@ -285,15 +279,15 @@ describe('SecurityTab', () => {
     clipboardWrite.mockRejectedValue(new Error('denied'))
     render(<SecurityTab />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.confirmGenerate' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认生成' }))
     await screen.findByText('generated-token')
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.copyToken' }))
+    fireEvent.click(screen.getByRole('button', { name: '复制 Token' }))
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'settings.security.copyFailed',
-          description: 'settings.security.copyFailedDesc',
+          title: '复制失败',
+          description: '请手动复制 Token',
           variant: 'destructive',
         })
       )
@@ -307,7 +301,7 @@ describe('SecurityTab', () => {
     })
     render(<SecurityTab />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.confirmGenerate' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认生成' }))
     await screen.findByText('generated-token')
 
     vi.useFakeTimers()
@@ -324,12 +318,12 @@ describe('SecurityTab', () => {
     fetchMock.mockRejectedValue(new Error('offline'))
     render(<SecurityTab />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.confirmGenerate' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认生成' }))
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'settings.security.generateFailed',
-          description: 'settings.security.generateFailedConn',
+          title: '生成失败',
+          description: '连接服务器失败',
           variant: 'destructive',
         })
       )
@@ -343,12 +337,12 @@ describe('SecurityTab', () => {
     })
     render(<SecurityTab />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.confirmGenerate' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认生成' }))
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'settings.security.generateFailed',
-          description: 'settings.security.generateFailedDesc',
+          title: '生成失败',
+          description: '无法生成新 Token',
         })
       )
     )
@@ -361,17 +355,17 @@ describe('SecurityTab', () => {
     })
     render(<SecurityTab />)
 
-    fireEvent.change(screen.getByLabelText('settings.security.newTokenLabel'), {
+    fireEvent.change(screen.getByLabelText('新的访问令牌'), {
       target: { value: '   ' },
     })
-    expect(screen.getByRole('button', { name: 'settings.security.updateBtn' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '更新自定义 Token' })).toBeEnabled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.security.updateBtn' }))
+    fireEvent.click(screen.getByRole('button', { name: '更新自定义 Token' }))
     expect(fetchMock).not.toHaveBeenCalled()
     expect(mocks.toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'settings.security.inputError',
-        description: 'settings.security.inputErrorDesc',
+        title: '输入错误',
+        description: '请输入新的 Token',
         variant: 'destructive',
       })
     )

@@ -15,7 +15,7 @@ from src.common.data_models.message_component_data_model import (
 )
 from src.common.llm_json import validate_llm_json
 from src.common.logger import get_logger
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.config.config import global_config
 from src.llm_models.model_client.base_client import ResponseRequest
 from src.llm_models.payload_content.context_item import ContextItemBuilder, RoleType

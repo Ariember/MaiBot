@@ -13,25 +13,7 @@ const virtualizerMocks = vi.hoisted(() => ({
   visibleStart: 0,
 }))
 
-// t 必须是稳定引用；带插值的文案拼上参数，方便断言空状态 / 运行状态
-const i18nMock = vi.hoisted(() => {
-  const t = (
-    key: string,
-    options?: { attempt?: number; bot?: string; count?: number; max?: number; retry?: string }
-  ) => {
-    if (key === 'chat.activity.retrySuffix' && options) {
-      return `retry ${options.attempt}/${options.max}`
-    }
-    if (options?.bot) {
-      return `${key}:${options.bot}${options.retry ? ` ${options.retry}` : ''}`
-    }
-    if (typeof options?.count === 'number') {
-      return `${key}:${options.count}`
-    }
-    return key
-  }
-  return { t }
-})
+
 
 vi.mock('@tanstack/react-virtual', () => ({
   defaultRangeExtractor: ({
@@ -74,9 +56,7 @@ vi.mock('@tanstack/react-virtual', () => ({
     }
   },
 }))
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: i18nMock.t }),
-}))
+
 vi.mock('@/components/ui/avatar', () => ({
   Avatar: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   AvatarFallback: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -207,7 +187,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={createMessages(20)}
         userName="测试用户"
       />
@@ -225,7 +204,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={initialMessages}
         userName="测试用户"
       />
@@ -247,7 +225,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={createMessages(21)}
         userName="测试用户"
       />
@@ -263,7 +240,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={initialMessages}
         userName="测试用户"
       />
@@ -297,7 +273,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={[...initialMessages.slice(1), appendedMessage]}
         userName="测试用户"
       />
@@ -317,7 +292,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={messages}
         userName="测试用户"
       />
@@ -330,7 +304,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={messages}
         userName="测试用户"
       />
@@ -349,14 +322,13 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={[]}
         userName="测试用户"
       />
     )
 
-    expect(view.getByText('chat.message.empty:MaiBot')).toBeInTheDocument()
-    expect(view.getByText('chat.message.emptyHint')).toBeInTheDocument()
+    expect(view.getByText('开始与 MaiBot 对话吧！')).toBeInTheDocument()
+    expect(view.getByText('在下方输入框输入消息，按 Enter 发送')).toBeInTheDocument()
     expect(view.container.querySelector('[data-message-id]')).toBeNull()
   })
 
@@ -365,14 +337,13 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory
-        language="zh-CN"
         messages={[]}
         userName="测试用户"
       />
     )
 
-    expect(view.queryByText('chat.message.empty:MaiBot')).toBeNull()
-    expect(view.queryByText('chat.message.emptyHint')).toBeNull()
+    expect(view.queryByText('开始与 MaiBot 对话吧！')).toBeNull()
+    expect(view.queryByText('在下方输入框输入消息，按 Enter 发送')).toBeNull()
   })
 
   it('渲染系统消息分隔条与错误消息胶囊', () => {
@@ -380,7 +351,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={[
           { content: '已连接会话', id: 'sys-1', timestamp: 1_753_353_600, type: 'system' },
           { content: '发送失败', id: 'err-1', timestamp: 1_753_353_601, type: 'error' },
@@ -400,7 +370,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={createMessages(2)}
         runtimeStatus={{ kind: 'thinking', stage: 'Planner', updatedAt: 1 }}
         userName="测试用户"
@@ -408,10 +377,10 @@ describe('MessageList', () => {
     )
 
     const status = view.getByRole('status')
-    expect(status).toHaveTextContent('chat.activity.thinking:MaiBot')
+    expect(status).toHaveTextContent('MaiBot 思考中')
     expect(status.className).toContain('bg-muted/70')
     expect(status.className).not.toContain('bg-destructive/10')
-    expect(view.getByText('chat.sidebar.subtitle:2')).toBeInTheDocument()
+    expect(view.getByText('2 个会话')).toBeInTheDocument()
   })
 
   it('错误状态折叠空白、截断超长详情，并拼接重试后缀', () => {
@@ -421,7 +390,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={createMessages(1)}
         runtimeStatus={{
           detail,
@@ -437,7 +405,7 @@ describe('MessageList', () => {
     const status = view.getByRole('status')
     expect(status.className).toContain('bg-destructive/10')
     expect(status).toHaveTextContent(
-      `chat.activity.error:MaiBot retry 2/3: ${collapsed.slice(0, 120)}...`
+      `MaiBot 出错了 2/3: ${collapsed.slice(0, 120)}...`
     )
     expect(status.querySelector('[title]')?.getAttribute('title')).toBe(collapsed)
   })
@@ -447,7 +415,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={createMessages(1)}
         runtimeStatus={{ detail: '后端超时', kind: 'error', updatedAt: 1 }}
         userName="测试用户"
@@ -455,7 +422,7 @@ describe('MessageList', () => {
     )
 
     const status = view.getByRole('status')
-    expect(status).toHaveTextContent('chat.activity.error:MaiBot: 后端超时')
+    expect(status).toHaveTextContent('MaiBot 出错了: 后端超时')
     expect(status).not.toHaveTextContent('retry')
     expect(status.querySelector('[title]')?.getAttribute('title')).toBe('后端超时')
   })
@@ -465,7 +432,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={createMessages(6)}
         userName="测试用户"
       />
@@ -484,7 +450,6 @@ describe('MessageList', () => {
         <MessageList
           botDisplayName="MaiBot"
           isLoadingHistory={false}
-          language="zh-CN"
           messages={createMessages(6)}
           userName="测试用户"
         />
@@ -509,7 +474,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={createMessages(20)}
         userName="测试用户"
       />
@@ -528,7 +492,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={createMessages(6)}
         userName="测试用户"
       />
@@ -556,7 +519,6 @@ describe('MessageList', () => {
       <MessageList
         botDisplayName="MaiBot"
         isLoadingHistory={false}
-        language="zh-CN"
         messages={createMessages(6)}
         userName="测试用户"
       />

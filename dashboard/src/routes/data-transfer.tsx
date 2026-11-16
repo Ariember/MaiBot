@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+
 
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -11,16 +11,15 @@ import { FilesPage } from '@/routes/files'
 import { LocalCacheTab } from '@/routes/settings/LocalCacheTab'
 
 export function DataTransferPage() {
-  const { t } = useTranslation()
   const { tab = 'transfer' } = useSearch({ from: '/protected/data-transfer' })
   const navigate = useNavigate()
   const { flags } = useFeatureFlags()
   const viewModel = useDataTransfer()
   const pageTabs = (
-    <TabsList aria-label={t('sidebar.menu.dataTransfer')} className="shrink-0">
-      <TabsTrigger value="transfer">{t('dataManagement.transfer')}</TabsTrigger>
+    <TabsList aria-label={'数据管理'} className="shrink-0">
+      <TabsTrigger value="transfer">{'备份与缓存'}</TabsTrigger>
       {(flags?.files || tab === 'files') && (
-        <TabsTrigger value="files">{t('files.title')}</TabsTrigger>
+        <TabsTrigger value="files">{'文件'}</TabsTrigger>
       )}
     </TabsList>
   )

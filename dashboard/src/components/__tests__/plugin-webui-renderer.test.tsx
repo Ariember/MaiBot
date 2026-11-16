@@ -5,7 +5,7 @@ import { PluginWebUIRenderer } from '@/components/plugin-webui-renderer'
 import { resolveNodeValue, validateRenderSize } from '@/lib/plugin-webui'
 import type { WebUINode } from '@/lib/plugin-webui'
 
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+
 
 const callbacks = () => ({ values: {}, busy: false, onChange: vi.fn(), onAction: vi.fn() })
 
@@ -92,7 +92,7 @@ describe('simple plugin components', () => {
     )
     expect(screen.getByText('row-0')).toBeInTheDocument()
     expect(screen.queryByText('row-50')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'pluginWebUI.next' }))
+    fireEvent.click(screen.getByRole('button', { name: '下一页' }))
     expect(screen.getByText('row-50')).toBeInTheDocument()
     expect(screen.queryByText('row-0')).not.toBeInTheDocument()
   })
@@ -161,7 +161,7 @@ describe('simple plugin components', () => {
       ...callbacks(),
     }
     const view = render(<PluginWebUIRenderer {...props} data={{ image: null }} />)
-    expect(screen.getByText('pluginWebUI.empty')).toBeInTheDocument()
+    expect(screen.getByText('暂无数据')).toBeInTheDocument()
     view.unmount()
     expect(() =>
       render(<PluginWebUIRenderer {...props} data={{ image: 'https://example.test/image.jpg' }} />)

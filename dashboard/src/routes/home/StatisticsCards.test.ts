@@ -26,10 +26,6 @@ import type { DashboardData, ModelStatistics, TimeSeriesData } from './types'
 const HOURLY_TS = '2026-07-28T13:45:00+08:00'
 const DAILY_TS = '2026-07-01T00:00:00+08:00'
 
-const i18nState = vi.hoisted(() => ({
-  resolvedLanguage: 'en-US' as string | undefined,
-  language: 'zh-CN',
-}))
 
 const dashboardState = vi.hoisted(() => ({
   data: null as DashboardData | null,
@@ -40,19 +36,7 @@ const dashboardState = vi.hoisted(() => ({
   fetchDashboardData: vi.fn(async () => {}),
 }))
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) => {
-      if (!options) {
-        return key
-      }
-      return `${key}:${Object.entries(options)
-        .map(([name, value]) => `${name}=${value}`)
-        .join(',')}`
-    },
-    i18n: i18nState,
-  }),
-}))
+
 
 vi.mock('./hooks/useDashboardData', () => ({
   useDashboardData: () => ({
@@ -282,8 +266,7 @@ function resetDashboardState(overrides: Partial<typeof dashboardState> = {}) {
     dashboardState.timeRange = hours
   })
   dashboardState.fetchDashboardData = vi.fn(async () => {})
-  i18nState.resolvedLanguage = 'en-US'
-  i18nState.language = 'zh-CN'
+
   Object.assign(dashboardState, overrides)
 }
 
@@ -305,18 +288,18 @@ describe('统计图表坐标格式', () => {
   it('24 小时横轴只显示时间，7 天和 30 天横轴只显示日期', () => {
     const timestamp = '2026-07-28T13:45:00+08:00'
 
-    expect(formatChartTimeAxis(timestamp, 'en-US', 24)).toContain(':')
-    expect(formatChartTimeAxis(timestamp, 'en-US', 24)).not.toContain('/')
-    expect(formatChartTimeAxis(timestamp, 'en-US', 168)).toContain('/')
-    expect(formatChartTimeAxis(timestamp, 'en-US', 720)).toContain('/')
+    expect(formatChartTimeAxis(timestamp, 'zh-CN', 24)).toContain(':')
+    expect(formatChartTimeAxis(timestamp, 'zh-CN', 24)).not.toContain('/')
+    expect(formatChartTimeAxis(timestamp, 'zh-CN', 168)).toContain('/')
+    expect(formatChartTimeAxis(timestamp, 'zh-CN', 720)).toContain('/')
   })
 
   it('Token 纵轴使用最多一位小数的 K 和 M 缩写', () => {
-    expect(formatTokenAxis(999, 'en-US')).toBe('999')
-    expect(formatTokenAxis(1_000, 'en-US')).toBe('1K')
-    expect(formatTokenAxis(1_550, 'en-US')).toBe('1.6K')
-    expect(formatTokenAxis(1_000_000, 'en-US')).toBe('1M')
-    expect(formatTokenAxis(1_250_000, 'en-US')).toBe('1.3M')
+    expect(formatTokenAxis(999, 'zh-CN')).toBe('999')
+    expect(formatTokenAxis(1_000, 'zh-CN')).toBe('1K')
+    expect(formatTokenAxis(1_550, 'zh-CN')).toBe('1.6K')
+    expect(formatTokenAxis(1_000_000, 'zh-CN')).toBe('1M')
+    expect(formatTokenAxis(1_250_000, 'zh-CN')).toBe('1.3M')
   })
 })
 
@@ -336,17 +319,17 @@ describe('StatisticsCards 卡片渲染与状态', () => {
     expect(screen.getByText('1.20s')).toBeInTheDocument()
     expect(screen.getByText('2.0h')).toBeInTheDocument()
     expect(screen.getByText('42')).toBeInTheDocument()
-    expect(screen.getByText('home.stats.inputTokens 999 · home.stats.outputTokens 1M')).toBeInTheDocument()
-    expect(screen.getByText('home.stats.replied:num=7')).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'home.timeRange.24h' })).toHaveAttribute(
+    expect(screen.getByText('输入 999 · 输出 1M')).toBeInTheDocument()
+    expect(screen.getByText('回复 7 条')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '24小时' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
 
     const user = userEvent.setup()
-    await user.click(screen.getByRole('radio', { name: 'home.timeRange.7d' }))
+    await user.click(screen.getByRole('radio', { name: '7天' }))
     expect(dashboardState.setTimeRange).toHaveBeenCalledWith(168)
-    await user.click(screen.getByRole('radio', { name: 'home.timeRange.30d' }))
+    await user.click(screen.getByRole('radio', { name: '30天' }))
     expect(dashboardState.setTimeRange).toHaveBeenCalledWith(720)
   })
 
@@ -378,11 +361,11 @@ describe('StatisticsCards 卡片渲染与状态', () => {
 
   it('缓存卡片展示命中率百分比、N/A 以及参与统计 Token', () => {
     render(createElement(PromptCacheCard))
-    expect(screen.getByText('home.cache.title')).toBeInTheDocument()
+    expect(screen.getByText('Prompt缓存')).toBeInTheDocument()
     expect(screen.getByText('12.34%')).toBeInTheDocument()
     expect(screen.getByText('N/A')).toBeInTheDocument()
-    expect(screen.getByText('home.cache.eligibleTokens:value=1K')).toBeInTheDocument()
-    expect(screen.getByText('home.cache.eligibleTokens:value=0')).toBeInTheDocument()
+    expect(screen.getByText('参与统计 1K Token')).toBeInTheDocument()
+    expect(screen.getByText('参与统计 0 Token')).toBeInTheDocument()
     const bars = document.querySelectorAll('[data-home-cache-breakdown="true"] [style]')
     expect([...bars].some((node) => (node as HTMLElement).style.width === '12.34%')).toBe(true)
     expect([...bars].some((node) => (node as HTMLElement).style.width === '0%')).toBe(true)
@@ -391,7 +374,7 @@ describe('StatisticsCards 卡片渲染与状态', () => {
 
   it('请求/花费/Token 趋势按时间范围选择小时或每日序列，并格式化坐标', () => {
     render(createElement(RequestTrendCard))
-    expect(screen.getByRole('img', { name: 'home.charts.requestTrend' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '请求趋势' })).toBeInTheDocument()
     expect(screen.getByTestId('line-chart')).toHaveAttribute('data-first-ts', HOURLY_TS)
     expect(screen.getByTestId('chart-xaxis')).toHaveTextContent(':')
     expect(screen.getByTestId('chart-tooltip')).toBeInTheDocument()
@@ -399,13 +382,13 @@ describe('StatisticsCards 卡片渲染与状态', () => {
     cleanup()
     resetDashboardState({ timeRange: 168 })
     render(createElement(CostTrendCard))
-    expect(screen.getByRole('img', { name: 'home.charts.costTrend' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '花费趋势' })).toBeInTheDocument()
     expect(screen.getByTestId('bar-chart')).toHaveAttribute('data-first-ts', DAILY_TS)
 
     cleanup()
     resetDashboardState({ timeRange: 720 })
     render(createElement(TokenTrendCard))
-    expect(screen.getByRole('img', { name: 'home.charts.tokenUsage' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Token消耗' })).toBeInTheDocument()
     expect(screen.getByTestId('bar-chart')).toHaveAttribute('data-first-ts', DAILY_TS)
     expect(screen.getByTestId('chart-yaxis-default')).toHaveTextContent('1.5K')
     expect(screen.getByTestId('chart-yaxis-default')).toHaveTextContent('2M')
@@ -413,7 +396,7 @@ describe('StatisticsCards 卡片渲染与状态', () => {
 
   it('模型花费饼图按占比隐藏小于 5% 的标签，详情卡展示 N/A 命中率', () => {
     render(createElement(ModelDistributionCard))
-    expect(screen.getByText('home.charts.modelDistribution')).toBeInTheDocument()
+    expect(screen.getByText('模型花费分布')).toBeInTheDocument()
     expect(screen.getByTestId('pie-label-alpha')).toHaveTextContent('')
     expect(screen.getByTestId('pie-label-beta')).toHaveTextContent('beta 0%')
     expect(screen.getByTestId('pie-label-gamma')).toHaveTextContent('gamma 20%')
@@ -428,11 +411,10 @@ describe('StatisticsCards 卡片渲染与状态', () => {
     expect(screen.getAllByText('1.23s').length).toBeGreaterThan(0)
   })
 
-  it('每日统计使用双轴柱状图；resolvedLanguage 为空时回退 language', () => {
-    i18nState.resolvedLanguage = undefined
-    i18nState.language = 'en-US'
+  it('每日统计使用双轴柱状图', () => {
+
     render(createElement(DailyStatisticsCard))
-    expect(screen.getByRole('img', { name: 'home.charts.dailyStats' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '每日统计' })).toBeInTheDocument()
     expect(screen.getByTestId('bar-chart')).toHaveAttribute('data-first-ts', HOURLY_TS)
     expect(screen.getByTestId('chart-yaxis-left')).toBeInTheDocument()
     expect(screen.getByTestId('chart-yaxis-right')).toBeInTheDocument()
@@ -442,30 +424,26 @@ describe('StatisticsCards 卡片渲染与状态', () => {
     expect(legend).toHaveTextContent('花费')
   })
 
-  it('各卡片在 resolvedLanguage 为空时都能回退到 language 完成格式化', () => {
-    i18nState.resolvedLanguage = undefined
-    i18nState.language = 'en-US'
+  it('各卡片使用中文格式展示数值', () => {
+
     render(createElement(StatisticsOverviewCard))
     expect(screen.getByText('1.5M')).toBeInTheDocument()
 
     cleanup()
     resetDashboardState()
-    i18nState.resolvedLanguage = undefined
-    i18nState.language = 'en-US'
+
     render(createElement(PromptCacheCard))
     expect(screen.getByText('12.34%')).toBeInTheDocument()
 
     cleanup()
     resetDashboardState()
-    i18nState.resolvedLanguage = undefined
-    i18nState.language = 'en-US'
+
     render(createElement(RequestTrendCard))
     expect(screen.getByTestId('chart-xaxis')).toHaveTextContent(':')
 
     cleanup()
     resetDashboardState()
-    i18nState.resolvedLanguage = undefined
-    i18nState.language = 'en-US'
+
     render(createElement(ModelDetailsCard))
     expect(screen.getByText('¥80.00')).toBeInTheDocument()
   })

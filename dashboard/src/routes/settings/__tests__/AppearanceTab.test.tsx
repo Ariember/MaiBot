@@ -40,11 +40,7 @@ const toastMock = vi.fn()
 let themeState: ThemeProviderState
 let animationState: AnimationSettings
 
-vi.mock('react-i18next', () => {
-  // t 在工厂内只创建一次，保持稳定引用，避免依赖 t 的 memo/effect 无限重渲染
-  const t = (key: string) => key
-  return { useTranslation: () => ({ t, i18n: { language: 'zh-CN' } }) }
-})
+
 
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: toastMock }) }))
 
@@ -195,10 +191,10 @@ describe('AppearanceTab 主题模式', () => {
     const user = userEvent.setup()
     render(<AppearanceTab />)
 
-    expect(screen.getByRole('radio', { name: 'settings.appearance.system' })).toBeChecked()
-    expect(screen.getByRole('radio', { name: 'settings.appearance.dark' })).not.toBeChecked()
+    expect(screen.getByRole('radio', { name: '跟随系统' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '深色' })).not.toBeChecked()
 
-    await user.click(screen.getByRole('radio', { name: 'settings.appearance.dark' }))
+    await user.click(screen.getByRole('radio', { name: '深色' }))
     expect(themeState.setTheme).toHaveBeenCalledWith('dark')
   })
 
@@ -206,12 +202,12 @@ describe('AppearanceTab 主题模式', () => {
     render(<AppearanceTab />)
 
     expect(screen.queryByText('settings.appearance.accentColor')).not.toBeInTheDocument()
-    expect(screen.getByText('settings.appearance.customCss')).toBeInTheDocument()
-    expect(screen.getByText('settings.appearance.importExportTheme')).toBeInTheDocument()
+    expect(screen.getByText('自定义 CSS')).toBeInTheDocument()
+    expect(screen.getByText('主题导入/导出')).toBeInTheDocument()
     expect(screen.queryByText('界面风格')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /未来复古/ })).not.toBeInTheDocument()
     // 自定义 CSS 为空时清除按钮禁用
-    expect(screen.getByRole('button', { name: /clearCss/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /清除/ })).toBeDisabled()
   })
 })
 
@@ -225,7 +221,7 @@ describe('AppearanceTab 自定义 CSS', () => {
     })
 
     // sanitizeCSS 实时产生警告（真实实现）
-    expect(screen.getByText('settings.appearance.cssWarningTitle')).toBeInTheDocument()
+    expect(screen.getByText('以下内容已被安全过滤：')).toBeInTheDocument()
     expect(screen.getByText(/移除 @import 语句/)).toBeInTheDocument()
 
     // 防抖（500ms）后按当前风格键保存
@@ -246,7 +242,7 @@ describe('AppearanceTab 自定义 CSS', () => {
     const editor = screen.getByLabelText('mock-css-editor')
     expect(editor).toHaveValue('body { color: red; }')
 
-    await user.click(screen.getByRole('button', { name: /clearCss/ }))
+    await user.click(screen.getByRole('button', { name: /清除/ }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleCustomCSS: { modern: '' },
     })
@@ -264,7 +260,7 @@ describe('AppearanceTab 主题导入/导出与重置', () => {
       .mockImplementation(() => {})
     render(<AppearanceTab />)
 
-    await user.click(screen.getByRole('button', { name: 'settings.appearance.exportTheme' }))
+    await user.click(screen.getByRole('button', { name: '导出主题' }))
 
     expect(exportThemeJSON).toHaveBeenCalledTimes(1)
     expect(createUrlSpy).toHaveBeenCalledTimes(1)
@@ -294,8 +290,8 @@ describe('AppearanceTab 主题导入/导出与重置', () => {
 
       expect(importThemeJSON).toHaveBeenCalledWith('{"version":1}')
       expect(toastMock).toHaveBeenCalledWith({
-        title: 'settings.appearance.importSuccess',
-        description: 'settings.appearance.importSuccessDesc',
+        title: '导入成功',
+        description: '主题配置已导入，页面将自动刷新',
       })
     } finally {
       vi.clearAllTimers()
@@ -316,7 +312,7 @@ describe('AppearanceTab 主题导入/导出与重置', () => {
 
     expect(importThemeJSON).toHaveBeenCalledWith('{"broken":true}')
     expect(toastMock).toHaveBeenCalledWith({
-      title: 'settings.appearance.importFailed',
+      title: '导入失败',
       description: '版本不兼容; 字段缺失',
       variant: 'destructive',
     })
@@ -326,14 +322,14 @@ describe('AppearanceTab 主题导入/导出与重置', () => {
     const user = userEvent.setup()
     render(<AppearanceTab />)
 
-    await user.click(screen.getByRole('button', { name: 'settings.appearance.resetTheme' }))
-    expect(await screen.findByText('settings.appearance.confirmResetTheme')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '重置为默认' }))
+    expect(await screen.findByText('确认重置主题')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'settings.appearance.confirmResetAction' }))
+    await user.click(screen.getByRole('button', { name: '确认重置' }))
     expect(themeState.resetTheme).toHaveBeenCalledTimes(1)
     expect(toastMock).toHaveBeenCalledWith({
-      title: 'settings.appearance.resetSuccess',
-      description: 'settings.appearance.resetSuccessDesc',
+      title: '重置成功',
+      description: '主题已重置为默认值',
     })
   })
 })
@@ -348,13 +344,13 @@ describe('AppearanceTab 样式微调与背景设置', () => {
     })
     render(<AppearanceTab />)
 
-    await user.click(screen.getByRole('button', { name: 'settings.appearance.typographyGroup' }))
+    await user.click(screen.getByRole('button', { name: '字体排版 (Typography)' }))
     // 覆盖值 1.125rem 换算为 18px 展示
     expect(await screen.findByText('18px')).toBeInTheDocument()
 
     // 分组内的重置按钮可用，点击后删除该分组覆盖
     const region = screen.getByRole('region')
-    const resetButton = within(region).getByRole('button', { name: /resetDefault/ })
+    const resetButton = within(region).getByRole('button', { name: /重置默认/ })
     expect(resetButton).toBeEnabled()
 
     await user.click(resetButton)
@@ -367,7 +363,7 @@ describe('AppearanceTab 样式微调与背景设置', () => {
     const user = userEvent.setup()
     render(<AppearanceTab />)
 
-    await user.click(screen.getByRole('button', { name: 'settings.appearance.backgroundGroup' }))
+    await user.click(screen.getByRole('button', { name: '背景设置 (Backgrounds)' }))
     const panel = await screen.findByRole('tabpanel')
 
     await user.click(within(panel).getByRole('button', { name: 'mock-select-asset' }))
@@ -388,7 +384,7 @@ describe('AppearanceTab 样式微调与背景设置', () => {
     const user = userEvent.setup()
     render(<AppearanceTab />)
 
-    await user.click(screen.getByRole('button', { name: 'settings.appearance.backgroundGroup' }))
+    await user.click(screen.getByRole('button', { name: '背景设置 (Backgrounds)' }))
     const panel = await screen.findByRole('tabpanel')
 
     // 第一步：调整效果（blur 0 -> 6）
@@ -427,8 +423,8 @@ describe('AppearanceTab 样式微调与背景设置', () => {
     const user = userEvent.setup()
     render(<AppearanceTab />)
 
-    await user.click(screen.getByRole('button', { name: 'settings.appearance.backgroundGroup' }))
-    await user.click(screen.getByRole('tab', { name: 'settings.appearance.bgSidebar' }))
+    await user.click(screen.getByRole('button', { name: '背景设置 (Backgrounds)' }))
+    await user.click(screen.getByRole('tab', { name: '侧边栏' }))
     const panel = await screen.findByRole('tabpanel')
 
     // sidebar 层唯一的开关即"继承父级背景"
@@ -454,7 +450,7 @@ describe('AppearanceTab 动效设置', () => {
     render(<AppearanceTab />)
 
     const animationSwitch = screen.getByRole('switch', {
-      name: 'settings.appearance.enableAnimations',
+      name: '启用动画效果',
     })
     expect(animationSwitch).toBeChecked()
 
@@ -482,7 +478,7 @@ describe('AppearanceTab 导入按钮', () => {
       expect(fileInput).not.toBeNull()
       const inputClick = vi.spyOn(fileInput!, 'click')
 
-      fireEvent.click(screen.getByRole('button', { name: 'settings.appearance.importTheme' }))
+      fireEvent.click(screen.getByRole('button', { name: '导入主题' }))
       expect(inputClick).toHaveBeenCalledTimes(1)
 
       // 未选择文件时 handleImport 直接返回
@@ -492,8 +488,8 @@ describe('AppearanceTab 导入按钮', () => {
       uploadThemeFile(container)
       expect(importThemeJSON).toHaveBeenCalledWith('{"version":1}')
       expect(toastMock).toHaveBeenCalledWith({
-        title: 'settings.appearance.importSuccess',
-        description: 'settings.appearance.importSuccessDesc',
+        title: '导入成功',
+        description: '主题配置已导入，页面将自动刷新',
       })
 
       // 导入成功后延迟整页刷新，使 ThemeProvider 重读 localStorage
@@ -509,7 +505,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
   it('字体排版：字号滑块按基准像素写入整组 rem token', async () => {
     const user = userEvent.setup()
     render(<AppearanceTab />)
-    const region = await openStyleGroup(user, 'settings.appearance.typographyGroup')
+    const region = await openStyleGroup(user, '字体排版 (Typography)')
 
     const fontSlider = within(region).getAllByRole('slider')[0]
     fireEvent.keyDown(fontSlider, { key: 'ArrowRight' })
@@ -533,14 +529,14 @@ describe('AppearanceTab 样式微调 token 写入', () => {
   it('字体排版：字族与行高 Select 分别写入对应 token', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     render(<AppearanceTab />)
-    const region = await openStyleGroup(user, 'settings.appearance.typographyGroup')
+    const region = await openStyleGroup(user, '字体排版 (Typography)')
     const comboboxes = within(region).getAllByRole('combobox')
 
     // 默认计算字体不含 ui-serif / ui-monospace，回落到 sans
-    expect(comboboxes[0]).toHaveTextContent('settings.appearance.fontFamilySans')
+    expect(comboboxes[0]).toHaveTextContent('无衬线 (Sans-serif)')
 
     await user.click(comboboxes[0])
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.fontFamilySerif' }))
+    await user.click(await screen.findByRole('option', { name: '衬线 (Serif)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: {
@@ -552,7 +548,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
 
     await user.click(comboboxes[0])
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.fontFamilyMono' }))
+    await user.click(await screen.findByRole('option', { name: '等宽 (Monospace)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: {
@@ -566,7 +562,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
 
     await user.click(comboboxes[0])
     await user.click(
-      await screen.findByRole('option', { name: 'settings.appearance.fontFamilySystem' })
+      await screen.findByRole('option', { name: '系统默认 (System)' })
     )
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
@@ -580,7 +576,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
 
     await user.click(comboboxes[1])
     await user.click(
-      await screen.findByRole('option', { name: 'settings.appearance.lineHeightCompact' })
+      await screen.findByRole('option', { name: '紧凑 (1.2)' })
     )
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
@@ -594,7 +590,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
 
     await user.click(comboboxes[1])
     await user.click(
-      await screen.findByRole('option', { name: 'settings.appearance.lineHeightLoose' })
+      await screen.findByRole('option', { name: '宽松 (1.75)' })
     )
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
@@ -620,9 +616,9 @@ describe('AppearanceTab 样式微调 token 写入', () => {
       },
     })
     const { rerender } = render(<AppearanceTab />)
-    let region = await openStyleGroup(user, 'settings.appearance.typographyGroup')
+    let region = await openStyleGroup(user, '字体排版 (Typography)')
     expect(within(region).getAllByRole('combobox')[0]).toHaveTextContent(
-      'settings.appearance.fontFamilySerif'
+      '衬线 (Serif)'
     )
     // 覆盖里没有 font-size-base，回落到计算默认 16px
     expect(within(region).getByText('16px')).toBeInTheDocument()
@@ -639,14 +635,14 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     rerender(<AppearanceTab />)
     region = screen.getByRole('region')
     expect(within(region).getAllByRole('combobox')[0]).toHaveTextContent(
-      'settings.appearance.fontFamilyMono'
+      '等宽 (Monospace)'
     )
   })
 
   it('视觉效果：圆角滑块、阴影 Select 与模糊开关写入 visual token', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     render(<AppearanceTab />)
-    const region = await openStyleGroup(user, 'settings.appearance.visualGroup')
+    const region = await openStyleGroup(user, '视觉效果 (Visual)')
 
     fireEvent.keyDown(within(region).getByRole('slider'), { key: 'ArrowRight' })
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
@@ -663,10 +659,10 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
 
     const shadowSelect = within(region).getByRole('combobox')
-    expect(shadowSelect).toHaveTextContent('settings.appearance.shadowMd')
+    expect(shadowSelect).toHaveTextContent('中等 (Medium)')
 
     await user.click(shadowSelect)
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.shadowNone' }))
+    await user.click(await screen.findByRole('option', { name: '无阴影 (None)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: { visual: { 'shadow-md': 'none' } },
@@ -674,7 +670,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
 
     await user.click(shadowSelect)
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.shadowSm' }))
+    await user.click(await screen.findByRole('option', { name: '轻微 (Small)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: { visual: { 'shadow-md': defaultLightTokens.visual['shadow-sm'] } },
@@ -682,7 +678,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
 
     await user.click(shadowSelect)
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.shadowLg' }))
+    await user.click(await screen.findByRole('option', { name: '强烈 (Large)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: { visual: { 'shadow-md': defaultLightTokens.visual['shadow-lg'] } },
@@ -690,7 +686,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
 
     await user.click(shadowSelect)
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.shadowXl' }))
+    await user.click(await screen.findByRole('option', { name: '极强 (Extra Large)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: { visual: { 'shadow-md': defaultLightTokens.visual['shadow-xl'] } },
@@ -698,7 +694,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
 
     const blurSwitch = within(region).getByRole('switch', {
-      name: 'settings.appearance.blurLabel',
+      name: '模糊效果 (Blur)',
     })
     expect(blurSwitch).toBeChecked()
     await user.click(blurSwitch)
@@ -722,12 +718,12 @@ describe('AppearanceTab 样式微调 token 写入', () => {
       },
     })
     const { rerender } = render(<AppearanceTab />)
-    const region = await openStyleGroup(user, 'settings.appearance.visualGroup')
+    const region = await openStyleGroup(user, '视觉效果 (Visual)')
     expect(within(region).getByRole('combobox')).toHaveTextContent(
-      'settings.appearance.shadowNone'
+      '无阴影 (None)'
     )
     const blurSwitch = within(region).getByRole('switch', {
-      name: 'settings.appearance.blurLabel',
+      name: '模糊效果 (Blur)',
     })
     expect(blurSwitch).not.toBeChecked()
 
@@ -743,7 +739,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
       },
     })
 
-    const resetButton = within(region).getByRole('button', { name: /resetDefault/ })
+    const resetButton = within(region).getByRole('button', { name: /重置默认/ })
     expect(resetButton).toBeEnabled()
     await user.click(resetButton)
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
@@ -761,7 +757,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
     rerender(<AppearanceTab />)
     expect(within(screen.getByRole('region')).getByRole('combobox')).toHaveTextContent(
-      'settings.appearance.shadowSm'
+      '轻微 (Small)'
     )
 
     themeState = makeThemeState({
@@ -775,7 +771,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
     rerender(<AppearanceTab />)
     expect(within(screen.getByRole('region')).getByRole('combobox')).toHaveTextContent(
-      'settings.appearance.shadowLg'
+      '强烈 (Large)'
     )
 
     themeState = makeThemeState({
@@ -789,7 +785,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
     rerender(<AppearanceTab />)
     expect(within(screen.getByRole('region')).getByRole('combobox')).toHaveTextContent(
-      'settings.appearance.shadowXl'
+      '极强 (Extra Large)'
     )
   })
 
@@ -809,9 +805,9 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     animationState = { enableAnimations: false, setEnableAnimations: vi.fn() }
     render(<AppearanceTab />)
 
-    const typography = await openStyleGroup(user, 'settings.appearance.typographyGroup')
+    const typography = await openStyleGroup(user, '字体排版 (Typography)')
     await user.click(within(typography).getAllByRole('combobox')[0])
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.fontFamilySans' }))
+    await user.click(await screen.findByRole('option', { name: '无衬线 (Sans-serif)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: {
@@ -825,9 +821,9 @@ describe('AppearanceTab 样式微调 token 写入', () => {
       },
     })
 
-    const visual = await openStyleGroup(user, 'settings.appearance.visualGroup')
+    const visual = await openStyleGroup(user, '视觉效果 (Visual)')
     await user.click(within(visual).getByRole('combobox'))
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.shadowMd' }))
+    await user.click(await screen.findByRole('option', { name: '中等 (Medium)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: {
@@ -840,10 +836,10 @@ describe('AppearanceTab 样式微调 token 写入', () => {
       },
     })
 
-    const animation = await openStyleGroup(user, 'settings.appearance.animationGroup')
+    const animation = await openStyleGroup(user, '动画 (Animation)')
     await user.click(within(animation).getByRole('combobox'))
     await user.click(
-      await screen.findByRole('option', { name: 'settings.appearance.animationNormal' })
+      await screen.findByRole('option', { name: '正常 (300ms)' })
     )
     expect(animationState.setEnableAnimations).toHaveBeenCalledWith(true)
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
@@ -867,7 +863,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
       },
     })
     render(<AppearanceTab />)
-    const region = await openStyleGroup(user, 'settings.appearance.layoutGroup')
+    const region = await openStyleGroup(user, '布局 (Layout)')
     expect(within(region).getByText('14rem')).toBeInTheDocument()
 
     fireEvent.keyDown(within(region).getByRole('slider'), { key: 'ArrowRight' })
@@ -879,7 +875,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
       },
     })
 
-    await user.click(within(region).getByRole('button', { name: /resetDefault/ }))
+    await user.click(within(region).getByRole('button', { name: /重置默认/ }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: { modern: {} },
     })
@@ -888,12 +884,12 @@ describe('AppearanceTab 样式微调 token 写入', () => {
   it('动画速度：关闭时同步停用全局动画，并写入 duration token', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     render(<AppearanceTab />)
-    const region = await openStyleGroup(user, 'settings.appearance.animationGroup')
+    const region = await openStyleGroup(user, '动画 (Animation)')
     const speedSelect = within(region).getByRole('combobox')
-    expect(speedSelect).toHaveTextContent('settings.appearance.animationNormal')
+    expect(speedSelect).toHaveTextContent('正常 (300ms)')
 
     await user.click(speedSelect)
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.animationOff' }))
+    await user.click(await screen.findByRole('option', { name: '关闭 (0ms)' }))
     expect(animationState.setEnableAnimations).toHaveBeenCalledWith(false)
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
@@ -902,7 +898,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
 
     await user.click(speedSelect)
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.animationFast' }))
+    await user.click(await screen.findByRole('option', { name: '快速 (100ms)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: { animation: { 'anim-duration-normal': '100ms' } },
@@ -910,7 +906,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
 
     await user.click(speedSelect)
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.animationSlow' }))
+    await user.click(await screen.findByRole('option', { name: '慢速 (500ms)' }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
         modern: { animation: { 'anim-duration-normal': '500ms' } },
@@ -929,13 +925,13 @@ describe('AppearanceTab 样式微调 token 写入', () => {
       },
     })
     const { rerender } = render(<AppearanceTab />)
-    const region = await openStyleGroup(user, 'settings.appearance.animationGroup')
+    const region = await openStyleGroup(user, '动画 (Animation)')
     expect(within(region).getByRole('combobox')).toHaveTextContent(
-      'settings.appearance.animationOff'
+      '关闭 (0ms)'
     )
 
     await user.click(within(region).getByRole('combobox'))
-    await user.click(await screen.findByRole('option', { name: 'settings.appearance.animationFast' }))
+    await user.click(await screen.findByRole('option', { name: '快速 (100ms)' }))
     expect(animationState.setEnableAnimations).toHaveBeenCalledWith(true)
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: {
@@ -952,7 +948,7 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
     rerender(<AppearanceTab />)
     expect(within(screen.getByRole('region')).getByRole('combobox')).toHaveTextContent(
-      'settings.appearance.animationFast'
+      '快速 (100ms)'
     )
 
     themeState = makeThemeState({
@@ -964,10 +960,10 @@ describe('AppearanceTab 样式微调 token 写入', () => {
     })
     rerender(<AppearanceTab />)
     expect(within(screen.getByRole('region')).getByRole('combobox')).toHaveTextContent(
-      'settings.appearance.animationSlow'
+      '慢速 (500ms)'
     )
 
-    await user.click(within(screen.getByRole('region')).getByRole('button', { name: /resetDefault/ }))
+    await user.click(within(screen.getByRole('region')).getByRole('button', { name: /重置默认/ }))
     expect(themeState.updateThemeConfig).toHaveBeenCalledWith({
       styleTokenOverrides: { modern: {} },
     })

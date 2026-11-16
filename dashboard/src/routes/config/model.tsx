@@ -1,6 +1,6 @@
 import { type CSSProperties, type MouseEvent, type UIEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,7 +69,7 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react'
-import { resolveFieldLabel } from '@/lib/config-label'
+
 import {
   getConfigSearchField,
   getModelConfigTabForField,
@@ -217,7 +217,6 @@ export function ModelConfigPage() {
 
 // 内部实现组件
 function ModelConfigPageContent() {
-  const { i18n } = useTranslation()
   const { isRestarting } = useRestart()
   const routeSearch = useRouterState({ select: (state) => state.location.searchStr })
   const searchFieldPath = getConfigSearchField(routeSearch)
@@ -1044,7 +1043,7 @@ function ModelConfigPageContent() {
 
                         return (
                           <SelectItem key={field.name} value={field.name}>
-                            {TASK_CONFIGS.find((task) => task.key === field.name)?.title ?? resolveFieldLabel(field, i18n.language)}
+                            {TASK_CONFIGS.find((task) => task.key === field.name)?.title ?? (field.label || field.name)}
                             {field.advanced ? ' · 高级' : ''}
                             {assignedCount > 0 ? ` · 已配置 ${assignedCount}` : ' · 未配置'}
                           </SelectItem>
@@ -1081,7 +1080,7 @@ function ModelConfigPageContent() {
                           <span className="min-w-0 flex-1">
                             <span className="flex min-w-0 items-center gap-1.5">
                               <span className="truncate text-sm font-medium">
-                                {TASK_CONFIGS.find((task) => task.key === field.name)?.title ?? resolveFieldLabel(field, i18n.language)}
+                                {TASK_CONFIGS.find((task) => task.key === field.name)?.title ?? (field.label || field.name)}
                               </span>
                               {field.advanced && (
                                 <span
@@ -1136,7 +1135,7 @@ function ModelConfigPageContent() {
                         onAdd={() => setWebSearchEditor({ name: null })}
                       />
                     ) : <TaskConfigCard
-                      title={selectedTaskMetadata?.title ?? resolveFieldLabel(selectedTaskField, i18n.language)}
+                      title={selectedTaskMetadata?.title ?? (selectedTaskField.label || selectedTaskField.name)}
                       description={selectedTaskField.description}
                       taskConfig={taskConfig[selectedTaskField.name] ?? { model_list: [] }}
                       modelNames={selectedTaskModelNames}

@@ -83,9 +83,6 @@ interface PluginApiResponse {
     plugin_type?: string
     display?: PluginInfo['manifest']['display']
     changelog?: string
-    default_locale?: string
-    i18n?: { default_locale: string; locales_path?: string }
-    locales_path?: string
   }
   // 可能还有其他字段,但我们不关心
   [key: string]: unknown
@@ -129,8 +126,6 @@ function normalizePluginManifest(manifest: PluginApiResponse['manifest']): Plugi
     plugin_type: normalizePluginType(manifest.plugin_type),
     display: manifest.display,
     changelog: normalizeOptionalString(manifest.changelog),
-    default_locale: manifest.i18n?.default_locale || manifest.default_locale || 'zh-CN',
-    locales_path: manifest.i18n?.locales_path || manifest.locales_path,
   }
 }
 

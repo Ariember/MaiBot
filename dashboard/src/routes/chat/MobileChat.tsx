@@ -12,7 +12,7 @@ import {
 import { motion } from 'motion/react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { MOBILE_GLASS_CLASS } from '@/components/layout/mobile-glass'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -133,18 +133,18 @@ export function MobileFloatingHeader({ children }: MobileFloatingHeaderProps) {
 }
 
 /** 会话行的时间：今天显示时刻，昨天显示「昨天」，更早显示日期 */
-function formatRowTime(seconds: number | undefined, language: string): string {
+function formatRowTime(seconds: number | undefined): string {
   if (!seconds) return ''
   const date = new Date(seconds * 1000)
   const now = new Date()
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
   if (date.getTime() >= startOfToday) {
-    return new Intl.DateTimeFormat(language, { hour: '2-digit', minute: '2-digit' }).format(date)
+    return new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit' }).format(date)
   }
   if (date.getTime() >= startOfToday - 86400_000) {
-    return new Intl.RelativeTimeFormat(language, { numeric: 'auto' }).format(-1, 'day')
+    return new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' }).format(-1, 'day')
   }
-  return new Intl.DateTimeFormat(language, { month: 'numeric', day: 'numeric' }).format(date)
+  return new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric' }).format(date)
 }
 
 interface SwipeAction {
@@ -288,9 +288,8 @@ function ChatRow({
 }
 
 function TabAvatar({ tab }: { tab: ChatTab }) {
-  const { t } = useTranslation()
   const isVirtual = tab.type === 'virtual'
-  const displayName = getChatTabDisplayName(tab, t('chat.botNameFallback'))
+  const displayName = getChatTabDisplayName(tab, '麦麦')
   const avatarUrl = useResolvedAvatarUrl(
     isVirtual ? tab.virtualConfig?.platform : 'qq',
     isVirtual ? tab.virtualConfig?.userId : tab.sessionInfo.bot_qq
@@ -302,7 +301,7 @@ function TabAvatar({ tab }: { tab: ChatTab }) {
         {avatarUrl && (
           <AvatarImage
             src={avatarUrl}
-            alt={t('chat.sidebar.userAvatarAlt', { name: displayName })}
+            alt={`${displayName} 的头像`}
             className="object-cover"
           />
         )}
@@ -324,7 +323,6 @@ function TabAvatar({ tab }: { tab: ChatTab }) {
 }
 
 function ObservedAvatar({ session }: { session: SessionInfo }) {
-  const { t } = useTranslation()
   const targetId = session.isGroupChat ? session.groupId : session.userId
   const avatarUrl = useResolvedAvatarUrl(
     session.platform,
@@ -337,7 +335,7 @@ function ObservedAvatar({ session }: { session: SessionInfo }) {
       {avatarUrl && (
         <AvatarImage
           src={avatarUrl}
-          alt={t('chat.sidebar.observedAvatarAlt', { name: session.sessionName })}
+          alt={`${session.sessionName} 的头像`}
           className="object-cover"
         />
       )}
@@ -376,15 +374,13 @@ export function MobileChatList({
   onOpenObservedSettings,
   onClose,
 }: MobileChatListProps) {
-  const { t, i18n } = useTranslation()
   const [query, setQuery] = useState('')
-  const language = i18n.resolvedLanguage ?? i18n.language
   const normalizedQuery = query.trim().toLowerCase()
 
   const visibleTabs = tabs.filter(
     (tab) =>
       !normalizedQuery ||
-      getChatTabDisplayName(tab, t('chat.botNameFallback')).toLowerCase().includes(normalizedQuery)
+      getChatTabDisplayName(tab, '麦麦').toLowerCase().includes(normalizedQuery)
   )
   const visibleObserved = Array.from(observedSessions.values())
     .sort((a, b) => b.lastActivity - a.lastActivity)
@@ -394,9 +390,9 @@ export function MobileChatList({
 
   const localSection = (
     // 与麦麦的会话固定在最上面
-    <section data-mobile-chat-section="local" aria-label={t('chat.sidebar.myChats')}>
+    <section data-mobile-chat-section="local" aria-label={'与麦麦聊天'}>
       {visibleTabs.map((tab) => {
-        const displayName = getChatTabDisplayName(tab, t('chat.botNameFallback'))
+        const displayName = getChatTabDisplayName(tab, '麦麦')
         const lastMessage = tab.messages[tab.messages.length - 1]
         return (
           <SwipeRow
@@ -406,7 +402,7 @@ export function MobileChatList({
                 ? []
                 : [
                     {
-                      label: t('chat.mobile.close'),
+                      label: '关闭',
                       destructive: true,
                       onClick: () => onClose(tab.id),
                     },
@@ -416,9 +412,9 @@ export function MobileChatList({
             <ChatRow
               avatar={<TabAvatar tab={tab} />}
               title={displayName}
-              badge={tab.type === 'virtual' ? t('chat.sidebar.virtualBadge') : undefined}
-              preview={lastMessage?.content || t('chat.sidebar.emptyPreview')}
-              time={formatRowTime(lastMessage?.timestamp, language)}
+              badge={tab.type === 'virtual' ? '虚拟' : undefined}
+              preview={lastMessage?.content || '暂无消息'}
+              time={formatRowTime(lastMessage?.timestamp)}
               onOpen={() => onOpenTab(tab.id)}
             />
           </SwipeRow>
@@ -429,20 +425,20 @@ export function MobileChatList({
 
   const observedSection = (
     // 麦麦的聊天流接在后面，按最近活跃排序，行内标「观察」区分
-    <section data-mobile-chat-section="observed" aria-label={t('chat.sidebar.observedChats')}>
+    <section data-mobile-chat-section="observed" aria-label={'麦麦的聊天流'}>
       {observedSessionsError ? (
         <p className="text-destructive px-5 py-4 text-sm">
-          {t('chat.sidebar.loadObservedChatsFailed')}
+          {'加载聊天流失败，请刷新重试'}
         </p>
       ) : visibleObserved.length === 0 ? (
         <p className="text-muted-foreground px-5 py-4 text-sm">
-          {t('chat.sidebar.waitingObservedChats')}
+          {'等待聊天流…'}
         </p>
       ) : (
         visibleObserved.map((session) => {
           const status = observedStageStatuses.get(session.sessionId)
           const latest = observedLatestMessages.get(session.sessionId)
-          const content = latest?.content || latest?.mediaText || t('chat.sidebar.emptyPreview')
+          const content = latest?.content || latest?.mediaText || '暂无消息'
           const preview =
             status && status.stage && status.stage !== '等待消息' ? (
               <StageStatusLabel status={status} />
@@ -456,7 +452,7 @@ export function MobileChatList({
               key={session.sessionId}
               actions={[
                 {
-                  label: t('chat.mobile.settings'),
+                  label: '设置',
                   onClick: () => onOpenObservedSettings(session.sessionId),
                 },
               ]}
@@ -464,9 +460,9 @@ export function MobileChatList({
               <ChatRow
                 avatar={<ObservedAvatar session={session} />}
                 title={session.sessionName}
-                badge={t('chat.sidebar.observedBadge')}
+                badge={'观察'}
                 preview={preview}
-                time={formatRowTime(session.lastActivity, language)}
+                time={formatRowTime(session.lastActivity)}
                 onOpen={() => onOpenObserved(session.sessionId)}
               />
             </SwipeRow>
@@ -483,7 +479,7 @@ export function MobileChatList({
     >
       <div className="px-5">
         <h1 data-mobile-large-title="true" className="text-[34px] leading-tight font-bold">
-          {t('chat.sidebar.title')}
+          {'聊天'}
         </h1>
       </div>
       <div className="px-4">
@@ -496,8 +492,8 @@ export function MobileChatList({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={t('chat.sidebar.searchPlaceholder')}
-            aria-label={t('chat.sidebar.searchPlaceholder')}
+            placeholder={'搜索聊天流…'}
+            aria-label={'搜索聊天流…'}
             className="min-w-0 flex-1 bg-transparent text-[15px] outline-none"
           />
         </label>
@@ -505,10 +501,10 @@ export function MobileChatList({
       {/* 与麦麦的会话和麦麦的聊天流放在同一个列表里 */}
       <div data-mobile-chat-screen="true">
         {localSection}
-        {agentEnabled && onOpenAgent && (!normalizedQuery || t('sidebar.menu.agent').toLowerCase().includes(normalizedQuery)) && (
+        {agentEnabled && onOpenAgent && (!normalizedQuery || '独立 Agent'.toLowerCase().includes(normalizedQuery)) && (
           <ChatRow
-            avatar={<ConversationAvatar name={t('sidebar.menu.agent')} bot />}
-            title={t('sidebar.menu.agent')}
+            avatar={<ConversationAvatar name={'独立 Agent'} bot />}
+            title={'独立 Agent'}
             preview=""
             time=""
             onOpen={onOpenAgent}
@@ -547,7 +543,6 @@ export function MobileChatRoomBar({
   onOpenSettings,
   userAvatar,
 }: MobileChatRoomBarProps) {
-  const { t } = useTranslation()
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const userAvatarUrl = useResolvedAvatarUrl(
     userAvatar?.userAvatarVersion ? 'webui' : undefined,
@@ -564,7 +559,7 @@ export function MobileChatRoomBar({
       <button
         type="button"
         onClick={onBack}
-        aria-label={t('chat.mobile.back')}
+        aria-label={'返回会话列表'}
         data-mobile-chat-room-button="true"
         className={cn(
           'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
@@ -601,7 +596,7 @@ export function MobileChatRoomBar({
         <button
           type="button"
           onClick={onOpenSettings}
-          aria-label={t('chat.sidebar.openSettings', { name: title })}
+          aria-label={`打开 ${title} 的聊天设置`}
           data-mobile-chat-room-button="true"
           className={cn(
             'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
@@ -615,7 +610,7 @@ export function MobileChatRoomBar({
         <>
           <button
             type="button"
-            aria-label={t('chat.sidebar.editAvatar')}
+            aria-label={'修改头像'}
             disabled={userAvatar.isUploading}
             onClick={() => avatarInputRef.current?.click()}
             data-mobile-chat-room-button="true"
@@ -628,7 +623,7 @@ export function MobileChatRoomBar({
               {userAvatarUrl && (
                 <AvatarImage
                   src={userAvatarUrl}
-                  alt={t('chat.sidebar.userAvatarAlt', { name: userAvatar.userName })}
+                  alt={`${userAvatar.userName} 的头像`}
                   className="object-cover"
                 />
               )}
@@ -665,7 +660,6 @@ export function MobileChatRoomBar({
 
 /** 对话页顶栏里的小头像：本地会话 */
 export function MobileChatRoomTabAvatar({ tab }: { tab: ChatTab }) {
-  const { t } = useTranslation()
   const isVirtual = tab.type === 'virtual'
   const avatarUrl = useResolvedAvatarUrl(
     isVirtual ? tab.virtualConfig?.platform : 'qq',
@@ -677,9 +671,7 @@ export function MobileChatRoomTabAvatar({ tab }: { tab: ChatTab }) {
       {avatarUrl && (
         <AvatarImage
           src={avatarUrl}
-          alt={t('chat.sidebar.userAvatarAlt', {
-            name: getChatTabDisplayName(tab, t('chat.botNameFallback')),
-          })}
+          alt={`${getChatTabDisplayName(tab, '麦麦')} 的头像`}
           className="object-cover"
         />
       )}
@@ -694,7 +686,6 @@ export function MobileChatRoomTabAvatar({ tab }: { tab: ChatTab }) {
 
 /** 对话页顶栏里的小头像：观察聊天流 */
 export function MobileChatRoomObservedAvatar({ session }: { session: SessionInfo }) {
-  const { t } = useTranslation()
   const targetId = session.isGroupChat ? session.groupId : session.userId
   const avatarUrl = useResolvedAvatarUrl(
     session.platform,
@@ -707,7 +698,7 @@ export function MobileChatRoomObservedAvatar({ session }: { session: SessionInfo
       {avatarUrl && (
         <AvatarImage
           src={avatarUrl}
-          alt={t('chat.sidebar.observedAvatarAlt', { name: session.sessionName })}
+          alt={`${session.sessionName} 的头像`}
           className="object-cover"
         />
       )}

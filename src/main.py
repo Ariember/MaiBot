@@ -6,7 +6,7 @@ import asyncio
 import sys
 import time
 
-from src.common.i18n import t
+
 from src.common.logger import get_logger
 from src.common.runtime_loop import set_main_loop
 from src.common.startup_diagnostics import diagnostic_stage, monitor_startup_loop
@@ -94,7 +94,7 @@ class MainSystem:
 
     async def initialize(self) -> None:
         """初始化系统组件"""
-        logger.info(t("startup.waking_up", nickname=global_config.bot.nickname))
+        logger.info(f'正在唤醒 {global_config.bot.nickname}......')
 
         # 主循环看门狗提前覆盖启动阶段；独立采样线程补充阻塞当时的调用栈。
         # HTTP 循环另有一份看门狗，挂在公共 HTTP 服务器启动处。
@@ -124,7 +124,7 @@ class MainSystem:
                 await self.http_server.shutdown()
             raise
 
-        logger.info(t("startup.initialization_completed_banner", nickname=global_config.bot.nickname))
+        logger.info(f'全部系统初始化完成，{global_config.bot.nickname} 已成功唤醒')
 
     async def _init_components(self) -> None:
         """初始化其他组件"""
@@ -190,7 +190,7 @@ class MainSystem:
             raise
 
         # 初始化表情管理器
-        logger.info(t("startup.emoji_manager_initialized"))
+        logger.info('表情包管理器初始化成功')
 
         # 初始化聊天管理器
         from src.chat.message_receive.chat_manager import chat_manager
@@ -199,7 +199,7 @@ class MainSystem:
         await chat_manager.initialize()
         asyncio.create_task(chat_manager.regularly_save_sessions())
 
-        logger.info(t("startup.chat_manager_initialized"))
+        logger.info('聊天管理器初始化成功')
         await memory_automation_service.start()
 
         from src.agent.service import agent_service
@@ -236,9 +236,9 @@ class MainSystem:
 
         try:
             init_time = int(1000 * (time.time() - init_start_time))
-            logger.info(t("startup.initialization_completed_cycles", init_time=init_time))
+            logger.info(f'初始化完成，神经元放电 {init_time} 次')
         except Exception as e:
-            logger.error(t("startup.brain_external_world_failed", error=e))
+            logger.error(f'启动大脑和外部世界失败: {e}')
             raise
 
     async def schedule_tasks(self) -> None:
@@ -289,7 +289,7 @@ class MainSystem:
 
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
-            logger.info(t("startup.schedule_cancelled"))
+            logger.info('调度任务已取消')
             raise
 
 

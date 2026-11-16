@@ -13,7 +13,7 @@ import threading
 import time
 import unicodedata
 
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.services import llm_service
 
 from .hash import compute_hash

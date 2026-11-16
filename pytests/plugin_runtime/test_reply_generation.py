@@ -10,7 +10,7 @@ from src.chat.heart_flow.heartflow_manager import heartflow_manager
 from src.chat.message_receive.chat_manager import chat_manager
 from src.chat.replyer import document_generator
 from src.chat.replyer.document_generator import DocumentReplyGenerator
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.config.config import global_config
 from src.llm_models.payload_content.context_item import get_item_text
 from src.plugin_runtime.capabilities.core import RuntimeCoreCapabilityMixin

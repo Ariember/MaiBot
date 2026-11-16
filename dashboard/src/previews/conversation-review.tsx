@@ -1,6 +1,4 @@
 import { useRef, useState } from 'react'
-import { createInstance } from 'i18next'
-import { I18nextProvider } from 'react-i18next'
 import { Activity, Bot, Brain, ImagePlus, Send, Smile, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -22,14 +20,7 @@ import { TimelineEventRenderer } from '@/routes/monitor/maisaka-monitor'
 import type { ChatMessage, ChatTab } from '@/routes/chat/types'
 import type { SessionInfo, TimelineEntry } from '@/routes/monitor/use-maisaka-monitor'
 import type { FlowStepEvent, PlannerFinalizedEvent } from '@/lib/maisaka-monitor-client'
-import zh from '@/i18n/locales/zh.json'
 
-const i18n = createInstance()
-void i18n.init({
-  lng: 'zh',
-  resources: { zh: { translation: zh } },
-  interpolation: { escapeValue: false },
-})
 const names = ['戒色中队', '糖人街会员制餐厅', '第恁音游人', '共享千石', '魔鸢', '北化乐灵会']
 const sessions = new Map<string, SessionInfo>(
   names.map((name, i) => [
@@ -186,7 +177,7 @@ function ConversationReview({ thinking = false }: { thinking?: boolean }) {
     setDraft('')
   }
   return (
-    <I18nextProvider i18n={i18n}>
+    <>
       <TooltipProvider>
         <p className="text-muted-foreground px-4 pt-2 text-xs" role="status">
           {notice}
@@ -284,7 +275,6 @@ function ConversationReview({ thinking = false }: { thinking?: boolean }) {
                   isLoadingHistory={false}
                   botDisplayName="麦麦"
                   userName="人类"
-                  language="zh-CN"
                 />
                 <MessageComposerFrame
                   tools={
@@ -356,7 +346,7 @@ function ConversationReview({ thinking = false }: { thinking?: boolean }) {
           </PageFrame>
         </div>
       </TooltipProvider>
-    </I18nextProvider>
+    </>
   )
 }
 export function ChatReview() {

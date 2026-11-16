@@ -1,5 +1,5 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+
 
 import { cn } from '@/lib/utils'
 import { PromptWarningDot } from '@/components/ui/prompt-warning-dot'
@@ -19,11 +19,10 @@ export function NavItem({
   promptWarning = false,
   onMobileMenuClose,
 }: NavItemProps) {
-  const { t } = useTranslation()
   const matchRoute = useMatchRoute()
   const isActive = item.external ? false : matchRoute({ to: item.path })
   const Icon = item.icon
-  const label = item.literalLabel ? item.label : t(item.label)
+  const label = item.label
   const menuItemContent = (
     <div className={cn('flex min-w-0 items-center', sidebarOpen ? 'gap-3' : 'gap-3 lg:gap-0')}>
       <span className="relative flex shrink-0">

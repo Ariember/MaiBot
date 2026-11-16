@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -34,7 +34,6 @@ interface MessageListProps {
   userAvatarPlatform?: string
   userAvatarId?: string
   userAvatarVersion?: number
-  language: string
   runtimeStatus?: ChatRuntimeStatus | null
 }
 
@@ -73,7 +72,6 @@ function BubbleAvatar({ type, visible, imageUrl }: BubbleAvatarProps) {
 }
 
 function EmptyState({ botName }: { botName: string }) {
-  const { t } = useTranslation()
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 px-6 py-16 text-center">
       <div className="bg-primary-gradient text-primary-foreground relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg">
@@ -82,9 +80,9 @@ function EmptyState({ botName }: { botName: string }) {
       </div>
       <div className="space-y-1">
         <h2 className="text-base font-semibold sm:text-lg">
-          {t('chat.message.empty', { bot: botName })}
+          {`开始与 ${botName} 对话吧！`}
         </h2>
-        <p className="text-muted-foreground text-xs sm:text-sm">{t('chat.message.emptyHint')}</p>
+        <p className="text-muted-foreground text-xs sm:text-sm">{'在下方输入框输入消息，按 Enter 发送'}</p>
       </div>
     </div>
   )
@@ -97,21 +95,19 @@ function RuntimeStatusIndicator({
   botDisplayName: string
   status: ChatRuntimeStatus
 }) {
-  const { t } = useTranslation()
   const errorDetail =
     status.kind === 'error' ? (status.detail || '').replace(/\s+/g, ' ').trim() : ''
   const visibleErrorDetail =
     errorDetail.length > 120 ? `${errorDetail.slice(0, 120)}...` : errorDetail
   const retryText = status.retry
-    ? t('chat.activity.retrySuffix', {
-        attempt: status.retry.attempt,
-        max: status.retry.maxAttempts,
-      })
+    ? ` ${status.retry.attempt}/${status.retry.maxAttempts}`
     : ''
-  const label = t(`chat.activity.${status.kind}`, {
-    bot: botDisplayName,
-    retry: retryText,
-  })
+  const label = {
+    acting: `${botDisplayName} 正在行动${retryText}`,
+    error: `${botDisplayName} 出错了${retryText}`,
+    thinking: `${botDisplayName} 思考中${retryText}`,
+    typing: `${botDisplayName} 正在输入${retryText}`,
+  }[status.kind]
   const displayText =
     visibleErrorDetail && status.kind === 'error' ? `${label}: ${visibleErrorDetail}` : label
 
@@ -168,10 +164,8 @@ export function MessageList({
   userAvatarPlatform,
   userAvatarId,
   userAvatarVersion,
-  language,
   runtimeStatus,
 }: MessageListProps) {
-  const { t } = useTranslation()
   // 历史数据可能包含同一消息的重复存储记录。按消息身份合并后再进行分组、
   // 定位和测量，避免不同高度的行共用虚拟列表缓存而持续触发更新。
   const messages = useMemo(
@@ -189,13 +183,13 @@ export function MessageList({
         if (!images.has(src)) {
           images.set(src, {
             src,
-            alt: segment.type === 'emoji' ? t('chat.media.emoji') : t('chat.media.image'),
+            alt: segment.type === 'emoji' ? '表情包' : '图片',
           })
         }
       }
     }
     return Array.from(images.values())
-  }, [messages, t])
+  }, [messages])
 
   const viewportRef = useRef<HTMLDivElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
@@ -388,11 +382,11 @@ export function MessageList({
 
   const timeFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(language || 'zh-CN', {
+      new Intl.DateTimeFormat('zh-CN', {
         hour: '2-digit',
         minute: '2-digit',
       }),
-    [language]
+    []
   )
   const formatTime = (timestamp: number) => timeFormatter.format(new Date(timestamp * 1000))
 
@@ -523,7 +517,7 @@ export function MessageList({
             <div ref={endRef} />
             {/* 用于读屏 / 避免悬空 */}
             <span className="sr-only" aria-live="polite">
-              {messages.length > 0 ? t('chat.sidebar.subtitle', { count: messages.length }) : ''}
+              {messages.length > 0 ? `${messages.length} 个会话` : ''}
             </span>
           </div>
         </ChatScrollContext.Provider>

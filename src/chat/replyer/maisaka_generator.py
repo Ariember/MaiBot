@@ -1,7 +1,7 @@
 from typing import Any, Callable, Optional
 
 from src.chat.message_receive.chat_manager import BotChatSession
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.services.llm_service import LLMServiceClient
 
 from .maisaka_generator_base import BaseMaisakaReplyGenerator

@@ -15,7 +15,7 @@ import json
 import uuid
 
 from src.common.data_models.llm_service_data_models import LLMResponseResult
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.common.paths import get_instance_root
 from src.core.tooling import (
     ToolAvailabilityContext, ToolExecutionContext, ToolExecutionResult, ToolInvocation, ToolSpec,

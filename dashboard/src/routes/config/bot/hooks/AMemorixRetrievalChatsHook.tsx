@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { fieldTitleClassName } from '@/components/dynamic-form/fieldStyle'
 import { getChatStreams, type ChatStream } from '@/lib/chat-management-api'
-import { resolveLocalizedText } from '@/lib/config-label'
+
 import type { FieldHookComponent } from '@/lib/field-hooks'
 import {
   buildAMemorixRetrievalChatTokenOptions,
@@ -107,7 +107,7 @@ export const AMemorixRetrievalChatsHook: FieldHookComponent = ({
 
   const fieldLabel =
     schema && 'label' in schema
-      ? resolveLocalizedText(schema.label, undefined, '聊天流列表')
+      ? (schema.label || '聊天流列表')
       : '聊天流列表'
   const retrievalCopy = resolveAMemorixRetrievalChatsCopy(fieldPath)
   const isEntryFilter = fieldPath === 'a_memorix.filter.chats'

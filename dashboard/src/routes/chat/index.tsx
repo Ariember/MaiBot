@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import {
   ChatStreamSettingsDialog,
@@ -274,7 +274,6 @@ export function ChatPage() {
   const [trialReplied, setTrialReplied] = useState(false)
   const trialMessagePending = useRef(false)
   const canOpenMessagePlatform = typeof window.maibotDesktopHost?.openMessagePlatform === 'function'
-  const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const {
     sessions: observedSessions,
@@ -339,7 +338,7 @@ export function ChatPage() {
   const defaultTab: ChatTab = {
     id: 'webui-default',
     type: 'webui',
-    label: t('chat.botNameFallback'),
+    label: '麦麦',
     messages: [],
     isConnected: false,
     isTyping: false,
@@ -649,14 +648,14 @@ export function ChatPage() {
                 messages: appendRecentMessage(tab.messages, {
                   id: generateMessageId('error'),
                   type: 'error' as const,
-                  content: data.content || t('chat.message.errorFallback'),
+                  content: data.content || '发生错误',
                   timestamp: data.timestamp || Date.now() / 1000,
                 }),
               }
             })
           )
           toast({
-            title: t('chat.toast.error'),
+            title: '错误',
             description: data.content,
             variant: 'destructive',
           })
@@ -683,7 +682,7 @@ export function ChatPage() {
               segments: isRich ? (msg.segments ?? undefined) : undefined,
               sender: {
                 name:
-                  msg.sender_name || (isBot ? t('chat.botNameFallback') : t('chat.userFallback')),
+                  msg.sender_name || (isBot ? '麦麦' : '用户'),
                 user_id: msg.sender_id,
                 is_bot: isBot,
               },
@@ -712,7 +711,7 @@ export function ChatPage() {
           break
       }
     },
-    [addMessageToTab, t, toast, updateTab]
+    [addMessageToTab, toast, updateTab]
   )
 
   const ensureSessionListener = useCallback(
@@ -742,7 +741,7 @@ export function ChatPage() {
             user_name: config.userName,
             platform: config.platform,
             person_id: config.personId,
-            group_name: config.groupName || t('chat.virtualGroupFallback'),
+            group_name: config.groupName || 'WebUI虚拟群聊',
             group_id: config.groupId,
           })
         } else {
@@ -758,13 +757,13 @@ export function ChatPage() {
         console.error(`[Tab ${tabId}] 打开聊天会话失败:`, error)
         setIsLoadingHistory(false)
         toast({
-          title: t('chat.toast.connectionFailed'),
-          description: t('chat.toast.sessionUnavailable'),
+          title: '连接失败',
+          description: '无法建立聊天会话，请稍后重试',
           variant: 'destructive',
         })
       }
     },
-    [ensureSessionListener, t, toast, updateTab, userId, userName]
+    [ensureSessionListener, toast, updateTab, userId, userName]
   )
 
   // 用于追踪组件是否已卸载
@@ -1011,12 +1010,12 @@ export function ChatPage() {
         })
       )
       toast({
-        title: t('chat.toast.sendFailed'),
-        description: t('chat.toast.currentSessionUnavailable'),
+        title: '发送失败',
+        description: '当前聊天会话不可用，请稍后重试',
         variant: 'destructive',
       })
     }
-  }, [activeTab, activeTabId, addMessageToTab, inputValue, selectedImages, filesByTab, filesEnabled, uploadingFiles, setupTrial, t, toast, userName])
+  }, [activeTab, activeTabId, addMessageToTab, inputValue, selectedImages, filesByTab, filesEnabled, uploadingFiles, setupTrial, toast, userName])
 
   const handleAddFiles = async (files: FileList) => {
     if (!filesEnabled) return
@@ -1030,14 +1029,14 @@ export function ChatPage() {
         setFilesByTab(previous => ({ ...previous, [tabId]: [...(previous[tabId] || []), stored] }))
       }
     } catch (e) {
-      toast({ title: t('files.uploadFailed'), description: String(e), variant: 'destructive' })
+      toast({ title: '文件上传失败', description: String(e), variant: 'destructive' })
     } finally { setUploadingFiles(false) }
   }
 
   const sendUserEmoji = useCallback(
     async (item: UserEmojiItem) => {
       if (!activeTab?.isConnected) {
-        throw new Error(t('chat.toast.currentSessionUnavailable'))
+        throw new Error('当前聊天会话不可用，请稍后重试')
       }
 
       const emoji = await loadUserEmojiPayload(item)
@@ -1058,7 +1057,7 @@ export function ChatPage() {
       addMessageToTab(activeTabId, {
         id: generateMessageId('user-emoji'),
         type: 'user',
-        content: `[${t(item.media_type === 'image' ? 'chat.media.image' : 'chat.media.emoji')}]`,
+        content: `[${(item.media_type === 'image' ? '图片' : '表情包')}]`,
         message_type: 'rich',
         segments: [{ type: item.media_type || 'emoji', data: emoji.data_url }],
         timestamp,
@@ -1068,7 +1067,7 @@ export function ChatPage() {
         },
       })
     },
-    [activeTab, activeTabId, addMessageToTab, t, userName]
+    [activeTab, activeTabId, addMessageToTab, userName]
   )
 
   // 处理输入区的图片附件
@@ -1077,8 +1076,8 @@ export function ChatPage() {
       const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'))
       if (imageFiles.length === 0) {
         toast({
-          title: t('chat.toast.imageUnsupported'),
-          description: t('chat.toast.imageUnsupportedDesc'),
+          title: '不支持的文件',
+          description: '请选择图片文件。',
           variant: 'destructive',
         })
         return
@@ -1087,8 +1086,8 @@ export function ChatPage() {
       const remainingSlots = MAX_CHAT_IMAGES - selectedImages.length
       if (remainingSlots <= 0) {
         toast({
-          title: t('chat.toast.imageLimit'),
-          description: t('chat.toast.imageLimitDesc', { count: MAX_CHAT_IMAGES }),
+          title: '图片数量已达上限',
+          description: `一次最多可以发送 ${MAX_CHAT_IMAGES} 张图片。`,
           variant: 'destructive',
         })
         return
@@ -1097,8 +1096,8 @@ export function ChatPage() {
       const filesToRead = imageFiles.slice(0, remainingSlots)
       if (imageFiles.length > remainingSlots) {
         toast({
-          title: t('chat.toast.imageLimit'),
-          description: t('chat.toast.imageLimitDesc', { count: MAX_CHAT_IMAGES }),
+          title: '图片数量已达上限',
+          description: `一次最多可以发送 ${MAX_CHAT_IMAGES} 张图片。`,
         })
       }
 
@@ -1110,13 +1109,13 @@ export function ChatPage() {
       } catch (error) {
         console.error('读取聊天图片失败', error)
         toast({
-          title: t('chat.toast.imageReadFailed'),
-          description: t('chat.toast.imageReadFailedDesc'),
+          title: '图片读取失败',
+          description: '请换一张图片后重试。',
           variant: 'destructive',
         })
       }
     },
-    [selectedImages.length, t, toast]
+    [selectedImages.length, toast]
   )
 
   const handleRemoveImage = useCallback((id: string) => {
@@ -1126,7 +1125,7 @@ export function ChatPage() {
   // 处理输入框左侧设置中的昵称变更
   const handleUpdateUserName = useCallback(
     (newName: string) => {
-      const trimmed = newName.trim() || t('chat.userNameFallback')
+      const trimmed = newName.trim() || '人类'
       setUserName(trimmed)
       saveUserName(trimmed)
 
@@ -1134,15 +1133,15 @@ export function ChatPage() {
         void chatWsClient.updateNickname('webui-default', trimmed)
       }
     },
-    [t]
+    []
   )
 
   const handleUpdateUserAvatar = useCallback(
     async (file: File) => {
       if ((file.type && !file.type.startsWith('image/')) || file.size > MAX_USER_AVATAR_BYTES) {
         toast({
-          title: t('chat.toast.avatarUnsupported'),
-          description: t('chat.toast.avatarUnsupportedDesc'),
+          title: '无法使用此头像',
+          description: '请选择不超过 5 MB 的 JPG、PNG、WebP、GIF 或 BMP 图片。',
           variant: 'destructive',
         })
         return
@@ -1155,22 +1154,22 @@ export function ChatPage() {
         setUserAvatarVersion(nextAvatarVersion)
         saveUserAvatarVersion(nextAvatarVersion)
         toast({
-          title: t('chat.toast.avatarSaved'),
-          description: t('chat.toast.avatarSavedDesc'),
+          title: '头像已保存',
+          description: '新头像已经应用到麦麦聊天。',
         })
       } catch (error) {
         console.error('保存用户头像失败', error)
         toast({
-          title: t('chat.toast.avatarSaveFailed'),
+          title: '头像保存失败',
           description:
-            error instanceof Error ? error.message : t('chat.toast.avatarSaveFailedDesc'),
+            error instanceof Error ? error.message : '请稍后重试。',
           variant: 'destructive',
         })
       } finally {
         setIsUploadingUserAvatar(false)
       }
     },
-    [t, toast, userId]
+    [toast, userId]
   )
 
   // 关闭标签页
@@ -1313,19 +1312,19 @@ export function ChatPage() {
         {setupTrial && (
           <section className="bg-card mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg border p-4" aria-live="polite">
             <div>
-              <p className="text-sm font-semibold">{t(trialReplied ? 'chat.setupTrial.repliedTitle' : 'chat.setupTrial.title')}</p>
-              <p className="text-muted-foreground mt-1 text-xs">{t(trialReplied ? 'chat.setupTrial.repliedDescription' : 'chat.setupTrial.description')}</p>
+              <p className="text-sm font-semibold">{(trialReplied ? '已收到麦麦的回复' : '试试和麦麦聊天')}</p>
+              <p className="text-muted-foreground mt-1 text-xs">{(trialReplied ? '如果回复和说话风格符合预期，就可以继续配置消息平台。' : '先发一句「你好」，确认麦麦能正常回复。')}</p>
             </div>
             {trialReplied && (
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => navigate({ to: '/chat', search: {}, replace: true })}>
-                  {t('chat.setupTrial.keepChatting')}
+                  {'继续聊聊'}
                 </Button>
                 {canOpenMessagePlatform && (
                   <Button size="sm" onClick={() => {
                     window.maibotDesktopHost!.openMessagePlatform()
                     void navigate({ to: '/chat', search: {}, replace: true })
-                  }}>{t('chat.setupTrial.continue')}</Button>
+                  }}>{'试聊正常，配置消息平台'}</Button>
                 )}
               </div>
             )}
@@ -1334,7 +1333,7 @@ export function ChatPage() {
         {agentActive ? (
           <>
             <div className="md:hidden">
-              <Button variant="ghost" onClick={() => setMobileRoomOpen(false)}>{t('chat.mobile.back')}</Button>
+              <Button variant="ghost" onClick={() => setMobileRoomOpen(false)}>{'返回会话列表'}</Button>
             </div>
             <div className="min-h-0 flex-1"><AgentPage /></div>
           </>
@@ -1344,9 +1343,9 @@ export function ChatPage() {
         <div className="md:hidden">
           {!activeObservedSessionId && activeTab && (
             <MobileChatRoomBar
-              title={getChatTabDisplayName(activeTab, t('chat.botNameFallback'))}
+              title={getChatTabDisplayName(activeTab, '麦麦')}
               subtitle={
-                activeTab.isConnected ? t('chat.sidebar.online') : t('chat.sidebar.offline')
+                activeTab.isConnected ? '在线' : '离线'
               }
               online={activeTab.isConnected}
               avatar={<MobileChatRoomTabAvatar tab={activeTab} />}
@@ -1377,7 +1376,7 @@ export function ChatPage() {
                     activeObservedStatus ? (
                       <StageStatusLabel status={activeObservedStatus} />
                     ) : (
-                      t('chat.sidebar.observedBadge')
+                      '观察'
                     )
                   }
                   online={activeObservedStatus !== undefined}
@@ -1408,7 +1407,7 @@ export function ChatPage() {
               key={activeTab?.id ?? 'empty-chat'}
               messages={activeTab?.messages ?? []}
               isLoadingHistory={isLoadingHistory}
-              botDisplayName={activeTab?.sessionInfo.bot_name || t('chat.botNameFallback')}
+              botDisplayName={activeTab?.sessionInfo.bot_name || '麦麦'}
               botQq={activeTab?.sessionInfo.bot_qq}
               userName={userName}
               userAvatarPlatform={
@@ -1422,7 +1421,6 @@ export function ChatPage() {
                 activeTab?.type === 'virtual' ? activeTab.virtualConfig?.userId : userId
               }
               userAvatarVersion={activeTab?.type === 'virtual' ? undefined : userAvatarVersion}
-              language={i18n.language}
               runtimeStatus={activeTab?.runtimeStatus ?? null}
             />
 

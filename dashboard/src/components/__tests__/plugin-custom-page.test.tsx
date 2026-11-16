@@ -8,16 +8,13 @@ const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   invoke: vi.fn(),
   upload: vi.fn(),
-  i18n: { language: 'en' },
 }))
 vi.mock('@/lib/http', () => ({ backendApi: { get: mocks.get } }))
 vi.mock('@/lib/plugin-webui', () => ({
   invokePluginWebUI: mocks.invoke,
   uploadPluginWebUI: mocks.upload,
 }))
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: mocks.i18n }),
-}))
+
 
 const page: CustomPage = {
   id: 'custom',
@@ -214,7 +211,7 @@ describe('custom page bridge lifecycle', () => {
     })
     expect(await screen.findByText('Reset records?')).toBeInTheDocument()
     expect(mocks.invoke).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'pluginWebUI.cancel' }))
+    fireEvent.click(screen.getByRole('button', { name: '取消' }))
     await waitFor(() =>
       expect(port.postMessage).toHaveBeenCalledWith({ id: 1, error: 'Error: Action cancelled' })
     )
@@ -229,7 +226,7 @@ describe('custom page bridge lifecycle', () => {
     })
     args.filter.ids[0] = 3
     expect(await screen.findByText('Reset records?')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'pluginWebUI.confirm' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认' }))
     await waitFor(() =>
       expect(mocks.invoke).toHaveBeenCalledWith(
         'test.plugin',
@@ -275,7 +272,7 @@ describe('custom page bridge lifecycle', () => {
     expect(port.postMessage).toHaveBeenCalledWith(
       expect.objectContaining({ id: 1, error: expect.any(String) })
     )
-    fireEvent.click(screen.getByRole('button', { name: 'pluginWebUI.customStop' }))
+    fireEvent.click(screen.getByRole('button', { name: '停止页面' }))
     expect(port.close).toHaveBeenCalled()
     expect(iframe.isConnected).toBe(false)
   })
@@ -299,8 +296,8 @@ describe('custom page bridge lifecycle', () => {
     })
     expect(port.close).toHaveBeenCalled()
     expect(iframe.isConnected).toBe(false)
-    expect(screen.getByText('pluginWebUI.customStopped')).toBeInTheDocument()
-    expect(screen.getByText('pluginWebUI.customStopRequestRate')).toBeInTheDocument()
+    expect(screen.getByText('页面已停止。点击重载页面可再次运行。')).toBeInTheDocument()
+    expect(screen.getByText('请求过于频繁，页面已停止（允许每秒 20 次请求，最多突发 200 次）。')).toBeInTheDocument()
   })
 
   it('removes the frame when it navigates and never reconnects its bridge', async () => {
@@ -310,7 +307,7 @@ describe('custom page bridge lifecycle', () => {
     expect(port.close).toHaveBeenCalled()
     expect(iframe.isConnected).toBe(false)
     expect(channels).toHaveLength(1)
-    expect(screen.getByText('pluginWebUI.customStopNavigation')).toBeInTheDocument()
+    expect(screen.getByText('页面发生了重新加载或跳转，连接已停止。')).toBeInTheDocument()
   })
 
   it('rejects excess concurrent requests without forwarding them', async () => {

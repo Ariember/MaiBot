@@ -45,9 +45,7 @@ vi.mock('@tanstack/react-router', () => ({
     return blocker
   },
 }))
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'zh', resolvedLanguage: 'zh' } }),
-}))
+
 vi.mock('@/components/ui/scroll-area', () => ({
   ScrollArea: ({ children }: { children: ReactNode }) => children,
 }))
@@ -126,21 +124,28 @@ function renderPage() {
   return { ...view, rerenderPage: () => view.rerender(page()) }
 }
 
+async function findCityInput() {
+  const input = screen.queryByLabelText('城市')
+  if (input) return input
+  fireEvent.click(await screen.findByRole('button', { name: /高级设置/ }))
+  return screen.findByLabelText('城市')
+}
+
 describe('麦日常配置', () => {
   it('禁用时可编辑，启停与其他草稿一起保存并保留未展示的配置', async () => {
     const user = userEvent.setup()
     renderPage()
-    fireEvent.change(await screen.findByLabelText('城市'), { target: { value: '杭州' } })
-    await user.click(screen.getByRole('switch', { name: 'mylife.enable' }))
-    await user.click(screen.getByRole('button', { name: 'mylife.chooseGroup' }))
-    await user.click(screen.getByRole('menuitem', { name: 'mylife.groups.private.title' }))
+    fireEvent.change(await findCityInput(), { target: { value: '杭州' } })
+    await user.click(screen.getByRole('switch', { name: '启用麦日常' }))
+    await user.click(screen.getByRole('button', { name: '选择设置页面' }))
+    await user.click(screen.getByRole('menuitem', { name: '私聊陪伴' }))
     expect(screen.getByLabelText('主动开始时间')).toHaveValue('09:00')
     expect(window.location.search).toBe('?tab=private')
-    await user.click(screen.getByRole('button', { name: 'mylife.chooseGroup' }))
-    await user.click(screen.getByRole('menuitem', { name: 'mylife.groups.general.title' }))
-    expect(screen.getByLabelText('城市')).toHaveValue('杭州')
+    await user.click(screen.getByRole('button', { name: '选择设置页面' }))
+    await user.click(screen.getByRole('menuitem', { name: '基础设置' }))
+    expect(await findCityInput()).toHaveValue('杭州')
     expect(updatePluginConfig).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'mylife.save' }))
+    await user.click(screen.getByRole('button', { name: '保存并应用' }))
     await waitFor(() => expect(updatePluginConfig).toHaveBeenCalledWith(MYLIFE_PLUGIN_ID, {
       ...makeBundle().config,
       plugin: { enabled: true, config_version: '1.21.0', admin_user_ids: ['123456'] },
@@ -154,36 +159,36 @@ describe('麦日常配置', () => {
       .mockRejectedValueOnce(new Error('连接中断'))
       .mockResolvedValueOnce({ success: true, message: '已应用' })
     renderPage()
-    fireEvent.change(await screen.findByLabelText('城市'), { target: { value: '杭州' } })
-    fireEvent.click(screen.getByRole('button', { name: 'mylife.save' }))
+    fireEvent.change(await findCityInput(), { target: { value: '杭州' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存并应用' }))
     expect(await screen.findByText('连接中断')).toBeInTheDocument()
-    expect(screen.getByLabelText('城市')).toHaveValue('杭州')
-    fireEvent.click(screen.getByRole('button', { name: 'mylife.save' }))
+    expect(await findCityInput()).toHaveValue('杭州')
+    fireEvent.click(screen.getByRole('button', { name: '保存并应用' }))
     await waitFor(() => expect(updatePluginConfig).toHaveBeenCalledTimes(2))
   })
 
   it('撤销恢复全部草稿，不向服务端写入', async () => {
     const user = userEvent.setup()
     renderPage()
-    fireEvent.change(await screen.findByLabelText('城市'), { target: { value: '杭州' } })
-    await user.click(screen.getByRole('switch', { name: 'mylife.enable' }))
-    await user.click(screen.getByRole('button', { name: 'mylife.discard' }))
-    expect(screen.getByLabelText('城市')).toHaveValue('上海')
-    expect(screen.getByRole('switch', { name: 'mylife.enable' })).not.toBeChecked()
+    fireEvent.change(await findCityInput(), { target: { value: '杭州' } })
+    await user.click(screen.getByRole('switch', { name: '启用麦日常' }))
+    await user.click(screen.getByRole('button', { name: '撤销更改' }))
+    expect(await findCityInput()).toHaveValue('上海')
+    expect(screen.getByRole('switch', { name: '启用麦日常' })).not.toBeChecked()
     expect(updatePluginConfig).not.toHaveBeenCalled()
   })
 
   it.each([
-    ['environment', 'general', '城市'],
-    ['users', 'private', '专属称呼'],
-    ['proactive', 'private', '主动开始时间'],
-    ['usage', 'models', '统计名称'],
+    ['environment', '基础设置', '城市'],
+    ['users', '私聊陪伴', '专属称呼'],
+    ['proactive', '私聊陪伴', '主动开始时间'],
+    ['usage', '模型与用量', '统计名称'],
   ])('旧配置节 %s 的链接打开对应分组', async (section, group, label) => {
     window.history.replaceState(null, '', `/mylife?tab=${section}`)
     renderPage()
-    expect(await screen.findByRole('button', { name: 'mylife.chooseGroup' })).toHaveTextContent(`mylife.groups.${group}.title`)
-    if (section === 'users' || section === 'usage') {
-      fireEvent.click(screen.getByRole('button', { name: /mylife.advanced/ }))
+    expect(await screen.findByRole('button', { name: '选择设置页面' })).toHaveTextContent(group)
+    if (section === 'users' || section === 'usage' || section === 'environment') {
+      fireEvent.click(screen.getByRole('button', { name: /高级设置/ }))
     }
     expect(await screen.findByLabelText(label)).toBeVisible()
   })
@@ -192,8 +197,8 @@ describe('麦日常配置', () => {
     vi.mocked(getPluginConfigBundle).mockRejectedValueOnce(new Error('连接中断'))
     renderPage()
     expect(await screen.findByText('连接中断')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'mylife.retry' }))
-    expect(await screen.findByLabelText('城市')).toHaveValue('上海')
+    fireEvent.click(screen.getByRole('button', { name: '重新加载' }))
+    expect(await findCityInput()).toHaveValue('上海')
   })
 
   it('返回已有缓存的页面时显示服务端最新配置', async () => {
@@ -203,8 +208,8 @@ describe('麦日常配置', () => {
       config: { ...makeBundle().config, environment: { city: '杭州', timezone: 'Asia/Shanghai' } },
     }))
     render(<QueryClientProvider client={client}><MyLifePage /></QueryClientProvider>)
-    expect(await screen.findByLabelText('城市')).toHaveValue('杭州')
-    expect(screen.getByRole('button', { name: 'mylife.save' })).toBeDisabled()
+    expect(await findCityInput()).toHaveValue('杭州')
+    expect(screen.getByRole('button', { name: '保存并应用' })).toBeDisabled()
   })
 
   it('配置错误提供 TOML 修复入口，保存后重新加载可视化配置', async () => {
@@ -217,9 +222,9 @@ describe('麦日常配置', () => {
     const editor = await screen.findByLabelText('TOML 配置')
     expect(screen.getByText('私聊用户 QQ 号不能重复')).toBeInTheDocument()
     fireEvent.change(editor, { target: { value: '[plugin]\nenabled = false\n' } })
-    fireEvent.click(screen.getByRole('button', { name: 'mylife.save' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存并应用' }))
     await waitFor(() => expect(updatePluginConfigRaw).toHaveBeenCalledWith(MYLIFE_PLUGIN_ID, '[plugin]\nenabled = false\n'))
-    expect(await screen.findByLabelText('城市')).toHaveValue('上海')
+    expect(await findCityInput()).toHaveValue('上海')
     expect(updatePluginConfig).not.toHaveBeenCalled()
   })
 
@@ -228,44 +233,44 @@ describe('麦日常配置', () => {
       .mockRejectedValueOnce(new Error('连接中断'))
       .mockResolvedValueOnce({ success: true, message: '已应用' })
     const { rerenderPage } = renderPage()
-    fireEvent.change(await screen.findByLabelText('城市'), { target: { value: '杭州' } })
+    fireEvent.change(await findCityInput(), { target: { value: '杭州' } })
     expect(blocker.options?.enableBeforeUnload).toBe(true)
     blocker.status = 'blocked'
     rerenderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'mylife.saveAndLeave' }))
+    fireEvent.click(await screen.findByRole('button', { name: '保存并离开' }))
     expect(await screen.findByText('连接中断')).toBeInTheDocument()
     expect(blocker.proceed).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'mylife.saveAndLeave' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存并离开' }))
     await waitFor(() => expect(blocker.proceed).toHaveBeenCalledTimes(1))
   })
 
   it('恢复默认设置须确认，成功后加载服务端默认值', async () => {
     vi.mocked(resetPluginConfig).mockResolvedValue({ success: true, message: '已重置' })
     renderPage()
-    fireEvent.change(await screen.findByLabelText('城市'), { target: { value: '杭州' } })
-    fireEvent.click(screen.getByRole('button', { name: 'mylife.reset' }))
+    fireEvent.change(await findCityInput(), { target: { value: '杭州' } })
+    fireEvent.click(screen.getByRole('button', { name: '恢复默认设置' }))
     let dialog = await screen.findByRole('dialog')
     expect(resetPluginConfig).not.toHaveBeenCalled()
-    fireEvent.click(within(dialog).getByRole('button', { name: 'mylife.cancel' }))
-    expect(screen.getByLabelText('城市')).toHaveValue('杭州')
-    fireEvent.click(screen.getByRole('button', { name: 'mylife.reset' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '继续编辑' }))
+    expect(await findCityInput()).toHaveValue('杭州')
+    fireEvent.click(screen.getByRole('button', { name: '恢复默认设置' }))
     dialog = await screen.findByRole('dialog')
-    fireEvent.click(within(dialog).getByRole('button', { name: 'mylife.reset' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '恢复默认设置' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(resetPluginConfig).toHaveBeenCalledWith(MYLIFE_PLUGIN_ID)
-    expect(screen.getByLabelText('城市')).toHaveValue('上海')
-    expect(screen.getByRole('button', { name: 'mylife.save' })).toBeDisabled()
+    expect(await findCityInput()).toHaveValue('上海')
+    expect(screen.getByRole('button', { name: '保存并应用' })).toBeDisabled()
   })
 
   it('恢复默认失败时保留当前草稿并显示错误', async () => {
     vi.mocked(resetPluginConfig).mockRejectedValue(new Error('无法备份配置'))
     renderPage()
-    fireEvent.change(await screen.findByLabelText('城市'), { target: { value: '杭州' } })
-    fireEvent.click(screen.getByRole('button', { name: 'mylife.reset' }))
+    fireEvent.change(await findCityInput(), { target: { value: '杭州' } })
+    fireEvent.click(screen.getByRole('button', { name: '恢复默认设置' }))
     const dialog = await screen.findByRole('dialog')
-    fireEvent.click(within(dialog).getByRole('button', { name: 'mylife.reset' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '恢复默认设置' }))
     expect(await screen.findByText('无法备份配置')).toBeInTheDocument()
-    expect(screen.getByLabelText('城市')).toHaveValue('杭州')
-    expect(screen.getByRole('button', { name: 'mylife.save' })).toBeEnabled()
+    expect(await findCityInput()).toHaveValue('杭州')
+    expect(screen.getByRole('button', { name: '保存并应用' })).toBeEnabled()
   })
 })

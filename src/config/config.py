@@ -10,7 +10,7 @@ from typing import Any, Callable, Mapping, Sequence, TypeVar, cast
 import tomlkit
 
 from src.common.paths import get_instance_root
-from src.common.i18n import t
+
 from src.common.logger import get_logger
 from src.common.http_service.config import HTTPConfig
 from src.common.version import read_project_version
@@ -210,19 +210,19 @@ class ModelConfig(ConfigBase):
     def model_post_init(self, context: Any = None):
         resolve_web_search_config(self.web, self.model_task_config.web_search)
         if not self.models:
-            raise ValueError(t("config.models_empty"))
+            raise ValueError('模型列表不能为空，请在配置中设置有效的模型列表。')
         if not self.api_providers:
-            raise ValueError(t("config.api_providers_empty"))
+            raise ValueError('API提供商列表不能为空，请在配置中设置有效的API提供商列表。')
 
         # 检查API提供商名称是否重复
         provider_names = [provider.name for provider in self.api_providers]
         if len(provider_names) != len(set(provider_names)):
-            raise ValueError(t("config.api_provider_name_duplicate"))
+            raise ValueError('API提供商名称存在重复，请检查配置文件。')
 
         # 检查模型名称是否重复
         model_names = [model.name for model in self.models]
         if len(model_names) != len(set(model_names)):
-            raise ValueError(t("config.model_name_duplicate"))
+            raise ValueError('模型名称存在重复，请检查配置文件。')
 
         for model_name in self.model_task_config.embedding.model_list:
             if model_name not in model_names:
@@ -232,14 +232,10 @@ class ModelConfig(ConfigBase):
 
         for model in self.models:
             if not model.model_identifier:
-                raise ValueError(t("config.model_identifier_empty", model_name=model.name))
+                raise ValueError(f"模型 '{model.name}' 的 model_identifier 不能为空")
             if not model.api_provider or model.api_provider not in api_providers_dict:
                 raise ValueError(
-                    t(
-                        "config.model_api_provider_missing",
-                        api_provider=model.api_provider,
-                        model_name=model.name,
-                    )
+                    f"模型 '{model.name}' 的 api_provider '{model.api_provider}' 不存在"
                 )
         return super().model_post_init(context)
 
@@ -297,8 +293,8 @@ class ConfigManager:
         self.retro_prompt_forced = forced
 
     def initialize(self):
-        logger.info(t("config.current_version", version=MMC_VERSION))
-        logger.info(t("config.loading"))
+        logger.info(f'MaiCore 当前版本: {MMC_VERSION}')
+        logger.info('正在品鉴配置文件...')
         self.global_config, global_updated = load_config_from_file(Config, self.bot_config_path, CONFIG_VERSION)
         self.model_config, model_updated = load_config_from_file(
             ModelConfig,
@@ -311,7 +307,7 @@ class ConfigManager:
             logger.info("配置已自动升级，将继续使用更新后的配置启动")
         self._update_config_file_fingerprints(("bot", "model"))
         self._warn_if_vlm_not_configured(self.model_config)
-        logger.info(t("config.loaded"))
+        logger.info('非常的新鲜，非常的美味！')
 
     @classmethod
     def _warn_if_vlm_not_configured(cls, model_config: ModelConfig) -> None:
@@ -333,12 +329,12 @@ class ConfigManager:
 
     def get_global_config(self) -> Config:
         if self.global_config is None:
-            raise RuntimeError(t("config.global_not_initialized"))
+            raise RuntimeError('global_config 未初始化')
         return self.global_config
 
     def get_model_config(self) -> ModelConfig:
         if self.model_config is None:
-            raise RuntimeError(t("config.model_not_initialized"))
+            raise RuntimeError('model_config 未初始化')
         return self.model_config
 
     def register_reload_callback(
@@ -632,17 +628,17 @@ class ConfigManager:
                     )
                 await asyncio.to_thread(self._sync_retro_reply_prompt, global_config_new, model_config_new)
             except Exception as exc:
-                logger.error(t("config.reload_failed", error=exc))
+                logger.error(f'配置重载失败: {exc}')
                 return False
 
             if global_updated or model_updated:
-                logger.warning(t("config.version_update_detected"))
+                logger.warning('检测到配置版本更新，热重载仅更新内存数据')
 
             self.global_config = global_config_new
             self.model_config = model_config_new
             self._update_config_file_fingerprints(normalized_scopes)
             self.reload_revision += 1
-            logger.info(t("config.hot_reload_completed"))
+            logger.info('配置热重载完成')
 
             # 未显式给出变更节时，按新旧配置差异自动推断，供回调按节过滤
             sections_for_dispatch = self._normalize_changed_sections(changed_sections) or None
@@ -657,7 +653,7 @@ class ConfigManager:
                 try:
                     await self._invoke_reload_callback(registration.callback, normalized_scopes)
                 except Exception as exc:
-                    logger.warning(t("config.reload_callback_failed", error=exc))
+                    logger.warning(f'配置重载回调执行失败: {exc}')
             return True
 
     async def start_file_watcher(self) -> None:
@@ -679,7 +675,7 @@ class ConfigManager:
             paths=[self.bot_config_path, self.model_config_path, policy_path],
         )
         await self._file_watcher.start()
-        logger.debug(t("config.file_watcher_started"))
+        logger.debug('配置文件监视器已启动')
 
     async def stop_file_watcher(self) -> None:
         if self._file_watcher is None:
@@ -689,16 +685,7 @@ class ConfigManager:
             self._file_watcher_subscription_id = None
         watcher_stats = self._file_watcher.stats
         logger.info(
-            t(
-                "config.file_watcher_stop_stats",
-                batches=watcher_stats.batches_seen,
-                changes=watcher_stats.changes_seen,
-                cooldown_skip=watcher_stats.callbacks_skipped_cooldown,
-                failed=watcher_stats.callbacks_failed,
-                ok=watcher_stats.callbacks_succeeded,
-                restart=watcher_stats.restart_count,
-                timeout=watcher_stats.callbacks_timed_out,
-            )
+            f'配置文件监视器停止统计: batches={watcher_stats.batches_seen}, changes={watcher_stats.changes_seen}, ok={watcher_stats.callbacks_succeeded}, failed={watcher_stats.callbacks_failed}, timeout={watcher_stats.callbacks_timed_out}, cooldown_skip={watcher_stats.callbacks_skipped_cooldown}, restart={watcher_stats.restart_count}'
         )
         await self._file_watcher.stop()
         self._file_watcher = None
@@ -726,17 +713,17 @@ class ConfigManager:
             return
         now_monotonic = asyncio.get_running_loop().time()
         if now_monotonic - self._last_hot_reload_monotonic < self._hot_reload_min_interval_s:
-            logger.debug(t("config.reload_skipped_too_frequent"))
+            logger.debug('文件变更触发过于频繁，已跳过本次重载')
             return
         self._last_hot_reload_monotonic = now_monotonic
-        logger.info(t("config.file_change_detected"))
+        logger.info('检测到配置文件变更，触发热重载')
         try:
             await asyncio.wait_for(
                 self.reload_config(changed_scopes=changed_scopes, skip_if_unchanged=True),
                 timeout=self._hot_reload_timeout_s,
             )
         except asyncio.TimeoutError:
-            logger.error(t("config.reload_timeout", timeout_seconds=self._hot_reload_timeout_s))
+            logger.error(f'配置热重载超时（>{self._hot_reload_timeout_s}s）')
 
 
 def generate_new_config_file(
@@ -780,10 +767,10 @@ def load_config_from_file(
         config_data = tomlkit.load(f)
     inner_table = config_data.get("inner")
     if not isinstance(inner_table, Mapping):
-        raise TypeError(t("config.missing_inner_version"))
+        raise TypeError('配置文件缺少 inner 版本信息')
     inner_version = inner_table.get("version")
     if not isinstance(inner_version, str):
-        raise TypeError(t("config.invalid_inner_version"))
+        raise TypeError('配置文件 inner.version 类型错误')
     old_ver: str = inner_version
     env_migration_applied: bool = False
     legacy_config_migration_applied: bool = False
@@ -801,7 +788,7 @@ def load_config_from_file(
         config_data = env_migration.data
         legacy_migration = try_migrate_legacy_bot_config_dict(config_data)
         if legacy_migration.migrated:
-            logger.warning(t("config.legacy_migrated", reason=legacy_migration.reason))
+            logger.warning(f'检测到旧版配置结构，已尝试自动修复: {legacy_migration.reason}。建议稍后检查并保存生成的新配置文件。')
             legacy_config_migration_applied = True
             legacy_config_migration_reasons.append(legacy_migration.reason)
         config_data = legacy_migration.data
@@ -835,7 +822,7 @@ def load_config_from_file(
                 # 基于未被部分构造污染的 original_data 做迁移尝试
                 mig = try_migrate_legacy_bot_config_dict(original_data)
                 if mig.migrated:
-                    logger.warning(t("config.legacy_migrated", reason=mig.reason))
+                    logger.warning(f'检测到旧版配置结构，已尝试自动修复: {mig.reason}。建议稍后检查并保存生成的新配置文件。')
                     legacy_config_migration_applied = True
                     legacy_config_migration_reasons.append(mig.reason)
                     migrated_data = mig.data
@@ -862,7 +849,7 @@ def load_config_from_file(
             )
         return target_config, updated
     except Exception as e:
-        logger.critical(t("config.parse_failed", file_name=config_path.name))
+        logger.critical(f'配置文件 {config_path.name} 解析失败')
         raise e
 
 
@@ -897,11 +884,11 @@ def write_config_to_file(
             aot = tomlkit.aot()
             for item in config_field:
                 if not isinstance(item, ConfigBase):
-                    raise TypeError(t("config.write_unsupported_type"))
+                    raise TypeError('配置写入只支持 ConfigBase 子类')
                 aot.append(recursive_parse_item_to_table(item, override_repr=override_repr))
             full_config_data.add(config_item_name, aot)
         else:
-            raise TypeError(t("config.write_unsupported_type"))
+            raise TypeError('配置写入只支持 ConfigBase 子类')
 
     if isinstance(config, Config):
         try:

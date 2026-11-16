@@ -23,12 +23,7 @@ vi.mock('@/lib/restart-context', () => ({
   RestartProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   useRestart: () => ({ triggerRestart, isRestarting: false }),
 }))
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) =>
-      options ? `${key} ${JSON.stringify(options)}` : key,
-  }),
-}))
+
 
 const TARGET = 'b'.repeat(40)
 
@@ -81,7 +76,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers() })
 
 async function chooseSourceAndCheck() {
-  fireEvent.click(screen.getByRole('button', { name: 'settings.selfUpdate.check' }))
+  fireEvent.click(screen.getByRole('button', { name: '检查更新' }))
   expect(screen.getByRole('button', { name: '检查更新' })).toBeDisabled()
   fireEvent.keyDown(screen.getByRole('combobox', { name: '更新源' }), { key: 'ArrowDown' })
   fireEvent.click(await screen.findByRole('option', { name: 'GitHub · Ariember/MaiBot' }))
@@ -101,11 +96,11 @@ describe('SelfUpdateCard', () => {
     api.checkSelfUpdate.mockResolvedValue(image)
     api.applySelfUpdate.mockResolvedValue({ success: true, message: 'queued', requested_at: 100 })
     await act(async () => { render(<SelfUpdateCard />) })
-    fireEvent.click(screen.getByRole('button', { name: 'settings.selfUpdate.check' }))
+    fireEvent.click(screen.getByRole('button', { name: '检查更新' }))
     expect(screen.queryByText('PyPI 官方')).not.toBeInTheDocument()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '检查更新' })) })
-    fireEvent.click(screen.getByRole('button', { name: 'settings.selfUpdate.apply' }))
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'settings.selfUpdate.confirmAction' })) })
+    fireEvent.click(screen.getByRole('button', { name: '立即更新' }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '更新并重启' })) })
     expect(api.applySelfUpdate).toHaveBeenCalledWith(digest, { source_id: 'ghcr' })
     await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
     expect(triggerRestart).not.toHaveBeenCalled()
@@ -128,15 +123,15 @@ describe('SelfUpdateCard', () => {
     api.applySelfUpdate.mockResolvedValue({ success: true, message: 'ok' })
     render(<SelfUpdateCard />)
 
-    expect(await screen.findByText('settings.selfUpdate.notChecked')).toBeInTheDocument()
+    expect(await screen.findByText('尚未检查更新')).toBeInTheDocument()
     await chooseSourceAndCheck()
 
     expect(await screen.findByText('修复断句')).toBeInTheDocument()
-    expect(screen.getByText(/settings\.selfUpdate\.newVersion.*1\.3\.8/)).toBeInTheDocument()
-    expect(screen.getByText(/settings\.selfUpdate\.source .*GitHub 官方源/)).toBeInTheDocument()
+    expect(screen.getByText(/发现新版本.*1\.3\.8/)).toBeInTheDocument()
+    expect(screen.getByText(/更新来源：GitHub 官方源/)).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'settings.selfUpdate.apply' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'settings.selfUpdate.confirmAction' }))
+    fireEvent.click(screen.getByRole('button', { name: '立即更新' }))
+    fireEvent.click(await screen.findByRole('button', { name: '更新并重启' }))
 
     await waitFor(() => expect(triggerRestart).toHaveBeenCalledTimes(1))
     expect(api.checkSelfUpdate).toHaveBeenCalledWith({ source_id: 'github' }, true, expect.any(Function))
@@ -155,10 +150,10 @@ describe('SelfUpdateCard', () => {
     render(<SelfUpdateCard />)
 
     expect(
-      await screen.findByText('settings.selfUpdate.blockers.dirty_worktree')
+      await screen.findByText('存在未提交的本地改动，请先提交或还原')
     ).toBeInTheDocument()
     expect(screen.getByText(/src\/main\.py/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'settings.selfUpdate.apply' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '立即更新' })).toBeDisabled()
   })
 
   it('不支持自更新的部署只说明原因；登记失败时不进入重启等待', async () => {
@@ -167,19 +162,19 @@ describe('SelfUpdateCard', () => {
     )
     const { unmount } = render(<SelfUpdateCard />)
     expect(
-      await screen.findByText('settings.selfUpdate.blockers.not_git_repo')
+      await screen.findByText('当前不是 Git 部署，请使用本 fork 的 GHCR 镜像或 Git 部署')
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'settings.selfUpdate.check' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '检查更新' })).toBeDisabled()
     unmount()
 
     api.getSelfUpdateStatus.mockResolvedValue(available)
     api.checkSelfUpdate.mockResolvedValue(available)
     api.applySelfUpdate.mockRejectedValue(new Error('存在未提交的本地改动'))
     render(<SelfUpdateCard />)
-    await screen.findByRole('button', { name: 'settings.selfUpdate.apply' })
+    await screen.findByRole('button', { name: '立即更新' })
     await chooseSourceAndCheck()
-    fireEvent.click(await screen.findByRole('button', { name: 'settings.selfUpdate.apply' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'settings.selfUpdate.confirmAction' }))
+    fireEvent.click(await screen.findByRole('button', { name: '立即更新' }))
+    fireEvent.click(await screen.findByRole('button', { name: '更新并重启' }))
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -215,6 +210,6 @@ describe('SelfUpdateCard', () => {
     render(<SelfUpdateCard />)
 
     expect(await screen.findByText('依赖同步失败: uv sync')).toBeInTheDocument()
-    expect(screen.getByText('settings.selfUpdate.rolledBack')).toBeInTheDocument()
+    expect(screen.getByText('已自动回滚到更新前的版本')).toBeInTheDocument()
   })
 })

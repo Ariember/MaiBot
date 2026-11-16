@@ -14,7 +14,7 @@ from src.A_memorix.core.utils.summary_importer import (
     _normalize_relation_items,
 )
 from src.config.model_configs import TaskConfig
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.services import llm_service as llm_api
 
 
@@ -213,11 +213,10 @@ def test_summary_prompt_requires_incremental_output_from_current_window() -> Non
     assert '"summary": ""' in prompt
 
 
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
-def test_summary_prompt_locales_share_image_evidence_contract(locale: str) -> None:
+def test_summary_prompt_has_image_evidence_contract() -> None:
     prompt = load_prompt(
         "a_memorix_chat_summary",
-        locale=locale,
+
         bot_name="Mai",
         personality_context="",
         identity_catalog="[]",

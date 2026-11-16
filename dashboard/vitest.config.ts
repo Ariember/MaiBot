@@ -38,10 +38,9 @@ export default defineConfig({
         'src/**/*.d.ts',
         'src/main.tsx',
         'src/assets/**',
-        // 产物类文件：Storybook 用例、代码生成产物、语言包资源，均无测试价值
+        // 产物类文件：Storybook 用例、代码生成产物，均无测试价值
         'src/**/*.stories.{ts,tsx}',
         'src/**/*.gen.ts',
-        'src/i18n/locales/**',
       ],
       // 防退化闸门：阈值取当前实测基线略低一档，只用于拦住覆盖率下滑，
       // 不作为质量目标。随着测试补充应逐步上调这些数字。

@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.common.i18n import use_locale
 from src.core.tooling import ToolRegistry
 from src.llm_models.payload_content.tool_option import ToolCall
 from src.maisaka.builtin_tool.provider import MaisakaBuiltinToolProvider
@@ -14,16 +13,14 @@ from src.maisaka.mode_policy import is_idle_cycle_reason
 from src.maisaka.reasoning_engine import CycleRuntimeState, MaisakaReasoningEngine
 
 
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
 @pytest.mark.parametrize("prompt_name", ["maisaka_chat", "maisaka_chat_focus"])
-def test_stop_prompt_is_always_available(monkeypatch: pytest.MonkeyPatch, locale: str, prompt_name: str) -> None:
+def test_stop_prompt_is_always_available(monkeypatch: pytest.MonkeyPatch, prompt_name: str) -> None:
     service = MaisakaChatLoopService(is_group_chat=True)
     monkeypatch.setattr(service, "_get_chat_prompt_name", lambda: prompt_name)
-    with use_locale(locale):
-        prompt = service._build_chat_system_prompt()
-        if prompt_name == "maisaka_chat":
-            reminder = service._build_planner_final_user_reminder()
-            assert all(name in reminder for name in ("reply", "wait", "stop"))
+    prompt = service._build_chat_system_prompt()
+    if prompt_name == "maisaka_chat":
+        reminder = service._build_planner_final_user_reminder()
+        assert all(name in reminder for name in ("reply", "wait", "stop"))
 
     stop_lines = [line for line in prompt.splitlines() if line.startswith("- stop()")]
     assert len(stop_lines) == 1

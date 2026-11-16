@@ -12,11 +12,8 @@ const { navigateMock, setThemeMock } = vi.hoisted(() => ({
   setThemeMock: vi.fn(),
 }))
 
-// t 必须在工厂内只创建一次保持稳定引用，否则依赖 [t] 的 useCallback 失稳导致 effect 无限重跑
-vi.mock('react-i18next', () => {
-  const t = (key: string) => key
-  return { useTranslation: () => ({ t }) }
-})
+// t 必须在工厂内只创建一次保持稳定引用，否则依赖 [] 的 useCallback 失稳导致 effect 无限重跑
+
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
@@ -65,7 +62,7 @@ describe('AuthPage 认证状态检查', () => {
     // 永不 resolve 的 Promise 模拟检查进行中
     checkAuthStatusMock.mockReturnValue(new Promise<boolean>(() => {}))
     render(<AuthPage />)
-    expect(screen.getByText('auth.checkingAuth')).toBeInTheDocument()
+    expect(screen.getByText('正在检查登录状态...')).toBeInTheDocument()
     // 表单尚未渲染
     expect(screen.queryByLabelText('Access Token')).not.toBeInTheDocument()
   })
@@ -102,9 +99,9 @@ describe('AuthPage 认证状态检查', () => {
   it('未认证时渲染登录表单', async () => {
     render(<AuthPage />)
 
-    expect(await screen.findByText('auth.welcome')).toBeInTheDocument()
+    expect(await screen.findByText('欢迎使用 MaiBot')).toBeInTheDocument()
     expect(getTokenInput()).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'auth.verifyEnter' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '验证并进入' })).toBeEnabled()
     expect(navigateMock).not.toHaveBeenCalled()
   })
 })
@@ -113,11 +110,11 @@ describe('AuthPage 手动提交登录', () => {
   it('空 token 提交时显示必填错误且不发请求', async () => {
     const user = userEvent.setup()
     render(<AuthPage />)
-    await screen.findByText('auth.welcome')
+    await screen.findByText('欢迎使用 MaiBot')
 
-    await user.click(screen.getByRole('button', { name: 'auth.verifyEnter' }))
+    await user.click(screen.getByRole('button', { name: '验证并进入' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('auth.tokenRequired')
+    expect(await screen.findByRole('alert')).toHaveTextContent('请输入访问密码')
     expect(postMock).not.toHaveBeenCalled()
   })
 
@@ -125,15 +122,15 @@ describe('AuthPage 手动提交登录', () => {
     postMock.mockResolvedValue({ valid: true })
     const user = userEvent.setup()
     render(<AuthPage />)
-    await screen.findByText('auth.welcome')
+    await screen.findByText('欢迎使用 MaiBot')
 
     await user.type(getTokenInput(), 'secret-token')
-    await user.click(screen.getByRole('button', { name: 'auth.verifyEnter' }))
+    await user.click(screen.getByRole('button', { name: '验证并进入' }))
 
     await waitFor(() =>
       expect(postMock).toHaveBeenCalledWith('/api/webui/auth/verify', {
         body: { token: 'secret-token' },
-        errorMessage: 'auth.verifyFailed',
+        errorMessage: 'Token 验证失败，请检查后重试',
       })
     )
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith({ to: '/' }))
@@ -145,10 +142,10 @@ describe('AuthPage 手动提交登录', () => {
     postMock.mockResolvedValue({ valid: true, is_first_setup: true })
     const user = userEvent.setup()
     render(<AuthPage />)
-    await screen.findByText('auth.welcome')
+    await screen.findByText('欢迎使用 MaiBot')
 
     await user.type(getTokenInput(), 'first-time-token')
-    await user.click(screen.getByRole('button', { name: 'auth.verifyEnter' }))
+    await user.click(screen.getByRole('button', { name: '验证并进入' }))
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith({ to: '/setup' }))
   })
@@ -157,10 +154,10 @@ describe('AuthPage 手动提交登录', () => {
     postMock.mockResolvedValue({ valid: false, message: 'Token 无效' })
     const user = userEvent.setup()
     render(<AuthPage />)
-    await screen.findByText('auth.welcome')
+    await screen.findByText('欢迎使用 MaiBot')
 
     await user.type(getTokenInput(), 'wrong-token')
-    await user.click(screen.getByRole('button', { name: 'auth.verifyEnter' }))
+    await user.click(screen.getByRole('button', { name: '验证并进入' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Token 无效')
     expect(navigateMock).not.toHaveBeenCalled()
@@ -170,10 +167,10 @@ describe('AuthPage 手动提交登录', () => {
     postMock.mockRejectedValue(new Error('后端连接失败'))
     const user = userEvent.setup()
     render(<AuthPage />)
-    await screen.findByText('auth.welcome')
+    await screen.findByText('欢迎使用 MaiBot')
 
     await user.type(getTokenInput(), 'any-token')
-    await user.click(screen.getByRole('button', { name: 'auth.verifyEnter' }))
+    await user.click(screen.getByRole('button', { name: '验证并进入' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('后端连接失败')
     expect(navigateMock).not.toHaveBeenCalled()
@@ -183,12 +180,12 @@ describe('AuthPage 手动提交登录', () => {
     postMock.mockRejectedValue('boom')
     const user = userEvent.setup()
     render(<AuthPage />)
-    await screen.findByText('auth.welcome')
+    await screen.findByText('欢迎使用 MaiBot')
 
     await user.type(getTokenInput(), 'any-token')
-    await user.click(screen.getByRole('button', { name: 'auth.verifyEnter' }))
+    await user.click(screen.getByRole('button', { name: '验证并进入' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('auth.connFailed')
+    expect(await screen.findByRole('alert')).toHaveTextContent('连接服务器失败，请检查网络连接')
   })
 })
 
@@ -201,7 +198,7 @@ describe('AuthPage URL token 自动登录', () => {
     await waitFor(() =>
       expect(postMock).toHaveBeenCalledWith('/api/webui/auth/verify', {
         body: { token: 'url-query-token' },
-        errorMessage: 'auth.verifyFailed',
+        errorMessage: 'Token 验证失败，请检查后重试',
       })
     )
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith({ to: '/' }))
@@ -217,7 +214,7 @@ describe('AuthPage URL token 自动登录', () => {
     await waitFor(() =>
       expect(postMock).toHaveBeenCalledWith('/api/webui/auth/verify', {
         body: { token: 'hash-token' },
-        errorMessage: 'auth.verifyFailed',
+        errorMessage: 'Token 验证失败，请检查后重试',
       })
     )
     expect(window.location.hash).toBe('#/login')
@@ -240,21 +237,21 @@ describe('AuthPage 主题切换与帮助弹窗', () => {
   it('浅色主题下点击切换按钮调用 setTheme(dark)', async () => {
     const user = userEvent.setup()
     render(<AuthPage />)
-    await screen.findByText('auth.welcome')
+    await screen.findByText('欢迎使用 MaiBot')
 
-    await user.click(screen.getByTitle('auth.switchToDark'))
+    await user.click(screen.getByTitle('切换到深色模式'))
     expect(setThemeMock).toHaveBeenCalledWith('dark')
   })
 
   it('点击帮助链接打开获取 Token 说明弹窗', async () => {
     const user = userEvent.setup()
     render(<AuthPage />)
-    await screen.findByText('auth.welcome')
+    await screen.findByText('欢迎使用 MaiBot')
 
-    await user.click(screen.getByRole('button', { name: /auth\.helpLink/ }))
+    await user.click(screen.getByRole('button', { name: '我没有密码，我该去哪里获得密码？' }))
 
-    expect(await screen.findByText('auth.helpTitle')).toBeInTheDocument()
-    expect(screen.getByText('auth.method1Title')).toBeInTheDocument()
-    expect(screen.getByText('auth.method2Title')).toBeInTheDocument()
+    expect(await screen.findByText('访问密码')).toBeInTheDocument()
+    expect(screen.getByText('方式一：查看启动日志')).toBeInTheDocument()
+    expect(screen.getByText('方式二：查看配置文件')).toBeInTheDocument()
   })
 })

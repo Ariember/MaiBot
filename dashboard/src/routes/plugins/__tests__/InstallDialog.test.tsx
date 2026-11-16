@@ -126,7 +126,6 @@ function makePlugin(
       repository_url: `https://example.com/${id}.git`,
       keywords: ['标签一'],
       plugin_type: 'extension',
-      default_locale: 'zh-CN',
       ...manifestOverrides,
     },
     downloads: 0,

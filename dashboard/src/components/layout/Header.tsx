@@ -21,7 +21,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { BackgroundLayer } from '@/components/background-layer'
 import { BackendManager } from '@/components/electron/BackendManager'
@@ -61,10 +61,10 @@ const WORKSPACE_TABS: Array<{
   value: WorkspaceMode
   to: string
   icon: ComponentType<{ className?: string }>
-  labelKey: string
+  label: string
 }> = [
-  { value: 'settings', to: '/', icon: SlidersHorizontal, labelKey: 'workspace.settings' },
-  { value: 'logs', to: '/logs', icon: FileText, labelKey: 'workspace.logs' },
+  { value: 'settings', to: '/', icon: SlidersHorizontal, label: "麦麦" },
+  { value: 'logs', to: '/logs', icon: FileText, label: "日志" },
 ]
 
 interface HeaderProps {
@@ -107,7 +107,6 @@ export function Header({
   topbarCollapsed,
   workspaceMode,
 }: HeaderProps) {
-  const { t } = useTranslation()
   const [preloadMobileSearch, setPreloadMobileSearch] = useState(false)
 
   useEffect(() => {
@@ -124,8 +123,7 @@ export function Header({
             value: extensionWorkspace(extension.plugin_id),
             to: extensionPath(extension.plugin_id, page.id),
             icon: extensionIcons[page.icon],
-            labelKey: extension.workspace_title ?? extension.plugin_id,
-            literal: true,
+            label: extension.workspace_title ?? extension.plugin_id,
           },
         ]
       : []
@@ -134,10 +132,10 @@ export function Header({
   const activePluginTab = pluginTabs.find((tab) => tab.value === workspaceMode)
   const { visible: visiblePluginTabs, overflow: overflowTabs } = splitWorkspaceTabs(pluginTabs, activePluginTab)
   const workspaceTabs = [
-    ...WORKSPACE_TABS.map((tab) => ({ ...tab, literal: false })),
+    ...WORKSPACE_TABS,
     ...visiblePluginTabs,
   ]
-  const workspaceTabsKey = workspaceTabs.map((tab) => `${tab.value}:${tab.labelKey}`).join('|')
+  const workspaceTabsKey = workspaceTabs.map((tab) => `${tab.value}:${tab.label}`).join('|')
   const { config: headerBg, inheritedFrom } = useBackground('header')
   const inheritsPageBackground = inheritedFrom === 'page'
   const [searchQuery, setSearchQuery] = useState('')
@@ -162,9 +160,9 @@ export function Header({
   useEffect(() => {
     if (!isElectron()) return
     window.electronAPI!.getActiveBackend().then((b) => {
-      setActiveBackendName(b?.name ?? t('header.notConnected'))
+      setActiveBackendName(b?.name ?? '未连接')
     })
-  }, [t])
+  }, [])
 
   useEffect(() => {
     workspaceTabsCompactRef.current = workspaceTabsCompact
@@ -341,13 +339,13 @@ export function Header({
             data-dashboard-topbar-toggle="true"
             data-topbar-mascot-toggle="true"
             onClick={onTopbarToggle}
-            aria-label={t('header.expandTopbar')}
+            aria-label={'展开顶栏'}
             aria-expanded={!topbarCollapsed}
-            title={t('header.expandTopbar')}
+            title={'展开顶栏'}
             className="bg-foreground/70 relative z-10 h-2 w-24 transition-shadow"
           >
             <TopbarMascot />
-            <span className="sr-only">{t('header.expandTopbar')}</span>
+            <span className="sr-only">{'展开顶栏'}</span>
           </button>
         </div>
       )}
@@ -366,19 +364,19 @@ export function Header({
                 aria-hidden="true"
                 className="pointer-events-none invisible absolute top-0 left-0 inline-flex h-9 items-center justify-center gap-0.5 rounded-lg p-1"
               >
-                {workspaceTabs.map(({ value, icon: Icon, labelKey, literal }) => (
+                {workspaceTabs.map(({ value, icon: Icon, label }) => (
                   <div
                     key={value}
                     className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-medium whitespace-nowrap"
                   >
                     <Icon className="h-3.5 w-3.5" />
                     <span className="font-sans text-base font-semibold tracking-wider uppercase">
-                      {literal ? labelKey : t(labelKey)}
+                      {label}
                     </span>
                   </div>
                 ))}
               </div>
-              <Tabs value={workspaceMode} aria-label={t('workspace.switcherLabel')}>
+              <Tabs value={workspaceMode} aria-label={'切换麦麦工作区'}>
                 <TabsList
                   ref={workspaceTabsRef}
                   data-dashboard-workspace-tabs="true"
@@ -398,7 +396,7 @@ export function Header({
                     }, WORKSPACE_HOVER_LEAVE_DELAY_MS)
                   }}
                 >
-                  {workspaceTabs.map(({ value, to, icon: Icon, labelKey, literal }) => (
+                  {workspaceTabs.map(({ value, to, icon: Icon, label }) => (
                     <TabsTrigger
                       size="sm"
                       key={value}
@@ -421,7 +419,7 @@ export function Header({
                     >
                       <Link
                         to={to}
-                        title={literal ? labelKey : t(labelKey)}
+                        title={label}
                         onPointerEnter={() => {
                           if (!workspaceHoverLocked) {
                             if (workspaceHoverTimerRef.current !== null) {
@@ -472,7 +470,7 @@ export function Header({
                             !workspaceTabsCompact && 'sm:inline'
                           )}
                         >
-                          {literal ? labelKey : t(labelKey)}
+                          {label}
                         </span>
                       </Link>
                     </TabsTrigger>
@@ -485,8 +483,8 @@ export function Header({
                     <Button
                       variant="ghost"
                       size="icon"
-                      title={t('pluginWebUI.more')}
-                      aria-label={t('pluginWebUI.more')}
+                      title={'更多插件工作区'}
+                      aria-label={'更多插件工作区'}
                       data-dashboard-header-action="true"
                       data-dashboard-workspace-more="true"
                       data-header-action-highlighted={
@@ -507,7 +505,7 @@ export function Header({
                         onSelect={() => onWorkspaceNavigate(tab.to)}
                       >
                         <tab.icon className="mr-2 h-4 w-4" />
-                        {tab.labelKey}
+                        {tab.label}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -537,13 +535,13 @@ export function Header({
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder={t('header.searchPlaceholder')}
-                  aria-label={t('header.searchPlaceholder')}
+                  placeholder={'问麦麦你想知道的一切'}
+                  aria-label={'问麦麦你想知道的一切'}
                   className="h-8 min-w-0 pr-9 text-sm"
                 />
                 <button
                   type="submit"
-                  aria-label={t('header.searchPlaceholder')}
+                  aria-label={'问麦麦你想知道的一切'}
                   className="text-muted-foreground hover:text-foreground absolute right-1 flex h-7 w-7 items-center justify-center rounded-sm"
                 >
                   <Search className="h-4 w-4" />
@@ -581,7 +579,7 @@ export function Header({
                   size="sm"
                   className="gap-2"
                   onClick={() => setBackendManagerOpen(true)}
-                  title={t('header.toggleConnection')}
+                  title={'切换后端连接'}
                 >
                   <Database className="h-4 w-4" />
                   <span className="text-muted-foreground hidden max-w-25 truncate text-xs sm:inline">
@@ -623,8 +621,8 @@ export function Header({
             >
               <Link
                 to="/settings"
-                title={t('sidebar.menu.settings')}
-                aria-label={t('sidebar.menu.settings')}
+                title={'WEBUI设置'}
+                aria-label={'WEBUI设置'}
                 data-dashboard-header-action="true"
                 data-header-action-highlighted={
                   highlightedHeaderAction === 'settings' ? 'true' : 'false'
@@ -646,8 +644,8 @@ export function Header({
                 window.open('https://docs.mai-mai.org', '_blank')
               }}
               className="relative isolate hidden border-0 bg-transparent shadow-none sm:inline-flex"
-              title={t('header.viewDocs')}
-              aria-label={t('header.viewDocs')}
+              title={'查看麦麦文档'}
+              aria-label={'查看麦麦文档'}
               data-dashboard-header-action="true"
               data-header-action-highlighted={
                 highlightedHeaderAction === 'docs' ? 'true' : 'false'
@@ -675,7 +673,7 @@ export function Header({
                 highlightedHeaderAction === 'theme' ? 'true' : 'false'
               }
               aria-label={
-                actualTheme === 'dark' ? t('header.switchToLight') : t('header.switchToDark')
+                actualTheme === 'dark' ? '切换到浅色模式' : '切换到深色模式'
               }
               className="relative isolate hidden border-0 bg-transparent shadow-none sm:inline-flex"
             >
@@ -692,8 +690,8 @@ export function Header({
               variant="ghost"
               size="icon"
               onClick={onTopbarToggle}
-              title={t('header.collapseTopbar')}
-              aria-label={t('header.collapseTopbar')}
+              title={'收起顶栏'}
+              aria-label={'收起顶栏'}
               aria-expanded={!topbarCollapsed}
               data-dashboard-header-action="true"
               data-dashboard-topbar-collapse-key="true"
@@ -716,8 +714,8 @@ export function Header({
                   variant="ghost"
                   size="icon"
                   className="sm:hidden"
-                  title={t('header.moreActions')}
-                  aria-label={t('header.moreActions')}
+                  title={'更多操作'}
+                  aria-label={'更多操作'}
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -726,7 +724,7 @@ export function Header({
                 <DropdownMenuItem asChild>
                   <Link to="/settings" className="cursor-pointer gap-2">
                     <Settings className="h-4 w-4" />
-                    {t('sidebar.menu.settings')}
+                    {'WEBUI设置'}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -741,7 +739,7 @@ export function Header({
                   ) : (
                     <Moon className="h-4 w-4" />
                   )}
-                  {actualTheme === 'dark' ? t('header.switchToLight') : t('header.switchToDark')}
+                  {actualTheme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

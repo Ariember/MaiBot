@@ -85,10 +85,6 @@ export interface PluginManifest {
   display?: PluginDisplay
   /** 更新日志地址或插件内相对路径 */
   changelog?: string
-  /** 插件默认语言 */
-  default_locale: string
-  /** 插件语言文件夹（可选） */
-  locales_path?: string
 }
 
 export interface PluginRelease {

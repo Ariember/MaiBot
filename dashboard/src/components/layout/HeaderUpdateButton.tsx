@@ -1,6 +1,6 @@
 import { ArrowUpToLine } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -19,7 +19,6 @@ interface HeaderUpdateButtonProps {
 }
 
 export function HeaderUpdateButton({ children, highlighted, onPointerEnter, onPointerLeave }: HeaderUpdateButtonProps) {
-  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<SelfUpdateStatus | null>(null)
   const [alwaysShow, setAlwaysShow] = useState(() => getSetting('alwaysShowUpdateButton'))
@@ -61,8 +60,8 @@ export function HeaderUpdateButton({ children, highlighted, onPointerEnter, onPo
           variant="ghost"
           size="icon"
           className="relative isolate border-0 bg-transparent shadow-none"
-          title={t('settings.selfUpdate.title')}
-          aria-label={t('settings.selfUpdate.title')}
+          title={'主程序更新'}
+          aria-label={'主程序更新'}
           data-dashboard-header-action="true"
           data-header-update-available={status?.update_available ? 'true' : 'false'}
           data-header-action-highlighted={highlighted ? 'true' : 'false'}
@@ -74,7 +73,7 @@ export function HeaderUpdateButton({ children, highlighted, onPointerEnter, onPo
           {status?.update_available && (
             <>
               <span className="relative z-10 whitespace-nowrap text-sm font-bold">
-                {t('home.versionCard.updateAvailable')} {status.latest_version ? `V${status.latest_version}` : status.latest_commit?.slice(0, 8)}
+                {'UPDATE'} {status.latest_version ? `V${status.latest_version}` : status.latest_commit?.slice(0, 8)}
               </span>
               <span aria-hidden="true" className="absolute -right-1 -top-1 z-20 h-2.5 w-2.5 rounded-full border border-background bg-yellow-400" />
             </>
@@ -83,10 +82,10 @@ export function HeaderUpdateButton({ children, highlighted, onPointerEnter, onPo
       </DialogTrigger>
       <DialogContent className="[--dialog-width:48rem]" aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>{t('settings.selfUpdate.title')}</DialogTitle>
+          <DialogTitle>{'主程序更新'}</DialogTitle>
         </DialogHeader>
         <DialogBody>
-          <Suspense fallback={<p className="text-sm text-muted-foreground">{t('settings.selfUpdate.loading')}</p>}>
+          <Suspense fallback={<p className="text-sm text-muted-foreground">{'正在读取更新状态…'}</p>}>
             <SelfUpdateCard />
           </Suspense>
         </DialogBody>

@@ -12,9 +12,9 @@ from rich.console import RenderableType
 
 from src.common.data_models.llm_service_data_models import LLMGenerationOptions
 from src.common.data_models.message_component_data_model import AtComponent
-from src.common.i18n import get_locale
+
 from src.common.logger import get_logger
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.common.utils.utils_config import ChatConfigUtils
 from src.common.utils.system_utils import is_bot_self
 from src.config.config import global_config
@@ -95,16 +95,8 @@ CONTEXT_SELECTION_CACHE_STABILITY_RATIO = 2.0
 FOCUS_PLANNER_FINAL_USER_REMINDER_TEMPLATE = (
     "你需要输出对{bot_name}发言的分析，视情况输出文本内容的分析，思考是否进行工具调用"
 )
-PLANNER_FINAL_USER_REMINDERS = {
-    "zh-CN": "请分析后决定下一步：用工具收集或处理信息，用 reply 回复，用 wait 稍后再判断，或用 stop 静默结束本轮。",
-    "en-US": "Decide the next step: use tools to gather or process information, reply to speak, wait to reconsider later, or stop to end the turn silently.",
-    "ja-JP": "次の行動を判断してください。情報の収集や処理にはツール、発言には reply、後で再判断するには wait、発言せずにターンを終えるには stop を使ってください。",
-}
-PASSIVE_PLANNER_FINAL_USER_REMINDERS = {
-    "zh-CN": "需要信息或操作时调用工具；决定发言时直接输出指导正文，不附带工具调用；不发言用 stop，需要稍后判断用 wait。",
-    "en-US": "Use tools for information or actions. To speak, output guidance without tool calls. Use stop to stay silent, or wait to reconsider later.",
-    "ja-JP": "情報や操作が必要ならツールを使い、発言する場合はツール呼び出しを伴わない指針本文を出力してください。発言しない場合は stop、後で再判断する場合は wait を使ってください。",
-}
+PLANNER_FINAL_USER_REMINDER = '请分析后决定下一步：用工具收集或处理信息，用 reply 回复，用 wait 稍后再判断，或用 stop 静默结束本轮。'
+PASSIVE_PLANNER_FINAL_USER_REMINDER = '需要信息或操作时调用工具；决定发言时直接输出指导正文，不附带工具调用；不发言用 stop，需要稍后判断用 wait。'
 
 
 @dataclass(slots=True)
@@ -777,7 +769,7 @@ class MaisakaChatLoopService:
             self._get_chat_prompt_name(),
             **self.build_prompt_template_context(tools_section, bot_nickname_notice),
         )
-        # 每轮读取实验开关，普通与专注模式共用同一份本地化风格指令。
+        # 每轮读取实验开关，普通与专注模式共用同一份风格指令。
         if attention_drift := build_attention_drift_prompt_block(self._is_group_chat):
             system_prompt += f"\n\n{attention_drift}"
         return system_prompt
@@ -787,9 +779,9 @@ class MaisakaChatLoopService:
 
         prompt_name = self._get_chat_prompt_name()
         if prompt_name == "maisaka_chat_passive":
-            return PASSIVE_PLANNER_FINAL_USER_REMINDERS.get(get_locale(), PASSIVE_PLANNER_FINAL_USER_REMINDERS["zh-CN"])
+            return PASSIVE_PLANNER_FINAL_USER_REMINDER
         if prompt_name == "maisaka_chat":
-            return PLANNER_FINAL_USER_REMINDERS.get(get_locale(), PLANNER_FINAL_USER_REMINDERS["zh-CN"])
+            return PLANNER_FINAL_USER_REMINDER
         return FOCUS_PLANNER_FINAL_USER_REMINDER_TEMPLATE.format(bot_name=global_config.bot.nickname.strip())
 
     def _get_chat_prompt_name(self) -> str:
@@ -811,13 +803,7 @@ class MaisakaChatLoopService:
         alias_names = [alias_name.strip() for alias_name in global_config.bot.alias_names if alias_name.strip()]
         if not alias_names:
             return ""
-        return self._localized_text(
-            {
-                "en-US": f"; some people also call you {', '.join(alias_names)}",
-                "ja-JP": f"（{'、'.join(alias_names)}と呼ぶ人もいます）",
-                "zh-CN": f"，还有人叫你{'、'.join(alias_names)}",
-            }
-        )
+        return f"，还有人叫你{'、'.join(alias_names)}"
 
     def build_prompt_template_context(self, tools_section: str = "", bot_nickname_notice: str = "") -> dict[str, str]:
         """构造 Maisaka prompt 模板的公共渲染参数。"""
@@ -879,63 +865,27 @@ class MaisakaChatLoopService:
 
         return "\n\n".join(prompt_lines) + "\n"
 
-    @staticmethod
-    def _localized_text(texts: dict[str, str]) -> str:
-        """按当前语言读取文案，默认中文。"""
-
-        return texts.get(get_locale(), texts["zh-CN"])
-
     def _build_planner_idle_focus_rule(self) -> str:
         """构造 Focus 模式下空闲等待动作提示。"""
 
-        return self._localized_text(
-            {
-                "en-US": "Consider all chats in the shared context. Every tool requires its target session_id. Use wait only to pause the entire group; otherwise finish this thought when no action is needed.",
-                "ja-JP": "共有コンテキスト内の全チャットを判断してください。すべてのツールに対象の session_id が必要です。wait はグループ全体を待機させる場合だけ使い、行動が不要なら思考を終了してください。",
-                "zh-CN": "结合共享上下文中的所有聊天判断，每个工具填写目标 session_id；只有需要整个组暂停等待时才使用 wait，没有需要执行的动作时结束本轮思考。",
-            }
-        )
+        return '结合共享上下文中的所有聊天判断，每个工具填写目标 session_id；只有需要整个组暂停等待时才使用 wait，没有需要执行的动作时结束本轮思考。'
 
     def _build_query_memory_rule(self) -> str:
         """按当前聊天类型构造记忆检索提示。"""
 
         if self._is_group_chat:
-            return self._localized_text(
-                {
-                    "en-US": "- query_memory(): Use it only when the reply clearly depends on past group conversation, shared experiences, public agreements, task progress, or recent clues. Do not retrieve memory for greetings, immediate emotional responses, light banter, or content that can be answered from recent messages alone. Do not bring private-chat or personal-privacy memories into a group chat.",
-                    "ja-JP": "- query_memory()：返信がグループ内の過去会話、共有した経験、公開された約束、タスクの進捗、最近の手がかりに明確に依存する場合だけ使ってください。挨拶、その場の感情への反応、軽いやり取り、最近のメッセージだけで答えられる内容では検索しないでください。個人チャットや私的な記憶をグループチャットに持ち込まないでください。",
-                    "zh-CN": "- query_memory()：只有回复明显依赖群内过去对话、共同经历、公开约定、任务进展或近期线索时使用；不要为了寒暄、即时情绪回应、轻松接话、只看最近消息就能回答的内容而检索。不要把私聊或个人隐私记忆带到群聊里。",
-                }
-            )
+            return '- query_memory()：只有回复明显依赖群内过去对话、共同经历、公开约定、任务进展或近期线索时使用；不要为了寒暄、即时情绪回应、轻松接话、只看最近消息就能回答的内容而检索。不要把私聊或个人隐私记忆带到群聊里。'
 
-        return self._localized_text(
-            {
-                "en-US": '- query_memory(): Consider retrieval more actively when the other person mentions signals like "before", "last time", "recently", "do you remember", "I like", or "I said", or when the reply depends on long-term preferences, prior promises, shared experiences, or long-term information about a person.',
-                "ja-JP": "- query_memory()：相手が「前に」「この前」「最近」「覚えてる？」「好き」「言った」などの合図を出した場合、または返信が長期的な好み、以前の約束、共有した経験、人物の長期的な情報に依存する場合は、より積極的に検索を検討できます。",
-                "zh-CN": "- query_memory()：当对方提到“之前”“上次”“最近”“还记得吗”“我喜欢”“我说过”等信号，或回复依赖长期偏好、先前承诺、共同经历、人物长期信息时，可以更积极检索。",
-            }
-        )
+        return '- query_memory()：当对方提到“之前”“上次”“最近”“还记得吗”“我喜欢”“我说过”等信号，或回复依赖长期偏好、先前承诺、共同经历、人物长期信息时，可以更积极检索。'
 
     def _build_subagent_rule(self) -> str:
         """开启子代理时说明何时该把任务交给 subagent；未开启时为空，不占提示词。"""
 
         if not global_config.capabilities.planner_subagent:
             return ""
-        rule = self._localized_text(
-            {
-                "en-US": "- subagent(): When something needs looking up before you can answer or judge it (reading docs, searching the web, checking version or plugin information, finding images, verifying a claim, and so on), prefer handing it to a sub-agent: state clearly what to find out and grant it the tools it may need. It only hands you its conclusion. Call a tool directly only for things that take a single step.",
-                "ja-JP": "- subagent()：答えたり判断したりする前に調べものが必要なこと（ドキュメントの確認、ウェブ検索、バージョンやプラグイン情報の確認、画像探し、ある主張の検証など）は、サブエージェントに任せることを優先してください。何を調べるかを明確に書き、使えそうなツールを許可します。サブエージェントは結論だけをあなたに渡します。一手で済むことだけ、該当するツールを直接呼び出してください。",
-                "zh-CN": "- subagent()：遇到需要查资料才能回答或判断的事（查文档、搜网页、查版本或插件信息、找图、核实某个说法等），优先交给子代理：写清楚要查什么，把用得上的工具授权给它；它查完只把结论交给你。只有一步就能完成的事才直接调用对应工具。",
-            }
-        )
+        rule = '- subagent()：遇到需要查资料才能回答或判断的事（查文档、搜网页、查版本或插件信息、找图、核实某个说法等），优先交给子代理：写清楚要查什么，把用得上的工具授权给它；它查完只把结论交给你。只有一步就能完成的事才直接调用对应工具。'
         if global_config.capabilities.advanced_sub_agent:
-            rule += self._localized_text(
-                {
-                    "en-US": " The sub-agent runs in the background: after dispatching it you do not need to wait and can keep chatting; its conclusion will be sent back to you later.",
-                    "ja-JP": "サブエージェントはバックグラウンドで動作します。依頼したあとは待つ必要はなく、会話を続けてかまいません。結論は後であなたに返されます。",
-                    "zh-CN": "子代理在后台运行，派发后不用等它，可以继续聊天，结论稍后会送回给你。",
-                }
-            )
+            rule += '子代理在后台运行，派发后不用等它，可以继续聊天，结论稍后会送回给你。'
         return f"\n{rule}"
 
     def _build_current_chat_attention_tail_message(self) -> str:
@@ -1009,22 +959,14 @@ class MaisakaChatLoopService:
         bot_name = global_config.bot.nickname.strip()
         lines: List[str] = []
         if self._bot_platform_nickname and not (skip_same_as_bot_name and self._bot_platform_nickname == bot_name):
-            lines.append(self._localized_text({
-                "zh-CN": f"你在 {self._bot_platform} 平台的昵称是“{self._bot_platform_nickname}”。",
-                "en-US": f'Your nickname on {self._bot_platform} is "{self._bot_platform_nickname}".',
-                "ja-JP": f"{self._bot_platform} でのあなたのニックネームは「{self._bot_platform_nickname}」です。",
-            }))
+            lines.append(f'你在 {self._bot_platform} 平台的昵称是“{self._bot_platform_nickname}”。')
         if (
             self._is_group_chat
             and self._bot_group_cardname
             and not (skip_same_as_bot_name and self._bot_group_cardname == bot_name)
         ):
-            lines.append(self._localized_text({
-                "zh-CN": f"你在本群的昵称是“{self._bot_group_cardname}”。",
-                "en-US": f'Your nickname in this group is "{self._bot_group_cardname}".',
-                "ja-JP": f"このグループでのあなたのニックネームは「{self._bot_group_cardname}」です。",
-            }))
-        return (" " if get_locale() == "en-US" else "").join(lines)
+            lines.append(f'你在本群的昵称是“{self._bot_group_cardname}”。')
+        return "".join(lines)
 
     @defer_context_image_encoding(lambda result: result[0])
     def _build_request_messages(

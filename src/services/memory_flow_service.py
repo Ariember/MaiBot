@@ -15,7 +15,7 @@ from src.common.llm_json import parse_llm_json
 from src.common.logger import get_logger
 from src.common.database.database import ROOT_PATH
 from src.common.message_repository import count_messages, find_messages
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.common.data_models.message_component_data_model import TextComponent
 from src.chat.utils.utils import is_bot_self
 from src.config.config import global_config

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -52,7 +52,6 @@ function CustomPageSession({
   pages,
   onReload,
 }: CustomPageProps & { onReload: () => void }) {
-  const { t, i18n } = useTranslation()
   const frame = useRef<HTMLIFrameElement>(null)
   const port = useRef<MessagePort | null>(null)
   const controller = useRef<AbortController | null>(null)
@@ -69,7 +68,6 @@ function CustomPageSession({
   const themeFonts = useRef(new Map<string, PluginPageFont>())
   const context = useRef<PluginPageContext>({
     theme: 'light',
-    language: i18n.language,
     dashboardStyle: 'modern',
     styles: '',
   })
@@ -115,7 +113,7 @@ function CustomPageSession({
     const update = () => {
       scheduled = 0
       if (!probes.current) return
-      const snapshot = readPluginPageTheme(probes.current, i18n.language)
+      const snapshot = readPluginPageTheme(probes.current)
       if (JSON.stringify(snapshot) !== JSON.stringify(context.current)) {
         context.current = snapshot
         port.current?.postMessage({ type: 'context', context: snapshot })
@@ -146,7 +144,7 @@ function CustomPageSession({
       window.removeEventListener('resize', schedule)
       document.fonts?.removeEventListener('loadingdone', schedule)
     }
-  }, [i18n.language])
+  }, [])
 
   useEffect(() => {
     const operation = new AbortController()
@@ -225,7 +223,7 @@ function CustomPageSession({
         layoutTokens = Math.min(100, layoutTokens + (now - layoutRefill) / 50)
         layoutRefill = now
         if (layoutTokens < 1) {
-          stop(t('pluginWebUI.customStopLayoutRate'))
+          stop('页面尺寸更新过于频繁，页面已停止。')
           return
         }
         layoutTokens -= 1
@@ -233,7 +231,7 @@ function CustomPageSession({
         if (Number.isSafeInteger(nextHeight) && nextHeight > 0 && nextHeight <= 30000)
           setHeight(nextHeight)
         else {
-          stop(t('pluginWebUI.customStopHeight'))
+          stop('页面高度无效或超过 30000 像素，页面已停止。')
         }
         return
       }
@@ -242,7 +240,7 @@ function CustomPageSession({
       // Allow bursts of 200 messages and sustain 20 per second for batch uploads.
       // Flooding closes this page's bridge instead of growing a queue in the host.
       if (tokens < 1) {
-        stop(t('pluginWebUI.customStopRequestRate'))
+        stop('请求过于频繁，页面已停止（允许每秒 20 次请求，最多突发 200 次）。')
         return
       }
       tokens -= 1
@@ -256,7 +254,7 @@ function CustomPageSession({
         const request = parseCustomPageRequest(event.data, page)
         id = request.id
         if (ids.has(id)) {
-          stop(t('pluginWebUI.customStopDuplicateId'))
+          stop('插件发送了重复的请求编号，页面已停止。')
           return
         }
         if (inflight >= 2) throw new Error('Concurrency limit reached')
@@ -352,17 +350,17 @@ function CustomPageSession({
       '*',
       [channel.port2]
     )
-  }, [page, pages, pageState, pluginId, stop, t])
+  }, [page, pages, pageState, pluginId, stop])
 
   useEffect(() => {
     if (!source) return
     const timer = window.setTimeout(() => {
       if (!connected.current) {
-        stop(t('pluginWebUI.customStopTimeout'))
+        stop('页面连接超过 10 秒未就绪，页面已停止。')
       }
     }, 10000)
     return () => window.clearTimeout(timer)
-  }, [source, stop, t])
+  }, [source, stop])
 
   useEffect(() => {
     const ready = (event: MessageEvent) => {
@@ -413,13 +411,13 @@ function CustomPageSession({
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => stop(t('pluginWebUI.customStopManual'))}
+            onClick={() => stop('你已停止页面。')}
             disabled={stopped}
           >
-            {t('pluginWebUI.customStop')}
+            {'停止页面'}
           </Button>
           <Button variant="outline" onClick={() => void reload()} disabled={reloading}>
-            {t('pluginWebUI.customReload')}
+            {'重载页面'}
           </Button>
         </div>
       </div>
@@ -429,9 +427,9 @@ function CustomPageSession({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      {!source && !error && !stopped && <p>{t('pluginWebUI.loading')}</p>}
+      {!source && !error && !stopped && <p>{'加载中…'}</p>}
       {stopped ? (
-        <p>{t('pluginWebUI.customStopped')}</p>
+        <p>{'页面已停止。点击重载页面可再次运行。'}</p>
       ) : (
         source && (
           <iframe
@@ -442,7 +440,7 @@ function CustomPageSession({
             allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'"
             srcDoc={source}
             onLoad={() => {
-              if (loaded.current) stop(t('pluginWebUI.customStopNavigation'))
+              if (loaded.current) stop('页面发生了重新加载或跳转，连接已停止。')
               loaded.current = true
             }}
             style={{
@@ -461,15 +459,15 @@ function CustomPageSession({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('pluginWebUI.confirmTitle')}</AlertDialogTitle>
+            <AlertDialogTitle>{'确认插件操作'}</AlertDialogTitle>
             <AlertDialogDescription className="whitespace-pre-line">
               {confirmation}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('pluginWebUI.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{'取消'}</AlertDialogCancel>
             <AlertDialogAction onClick={() => resolveConfirmation(true)}>
-              {t('pluginWebUI.confirm')}
+              {'确认'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

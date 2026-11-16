@@ -10,10 +10,7 @@ import type { InstalledPlugin, PluginConfigSchema } from '@/lib/plugin-api'
 
 import { useQuickShortcuts } from './useQuickShortcuts'
 
-vi.mock('react-i18next', () => {
-  const t = (key: string) => key
-  return { useTranslation: () => ({ t }) }
-})
+
 
 vi.mock('@/lib/config-api', () => ({
   getBotConfigSchema: vi.fn(),
@@ -303,7 +300,7 @@ describe('useQuickShortcuts', () => {
     const reviewOverflow = result.current.filteredQuickShortcutOptions.find(
       (item) => item.id === 'action:expression-review'
     )
-    expect(restarting?.label).toBe('home.quickActions.restarting')
+    expect(restarting?.label).toBe('重启中...')
     expect(restarting?.disabled).toBe(true)
     expect(reviewOverflow?.badge).toBe('99+')
 
@@ -324,7 +321,7 @@ describe('useQuickShortcuts', () => {
     const review = result.current.filteredQuickShortcutOptions.find(
       (item) => item.id === 'action:expression-review'
     )
-    expect(restart?.label).toBe('home.quickActions.restart')
+    expect(restart?.label).toBe('重启麦麦')
     expect(restart?.disabled).toBe(false)
     expect(review?.badge).toBe('7')
 
@@ -349,7 +346,7 @@ describe('useQuickShortcuts', () => {
     )
 
     act(() => {
-      result.current.setQuickShortcutSearch('  VIEWLOGS  ')
+      result.current.setQuickShortcutSearch('  查看日志  ')
     })
     expect(result.current.filteredQuickShortcutOptions.map((item) => item.id)).toEqual([
       'route:logs',
@@ -402,8 +399,8 @@ describe('useQuickShortcuts', () => {
       'plugin-config:org%2Fpkg',
     ])
     expect(pluginOptions[0]).toMatchObject({
-      label: 'home.pluginShortcuts.baseLabel',
-      description: 'home.pluginShortcuts.baseDescription',
+      label: 'Demo 配置',
+      description: '打开 Demo 的插件配置页面',
       href: '/plugin-config?plugin=demo',
     })
     expect(pluginOptions[1]).toMatchObject({
@@ -461,7 +458,7 @@ describe('useQuickShortcuts', () => {
     )
     expect(tabShortcut).toMatchObject({
       label: 'Demo / 常规',
-      description: 'home.pluginShortcuts.tabDescription',
+      description: '打开 Demo 的 常规 标签页',
       href: '/plugin-config?plugin=demo&tab=general',
     })
 
@@ -469,8 +466,8 @@ describe('useQuickShortcuts', () => {
       (item) => item.id === 'plugin-config:missing:tab:gone'
     )
     expect(fallback).toMatchObject({
-      label: 'home.pluginShortcuts.fallbackTabLabel',
-      description: 'home.pluginShortcuts.fallbackTabDescription',
+      label: '插件配置：missing / gone',
+      description: '打开指定插件配置标签页',
       href: '/plugin-config?plugin=missing&tab=gone',
     })
   })
@@ -513,7 +510,7 @@ describe('useQuickShortcuts', () => {
     expect(
       result.current.selectedQuickShortcuts.find((item) => item.id === 'plugin-config:auto:tab:hidden')
     ).toMatchObject({
-      label: 'home.pluginShortcuts.fallbackTabLabel',
+      label: '插件配置：auto / hidden',
       href: '/plugin-config?plugin=auto&tab=hidden',
     })
   })
@@ -538,7 +535,7 @@ describe('useQuickShortcuts', () => {
     expect(
       result.current.selectedQuickShortcuts.find((item) => item.id === 'plugin-config:demo:tab:general')
     ).toMatchObject({
-      label: 'home.pluginShortcuts.fallbackTabLabel',
+      label: '插件配置：demo / general',
     })
     warn.mockRestore()
   })
@@ -564,7 +561,7 @@ describe('useQuickShortcuts', () => {
     expect(result.current.selectedQuickShortcuts).toEqual([
       expect.objectContaining({
         id: 'plugin-config:off:tab:general',
-        label: 'home.pluginShortcuts.fallbackTabLabel',
+        label: '插件配置：off / general',
       }),
     ])
   })
@@ -585,8 +582,8 @@ describe('useQuickShortcuts', () => {
       (item) => item.id === 'plugin-config:demo:other:x'
     )
     expect(fallback).toMatchObject({
-      label: 'home.pluginShortcuts.fallbackLabel',
-      description: 'home.pluginShortcuts.fallbackDescription',
+      label: '插件配置：demo',
+      description: '打开指定插件配置页面',
       href: '/plugin-config?plugin=demo',
     })
   })
@@ -634,8 +631,8 @@ describe('useQuickShortcuts', () => {
     expect(result.current.selectedQuickShortcuts).toEqual([
       expect.objectContaining({
         id: 'plugin-config:ghost',
-        label: 'home.pluginShortcuts.fallbackLabel',
-        description: 'home.pluginShortcuts.fallbackDescription',
+        label: '插件配置：ghost',
+        description: '打开指定插件配置页面',
         href: '/plugin-config?plugin=ghost',
       }),
     ])

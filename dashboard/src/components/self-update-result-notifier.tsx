@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { useToast } from '@/hooks/use-toast'
 import { takeSelfUpdatePending } from '@/lib/self-update-pending'
@@ -10,7 +10,6 @@ import { getSelfUpdateStatus } from '@/lib/system-api'
  * 只有本页面发起过更新时才会请求后端。
  */
 export function SelfUpdateResultNotifier() {
-  const { t } = useTranslation()
   const { toast } = useToast()
 
   useEffect(() => {
@@ -23,13 +22,13 @@ export function SelfUpdateResultNotifier() {
         if (result === null || result.to_commit !== commit) return
         if (result.success) {
           toast({
-            title: t('settings.selfUpdate.toastSuccess'),
-            description: t('settings.selfUpdate.toastSuccessDesc', { version: result.to_version }),
+            title: '更新完成',
+            description: `已更新到 ${result.to_version}`,
           })
         } else {
           toast({
-            title: t('settings.selfUpdate.toastFailed'),
-            description: t('settings.selfUpdate.toastFailedDesc'),
+            title: '更新失败',
+            description: '更新失败，详情见「设置 → 关于」',
             variant: 'destructive',
             duration: 20000,
           })
@@ -38,7 +37,7 @@ export function SelfUpdateResultNotifier() {
       .catch((error: unknown) => {
         console.error('读取自更新结果失败', error)
       })
-  }, [t, toast])
+  }, [toast])
 
   return null
 }

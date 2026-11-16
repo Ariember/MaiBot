@@ -2,7 +2,7 @@
 
 
 
-所有分组和字段都提供中文标签、中文说明及英文 i18n，避免 WebUI 直接显示
+所有分组和字段都提供中文标签和中文说明，避免 WebUI 直接显示
 
 ``user_id``、``work_start`` 等内部字段名。
 
@@ -40,8 +40,6 @@ def _ui(
     hint: str,
     order: int,
     *,
-    label_en: str = "",
-    hint_en: str = "",
     placeholder: str | None = None,
     hidden: bool = False,
     disabled: bool = False,
@@ -49,23 +47,14 @@ def _ui(
 ) -> Dict[str, Any]:
     """构造 MaiBot WebUI 使用的字段元数据。"""
 
-    zh: Dict[str, str] = {"label": label, "hint": hint}
-
-    en: Dict[str, str] = {"label": label_en or label, "hint": hint_en or hint}
-
     result: Dict[str, Any] = {
         "label": label,
         "hint": hint,
         "order": order,
-        "i18n": {"zh_CN": zh, "en_US": en},
     }
 
     if placeholder is not None:
         result["placeholder"] = placeholder
-
-        zh["placeholder"] = placeholder
-
-        en["placeholder"] = placeholder
 
     if hidden:
         result["hidden"] = True
@@ -144,9 +133,6 @@ class PluginSettings(PluginConfigBase):
 
     __ui_order__: ClassVar[int] = 0
 
-    __ui_i18n__: ClassVar[Dict[str, Dict[str, str]]] = {
-        "en_US": {"title": "Plugin Settings", "description": "Basic switch, model and administrator settings."}
-    }
 
     # SDK 2.7+ 强制要求 plugin.config_version，用于配置补齐与迁移判定。
 
@@ -157,8 +143,6 @@ class PluginSettings(PluginConfigBase):
             "配置版本",
             "由插件维护，请勿手动修改。",
             99,
-            label_en="Config Version",
-            hint_en="Managed by the plugin. Do not edit manually.",
             hidden=True,
             disabled=True,
         ),
@@ -171,8 +155,6 @@ class PluginSettings(PluginConfigBase):
             "启用麦日常",
             "关闭后保留数据库，但停止后台生活记录与主动行为。",
             0,
-            label_en="Enable Mai MyLife",
-            hint_en="Keep data but stop life tracking and proactive behavior when disabled.",
             hidden=True,
         ),
     )
@@ -184,8 +166,6 @@ class PluginSettings(PluginConfigBase):
             "管理员 QQ 列表",
             "管理员无需同时创建用户档案即可使用管理类指令；关系和重要日期等个人功能仍需启用用户档案。留空时，第一个有效私聊用户自动成为管理员。",
             1,
-            label_en="Administrator QQ IDs",
-            hint_en="Administrators can use management commands without a user profile; relationship and personal-record commands still require an enabled profile. If empty, the first valid private user becomes administrator.",
             placeholder="123456789",
         ),
     )
@@ -222,9 +202,6 @@ class UserProfile(PluginConfigBase):
 
     __ui_label__: ClassVar[str] = "私聊用户资料"
 
-    __ui_i18n__: ClassVar[Dict[str, Dict[str, str]]] = {
-        "en_US": {"title": "Private User Profile", "description": "Per-user relationship and quiet-hour settings."}
-    }
 
     user_id: str = Field(
         default="",
@@ -233,8 +210,6 @@ class UserProfile(PluginConfigBase):
             "QQ 号",
             "填写允许进入麦日常系统的 QQ 号。",
             0,
-            label_en="QQ User ID",
-            hint_en="QQ account allowed to use Mai MyLife.",
             placeholder="123456789",
         ),
     )
@@ -246,8 +221,6 @@ class UserProfile(PluginConfigBase):
             "启用用户档案",
             "关闭后不记录该用户互动，也不会注入生活上下文。",
             1,
-            label_en="Enable User Profile",
-            hint_en="Disable to stop relationship tracking and context injection for this user.",
         ),
     )
 
@@ -258,8 +231,6 @@ class UserProfile(PluginConfigBase):
             "关系角色",
             "最多只能有一个主人；朋友不会获得主人专属上下文和敏感能力。",
             3,
-            label_en="Relationship Role",
-            hint_en="At most one owner is allowed. Friends never receive owner-only context.",
             enum_labels={"owner": "主人（owner）", "friend": "朋友（friend）"},
         ),
     )
@@ -273,8 +244,6 @@ class UserProfile(PluginConfigBase):
             "用户每日主动上限",
             "每日最多主动发送 N 次（硬上限，非目标次数）。实际次数常少于该值：受免打扰、冷却、候选评分和 Planner 自主决策约束。0 表示禁止主动消息；开启“每日主动不限次数”后忽略此值。主人通常填 2，朋友通常填 1。",
             4,
-            label_en="Per-user Daily Proactive Limit",
-            hint_en="Hard cap of proactive messages per day (not a target). Actual count is often lower due to quiet hours, cooldown, scoring and Planner decisions. Zero disables proactive messages. Ignored when unlimited daily proactive chat is enabled.",
         ),
     )
 
@@ -285,8 +254,6 @@ class UserProfile(PluginConfigBase):
             "每日主动不限次数",
             "开启后忽略每日主动上限，由 Planner 结合生活契机和互动情况决定是否发送；仍遵守主动私聊开关、免打扰和冷却，不保证每天发送。",
             5,
-            label_en="Unlimited Daily Proactive Chat",
-            hint_en="Ignore the daily cap and let Planner decide using life opportunities and interaction context. Proactive switches, quiet hours and cooldown still apply; messages are not guaranteed every day.",
         ),
     )
 
@@ -299,8 +266,6 @@ class UserProfile(PluginConfigBase):
             "初始关系温度",
             "仅首次创建档案时使用。30 表示“认识”，不会自动进入恋爱语气。",
             6,
-            label_en="Initial Relationship Temperature",
-            hint_en="Used only when the profile is first created. Default 30 means acquaintance.",
         ),
     )
 
@@ -311,8 +276,6 @@ class UserProfile(PluginConfigBase):
             "免打扰开始",
             "此时间后不向该用户主动发消息，支持跨午夜时段。格式 HH:MM。",
             7,
-            label_en="Quiet Hours Start",
-            hint_en="No proactive messages after this time. HH:MM format.",
             placeholder="00:00",
         ),
     )
@@ -324,8 +287,6 @@ class UserProfile(PluginConfigBase):
             "免打扰结束",
             "到达此时间后恢复主动消息。格式 HH:MM。",
             8,
-            label_en="Quiet Hours End",
-            hint_en="Proactive messaging resumes after this time. HH:MM format.",
             placeholder="08:00",
         ),
     )
@@ -377,9 +338,6 @@ class UsersSettings(PluginConfigBase):
 
     __ui_order__: ClassVar[int] = 1
 
-    __ui_i18n__: ClassVar[Dict[str, Dict[str, str]]] = {
-        "en_US": {"title": "Private Users", "description": "Users allowed to share Mai's global life timeline."}
-    }
 
     profiles: List[UserProfile] = Field(
         default_factory=list,
@@ -388,8 +346,6 @@ class UsersSettings(PluginConfigBase):
             "私聊用户列表",
             "麦麦的日程和生活记录全局共享，但每位用户的关系、额度和免打扰相互独立。",
             0,
-            label_en="Private User Profiles",
-            hint_en="Schedules and life records are global while relationship, quota and quiet hours are per user.",
         ),
     )
 
@@ -400,8 +356,6 @@ class UsersSettings(PluginConfigBase):
             "主人专属称呼",
             "朋友回复命中后会重生成一次，仍命中则静默。请只填写明确专属词。",
             1,
-            label_en="Owner-only Terms",
-            hint_en="Terms forbidden in friend replies.",
         ),
     )
 
@@ -428,9 +382,6 @@ class EnvironmentSettings(PluginConfigBase):
 
     __ui_order__: ClassVar[int] = 3
 
-    __ui_i18n__: ClassVar[Dict[str, Dict[str, str]]] = {
-        "en_US": {"title": "Weather", "description": "Weather refresh; timezone and location use global settings."}
-    }
 
     weather_refresh_minutes: int = Field(
         default=30,
@@ -441,8 +392,6 @@ class EnvironmentSettings(PluginConfigBase):
             "天气刷新间隔（分钟）",
             "后台刷新，不会在被动回复时等待网络请求。建议 30～60 分钟。",
             4,
-            label_en="Weather Refresh Interval (min)",
-            hint_en="Background refresh interval. Passive replies never wait for weather requests.",
         ),
     )
 
@@ -461,8 +410,6 @@ class MemorySettings(PluginConfigBase):
             "启用生活记忆",
             "总开关；关闭后保留已有日期数据。",
             0,
-            label_en="Enable Life Memory",
-            hint_en="Keep existing data while pausing memory settlement.",
         ),
     )
 
@@ -473,8 +420,6 @@ class MemorySettings(PluginConfigBase):
             "启用重要日期",
             "明确日期自动记录，模糊日期只进入待确认列表。",
             8,
-            label_en="Enable Important Dates",
-            hint_en="Save explicit dates and keep ambiguous dates as candidates.",
         ),
     )
 
@@ -485,8 +430,6 @@ class MemorySettings(PluginConfigBase):
             "启用日期模型分析",
             "默认关闭；开启会增加私聊后的异步模型调用。",
             9,
-            label_en="Enable Date Model Analysis",
-            hint_en="Disabled by default because it adds an asynchronous model call.",
         ),
     )
 
@@ -499,8 +442,6 @@ class MemorySettings(PluginConfigBase):
             "日期候选保留天数",
             "过期候选只清理待确认项，不删除正式日期。",
             10,
-            label_en="Date Candidate Retention",
-            hint_en="Retention for unconfirmed date candidates.",
         ),
     )
 
@@ -511,8 +452,6 @@ class MemorySettings(PluginConfigBase):
             "重要日期提前天数",
             "默认提前 30、7、1 天以及当天生成一次专属契机。",
             11,
-            label_en="Important Date Lead Days",
-            hint_en="Days before an event when a private opportunity may be created.",
         ),
     )
 
@@ -551,8 +490,6 @@ class NetworkSettings(PluginConfigBase):
             "启用联网",
             "关闭后联网工具、新闻与探索均跳过；内置新闻源可直接读取，搜索服务在主程序配置。",
             0,
-            label_en="Enable Networking",
-            hint_en="Master switch for the web-search tool, news reading and exploration.",
         ),
     )
 
@@ -563,8 +500,6 @@ class NetworkSettings(PluginConfigBase):
             "允许麦麦使用联网搜索工具",
             "总开关之上的工具子开关；工具只返回搜索摘要，不会直接发送消息。",
             1,
-            label_en="Enable Web Search Tool",
-            hint_en="Tool-level switch under the master switch.",
         ),
     )
 
@@ -577,8 +512,6 @@ class NetworkSettings(PluginConfigBase):
             "单次结果数",
             "联网工具、新闻和主动搜索共同使用；宿主服务可能有自己的上限。",
             2,
-            label_en="Maximum Results",
-            hint_en="Shared result limit for tool, news and exploration.",
         ),
     )
 
@@ -591,8 +524,6 @@ class NetworkSettings(PluginConfigBase):
             "失败重试次数",
             "宿主搜索失败时按次数重试（短退避）；仍失败则记录历史并返回空结果。",
             3,
-            label_en="Retry Attempts",
-            hint_en="Retries host search failures with short backoff.",
         ),
     )
 
@@ -616,8 +547,6 @@ class NetworkSettings(PluginConfigBase):
             "记录搜索历史",
             "记录联网工具、主动搜索和新闻阅读的查询词与结果摘要；查询词已做隐私清洗。",
             4,
-            label_en="Record Search History",
-            hint_en="Store sanitized query and result summaries for local audit.",
         ),
     )
 
@@ -630,8 +559,6 @@ class NetworkSettings(PluginConfigBase):
             "搜索历史保留天数",
             "到期自动清理；新闻与探索笔记仍按各自保留期管理。",
             5,
-            label_en="Search History Retention (days)",
-            hint_en="Expired history rows are cleaned automatically.",
         ),
     )
 
@@ -642,8 +569,6 @@ class NetworkSettings(PluginConfigBase):
             "启用自我关联",
             "先判断与人格、状态、兴趣或关系是否有关，再考虑分享。",
             6,
-            label_en="Enable Self-association",
-            hint_en="Relate external information to Mai before considering sharing.",
         ),
     )
 
@@ -656,8 +581,6 @@ class NetworkSettings(PluginConfigBase):
             "关联分数阈值",
             "越高越克制；低于阈值只保留为近期见闻。",
             7,
-            label_en="Association Threshold",
-            hint_en="Items below this score remain notes and do not create opportunities.",
         ),
     )
 
@@ -668,8 +591,6 @@ class NetworkSettings(PluginConfigBase):
             "允许见闻主动分享",
             "仍受用户额度、休息、免打扰和 Planner 终审限制。",
             8,
-            label_en="Allow Discovery Sharing",
-            hint_en="Still subject to quota, rest, quiet hours and Planner review.",
         ),
     )
 
@@ -682,8 +603,6 @@ class NetworkSettings(PluginConfigBase):
             "近期见闻上下文数量",
             "设为 0 可只积累记录、不注入被动回复。",
             9,
-            label_en="Discovery Context Items",
-            hint_en="Set to zero to store discoveries without passive context injection.",
         ),
     )
 
@@ -694,8 +613,6 @@ class NetworkSettings(PluginConfigBase):
             "启用新闻阅读",
             "总开关之上的新闻子开关；优先内置订阅源，无结果时使用宿主搜索。",
             10,
-            label_en="Enable News Reading",
-            hint_en="News-level switch under the master switch.",
         ),
     )
 
@@ -706,8 +623,6 @@ class NetworkSettings(PluginConfigBase):
             "内置新闻源",
             "默认 IT之家、Solidot、少数派；读取公开 RSS，不向订阅源发送聊天内容。",
             10,
-            label_en="Built-in News Sources",
-            hint_en="Public RSS feeds; an empty list uses host search only.",
             enum_labels={"ithome": "IT之家", "solidot": "Solidot", "sspai": "少数派"},
         ),
     )
@@ -721,8 +636,6 @@ class NetworkSettings(PluginConfigBase):
             "每日新闻阅读次数",
             "默认 1 次；失败或空结果也计入，避免持续请求。",
             11,
-            label_en="Daily News Reads",
-            hint_en="Failures and empty results count to prevent repeated requests.",
         ),
     )
 
@@ -735,8 +648,6 @@ class NetworkSettings(PluginConfigBase):
             "正文读取数量",
             "经宿主 web.fetch 抓取正文，最多 3 篇；0 表示只用搜索摘要。",
             12,
-            label_en="Full-text Articles",
-            hint_en="Read up to three source pages via the host; zero uses summaries only.",
         ),
     )
 
@@ -749,8 +660,6 @@ class NetworkSettings(PluginConfigBase):
             "正文读取并发",
             "建议保持 1～2。",
             13,
-            label_en="Article Concurrency",
-            hint_en="Keep low to be gentle on the host service.",
         ),
     )
 
@@ -763,8 +672,6 @@ class NetworkSettings(PluginConfigBase):
             "正文长度上限",
             "超长正文会在本地截断。",
             14,
-            label_en="Article Length Limit",
-            hint_en="Truncate long articles locally.",
         ),
     )
 
@@ -777,8 +684,6 @@ class NetworkSettings(PluginConfigBase):
             "新闻保留天数",
             "过期缓存自动清理。",
             15,
-            label_en="News Retention",
-            hint_en="Expired cached articles are removed automatically.",
         ),
     )
 
@@ -789,8 +694,6 @@ class NetworkSettings(PluginConfigBase):
             "允许阅读的日程",
             "默认只在闲暇或休息时阅读。",
             16,
-            label_en="News Allowed Schedules",
-            hint_en="Read news only during leisure or rest.",
             enum_labels={"leisure": "闲暇", "rest": "休息"},
         ),
     )
@@ -802,8 +705,6 @@ class NetworkSettings(PluginConfigBase):
             "启用主动搜索",
             "总开关之上的主动探索子开关。",
             17,
-            label_en="Enable Proactive Search",
-            hint_en="Exploration-level switch under the master switch.",
         ),
     )
 
@@ -816,8 +717,6 @@ class NetworkSettings(PluginConfigBase):
             "每日主动搜索上限",
             "默认 1 次；失败或空结果也会计入，避免持续请求。",
             18,
-            label_en="Daily Search Limit",
-            hint_en="Failures and empty results count to prevent repeated external requests.",
         ),
     )
 
@@ -828,8 +727,6 @@ class NetworkSettings(PluginConfigBase):
             "允许参考聊天话题",
             "默认关闭，避免把私聊内容变成外部搜索词。",
             19,
-            label_en="Use Chat Topics",
-            hint_en="Disabled by default to keep private chat out of external queries.",
         ),
     )
 
@@ -840,8 +737,6 @@ class NetworkSettings(PluginConfigBase):
             "允许搜索的日程类型",
             "只在空档、休息或按配置允许的出行段探索。",
             20,
-            label_en="Search Allowed Schedules",
-            hint_en="Search only during configured free schedule segments.",
             enum_labels={"leisure": "闲暇", "rest": "休息", "travel": "出行"},
         ),
     )
@@ -855,8 +750,6 @@ class NetworkSettings(PluginConfigBase):
             "探索笔记保留天数",
             "过期笔记自动清理。",
             21,
-            label_en="Exploration Note Retention",
-            hint_en="Expired exploration notes are removed automatically.",
         ),
     )
 
@@ -875,8 +768,6 @@ class ModelRoutingSettings(PluginConfigBase):
             "快速任务",
             "默认 utils，用于日期分析、新闻整理等轻量任务。",
             0,
-            label_en="Fast Task",
-            hint_en="MaiBot task name for lightweight analysis.",
         ),
     )
 
@@ -887,8 +778,6 @@ class ModelRoutingSettings(PluginConfigBase):
             "推理任务",
             "默认 planner，用于搜索规划、自我关联等复杂判断；日常任务窗口无需模型。",
             1,
-            label_en="Reasoning Task",
-            hint_en="MaiBot task name for reasoning.",
         ),
     )
 
@@ -899,8 +788,6 @@ class ModelRoutingSettings(PluginConfigBase):
             "日期分析任务覆盖",
             "留空继承快速任务。",
             10,
-            label_en="Date Analysis Override",
-            hint_en="Leave empty to inherit fast task.",
         ),
     )
 
@@ -911,8 +798,6 @@ class ModelRoutingSettings(PluginConfigBase):
             "新闻整理任务覆盖",
             "留空继承快速任务。",
             11,
-            label_en="News Digest Override",
-            hint_en="Leave empty to inherit fast task.",
         ),
     )
 
@@ -923,8 +808,6 @@ class ModelRoutingSettings(PluginConfigBase):
             "主动搜索任务覆盖",
             "留空继承推理任务。",
             12,
-            label_en="Search Planning Override",
-            hint_en="Leave empty to inherit reasoning task.",
         ),
     )
 
@@ -935,8 +818,6 @@ class ModelRoutingSettings(PluginConfigBase):
             "自我关联任务覆盖",
             "留空继承推理任务。",
             13,
-            label_en="Self-association Override",
-            hint_en="Leave empty to inherit reasoning task.",
         ),
     )
 
@@ -948,8 +829,6 @@ class ModelRoutingSettings(PluginConfigBase):
             "输出 token 上限",
             "0=不限制（推荐）。推理模型的思考链占用输出预算，写死小上限会把正文挤成空响应；仅在对成本敏感时设正数。",
             22,
-            label_en="Max Output Tokens",
-            hint_en="0 = unlimited (provider decides). Tight caps starve content on reasoning models.",
         ),
     )
 
@@ -968,8 +847,6 @@ class UsageSettings(PluginConfigBase):
             "启用 Token 统计",
             "不限制每日额度，只记录调用、Token、耗时与失败。",
             0,
-            label_en="Enable Token Monitoring",
-            hint_en="Record usage without enforcing a daily budget.",
         ),
     )
 
@@ -982,8 +859,6 @@ class UsageSettings(PluginConfigBase):
             "明细保留天数",
             "每日聚合可长期保留，调用明细按此清理。",
             1,
-            label_en="Detail Retention Days",
-            hint_en="Retention period for individual call records.",
         ),
     )
 
@@ -995,12 +870,6 @@ class ProactiveSettings(PluginConfigBase):
 
     __ui_order__: ClassVar[int] = 9
 
-    __ui_i18n__: ClassVar[Dict[str, Dict[str, str]]] = {
-        "en_US": {
-            "title": "Proactive Private Chat",
-            "description": "Allowed hours, shared decision and message interval, and opportunity scoring.",
-        }
-    }
 
     enabled: bool = Field(
         default=True,
@@ -1009,8 +878,6 @@ class ProactiveSettings(PluginConfigBase):
             "启用主动私聊",
             "关闭后麦麦仍维护日程和记忆，但不会主动找任何用户。",
             0,
-            label_en="Enable Proactive Chat",
-            hint_en="Schedules and memories continue, but Mai will not proactively message users.",
         ),
     )
 
@@ -1023,8 +890,6 @@ class ProactiveSettings(PluginConfigBase):
             "主动判断与发送间隔（分钟）",
             "默认 180，范围 1～1440。每位用户分别计时；Planner 沉默或实际发送后都至少等待此间隔。每轮最多判断一位到期用户，优先最久未判断者，多用户时可能略延后；没有生活契机时也可自主考虑。",
             1,
-            label_en="Proactive Decision and Message Interval (min)",
-            hint_en="Minimum time after each decision or actual message for each user, including silence. Each patrol selects at most one due user, prioritizing the longest wait; multiple users may wait slightly longer.",
         ),
     )
 
@@ -1037,8 +902,6 @@ class ProactiveSettings(PluginConfigBase):
             "用户发言后冷却（分钟）",
             "用户刚刚聊过时无需再主动开场。默认等待 30 分钟。",
             3,
-            label_en="Cooldown after User Message (min)",
-            hint_en="Do not start another proactive topic immediately after the user speaks.",
         ),
     )
 
@@ -1051,8 +914,6 @@ class ProactiveSettings(PluginConfigBase):
             "主动回复确认窗口（秒）",
             "用于判断 Planner 是否真的生成了主动回复。通常无需修改。",
             4,
-            label_en="Proactive Confirmation Window (sec)",
-            hint_en="Window used to correlate a Planner trigger with an actual Replyer response.",
         ),
     )
 
@@ -1065,8 +926,6 @@ class ProactiveSettings(PluginConfigBase):
             "契机重试次数",
             "Planner 沉默或超时后，同一契机最多重试这么多次；超过后不再重复触发，避免反复打扰。0 表示不重试。",
             5,
-            label_en="Opportunity Retry Limit",
-            hint_en="How many times one opportunity re-enters the candidate pool after Planner silence or timeout.",
         ),
     )
 
@@ -1079,8 +938,6 @@ class ProactiveSettings(PluginConfigBase):
             "主动候选分数阈值",
             "综合考虑契机、关系和用户活跃时间。未达标时不提供该契机，Planner 仍可自主判断是否联系，但不得虚构事件。",
             6,
-            label_en="Proactive Candidate Score Threshold",
-            hint_en="Minimum score for providing a life opportunity. Planner may still consider contacting the user without one, but must not invent events.",
         ),
     )
 
@@ -1091,8 +948,6 @@ class ProactiveSettings(PluginConfigBase):
             "主动开始时间",
             "HH:MM，按全局时区；支持跨午夜，与结束相同表示全天。普通私聊回复不受影响。",
             7,
-            label_en="Proactive Start",
-            hint_en="HH:MM in the global timezone; equal endpoints mean all day. Passive private replies are unaffected.",
         ),
     )
 
@@ -1103,8 +958,6 @@ class ProactiveSettings(PluginConfigBase):
             "主动结束时间",
             "到此时刻停止主动判断与发送；同时遵守用户免打扰时间。",
             8,
-            label_en="Proactive End",
-            hint_en="Stop proactive decisions and messages at this time. Per-user quiet hours still apply.",
         ),
     )
 
@@ -1148,8 +1001,6 @@ class MaiLifeSettings(PluginConfigBase):
             "基础设置",
             "总开关、模型与管理员。",
             0,
-            label_en="Plugin Settings",
-            hint_en="Switch, model and administrators.",
         ),
     )
 
@@ -1159,8 +1010,6 @@ class MaiLifeSettings(PluginConfigBase):
             "私聊用户",
             "配置允许互动和主动私聊的用户。",
             1,
-            label_en="Private Users",
-            hint_en="Users allowed to interact with Mai MyLife.",
         ),
     )
 
@@ -1170,16 +1019,13 @@ class MaiLifeSettings(PluginConfigBase):
             "天气",
             "天气刷新；时区和地区使用主程序全局配置。",
             3,
-            label_en="Weather",
-            hint_en="Weather refresh; timezone and location use global settings.",
         ),
     )
 
     memory: MemorySettings = Field(
         default_factory=MemorySettings,
         json_schema_extra=_ui(
-            "生活记忆", "重要日期和提醒。", 5, label_en="Life Memory", hint_en="Important dates and reminders."
-        ),
+            "生活记忆", "重要日期和提醒。", 5,          ),
     )
 
     proactive: ProactiveSettings = Field(
@@ -1188,8 +1034,6 @@ class MaiLifeSettings(PluginConfigBase):
             "主动私聊",
             "允许时段、公共冷却和评分；每日额度在每个私聊用户中设置。",
             9,
-            label_en="Proactive Private Chat",
-            hint_en="Allowed hours, shared cooldown and scoring; daily limits are configured per user.",
         ),
     )
 
@@ -1199,8 +1043,6 @@ class MaiLifeSettings(PluginConfigBase):
             "联网",
             "总开关、搜索工具、搜索历史、见闻关联、新闻与主动探索。",
             11,
-            label_en="Networking",
-            hint_en="Master switch, tool, history, discovery, news and exploration.",
         ),
     )
 
@@ -1210,8 +1052,6 @@ class MaiLifeSettings(PluginConfigBase):
             "模型与成本编排",
             "基础任务路由和高级覆盖。",
             13,
-            label_en="Model Routing",
-            hint_en="Base task routes and per-task overrides.",
         ),
     )
 
@@ -1221,8 +1061,6 @@ class MaiLifeSettings(PluginConfigBase):
             "Token 监控",
             "调用次数、Token、耗时和失败统计。",
             14,
-            label_en="Token Monitoring",
-            hint_en="Calls, tokens, latency and failure statistics.",
         ),
     )
 

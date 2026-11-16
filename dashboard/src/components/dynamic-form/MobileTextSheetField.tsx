@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Check, ChevronRight, X } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+
 
 import { MOBILE_GLASS_CLASS } from '@/components/layout/mobile-glass'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -18,7 +18,6 @@ interface MobileTextSheetFieldProps {
  * 「完成」才写回配置，「取消」放弃本次修改。
  */
 export function MobileTextSheetField({ label, description, value, onChange }: MobileTextSheetFieldProps) {
-  const { t } = useTranslation()
   const [open, setOpen] = React.useState(false)
   const [draft, setDraft] = React.useState(value)
 
@@ -43,7 +42,7 @@ export function MobileTextSheetField({ label, description, value, onChange }: Mo
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="text-[15px] leading-6 font-medium">{label}</span>
           <span className="text-muted-foreground line-clamp-2 text-sm leading-[1.45] whitespace-pre-line">
-            {value || t('dynamicForm.mobileTextEmpty')}
+            {value || '未填写'}
           </span>
         </span>
         <ChevronRight className="text-muted-foreground/60 mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -59,7 +58,7 @@ export function MobileTextSheetField({ label, description, value, onChange }: Mo
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label={t('dynamicForm.mobileTextCancel')}
+              aria-label={'取消'}
               data-mobile-sheet-button="cancel"
               className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full', MOBILE_GLASS_CLASS)}
             >
@@ -69,7 +68,7 @@ export function MobileTextSheetField({ label, description, value, onChange }: Mo
             <button
               type="button"
               onClick={commit}
-              aria-label={t('dynamicForm.mobileTextDone')}
+              aria-label={'完成'}
               data-mobile-sheet-button="confirm"
               data-dialog-action="confirm"
               className="bg-foreground text-background flex h-11 w-11 shrink-0 items-center justify-center rounded-full"

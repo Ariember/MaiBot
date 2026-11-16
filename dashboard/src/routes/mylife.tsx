@@ -11,7 +11,7 @@ import {
   Settings2,
 } from 'lucide-react'
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { CodeEditor } from '@/components/CodeEditor'
 import { SchemaConfigField } from '@/components/SchemaConfigField'
@@ -46,8 +46,25 @@ import {
 } from '@/lib/plugin-api'
 import type { ConfigFieldSchema, ConfigSectionSchema, PluginConfigBundle } from '@/lib/plugin-api'
 import { refreshPluginWebUI } from '@/lib/plugin-webui'
-import { resolveLocalizedText } from '@/lib/schema-config-label'
+
 import { cn } from '@/lib/utils'
+
+const MYLIFE_GROUPS_TITLE_LABELS: Record<string, string> = {
+  "general": "基础设置",
+  "private": "私聊陪伴",
+  "memory": "生活记忆",
+  "network": "联网见闻",
+  "models": "模型与用量",
+}
+
+const MYLIFE_GROUPS_DESCRIPTION_LABELS: Record<string, string> = {
+  "general": "设置管理员、所在城市与天气环境。",
+  "private": "管理陪伴用户、专属称呼与主动联系的时段和频率。",
+  "memory": "记录重要日期，安排纪念日与生活提醒。",
+  "network": "管理联网搜索、新闻与主动探索。",
+  "models": "分配模型任务，调整输出限制与用量统计。",
+}
+
 
 const settingGroups = [
   { id: 'general', icon: Settings2, sections: ['environment', 'plugin'] },
@@ -88,8 +105,6 @@ function MyLifeSection({
   values: Record<string, unknown>
   onChange: (field: string, value: unknown) => void
 }) {
-  const { t, i18n } = useTranslation()
-  const language = i18n.resolvedLanguage || i18n.language || 'zh'
   const fields = Object.entries(section.fields)
     .filter(([, field]) => !field.hidden)
     .sort(([, a], [, b]) => a.order - b.order)
@@ -133,13 +148,13 @@ function MyLifeSection({
       <CardHeader className="border-border/50 border-b">
         <CardTitle className="text-base">
           {name === 'plugin'
-            ? t('mylife.administrators')
-            : resolveLocalizedText(section.title, language, name, section.i18n, 'title')}
+            ? '管理员'
+            : (section.title || name)}
         </CardTitle>
         <CardDescription>
           {name === 'plugin'
-            ? t('mylife.administratorsHint')
-            : resolveLocalizedText(section.description, language, '', section.i18n, 'description')}
+            ? '可以管理麦日常的 QQ 用户。'
+            : (section.description || '')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 pt-5">
@@ -152,7 +167,7 @@ function MyLifeSection({
                   className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180"
                   aria-hidden="true"
                 />
-                {t('mylife.advanced')}
+                {'高级设置'}
                 <Badge variant="secondary">{advanced.length}</Badge>
               </Button>
             </CollapsibleTrigger>
@@ -165,7 +180,6 @@ function MyLifeSection({
 }
 
 function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
-  const { t } = useTranslation()
   const { toast } = useToast()
   const [baseline, setBaseline] = useState(bundle)
   const [config, setConfig] = useState(bundle.config)
@@ -222,11 +236,11 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
         await updatePluginConfig(MYLIFE_PLUGIN_ID, config)
         setBaseline((current) => ({ ...current, config }))
       }
-      toast({ title: t('mylife.saveSuccess'), description: t('mylife.saveSuccessHint') })
+      toast({ title: '设置已保存', description: '麦日常会自动应用新的设置。' })
       void refreshPluginWebUI(true)
       return true
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : t('mylife.saveError'))
+      setSaveError(error instanceof Error ? error.message : '保存失败')
       return false
     } finally {
       setSaving(false)
@@ -240,11 +254,11 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
       await resetPluginConfig(MYLIFE_PLUGIN_ID)
       applyBundle(await getPluginConfigBundle(MYLIFE_PLUGIN_ID))
       setResetOpen(false)
-      toast({ title: t('mylife.resetSuccess') })
+      toast({ title: '已恢复默认设置' })
       void refreshPluginWebUI(true)
     } catch (error) {
       setResetOpen(false)
-      setSaveError(error instanceof Error ? error.message : t('mylife.resetError'))
+      setSaveError(error instanceof Error ? error.message : '恢复默认设置失败')
     } finally {
       setSaving(false)
     }
@@ -257,7 +271,7 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
       scrollbars="vertical"
     >
       <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
-        <h1 className="sr-only">{t('mylife.title')}</h1>
+        <h1 className="sr-only">{'麦日常'}</h1>
         <header
           data-config-section-navigation="true"
           className="bg-background sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 py-2"
@@ -269,9 +283,9 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
                   variant="outline"
                   disabled={saving}
                   className="gap-2 bg-none! text-base font-semibold"
-                  aria-label={t('mylife.chooseGroup')}
+                  aria-label={'选择设置页面'}
                 >
-                  {t(`mylife.groups.${activeGroup.id}.title`)}
+                  {MYLIFE_GROUPS_TITLE_LABELS[activeGroup.id]}
                   <ChevronDown className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </DropdownMenuTrigger>
@@ -283,7 +297,7 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
                     className="cursor-pointer gap-2 px-3 py-2 text-base"
                   >
                     <Icon className="h-4 w-4" aria-hidden="true" />
-                    {t(`mylife.groups.${id}.title`)}
+                    {MYLIFE_GROUPS_TITLE_LABELS[id]}
                     {activeTab === id && <Check className="ml-auto h-4 w-4" aria-hidden="true" />}
                   </DropdownMenuItem>
                 ))}
@@ -292,20 +306,20 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
           )}
           <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
             <span className="text-muted-foreground mr-auto text-xs sm:mr-2" role="status">
-              {t(hasChanges ? 'mylife.unsaved' : 'mylife.saved')}
+              {(hasChanges ? '有未保存的更改' : '所有更改已保存')}
             </span>
             {!repairMode && (
               <>
                 <SwitchField
                   id="mylife-enabled"
-                  label={t('mylife.enable')}
+                  label={'启用麦日常'}
                   aria-describedby="mylife-enable-hint"
                   checked={Boolean((config.plugin as Record<string, unknown>)?.enabled)}
                   onCheckedChange={(enabled) => changeField('plugin', 'enabled', enabled)}
                   disabled={saving}
                 />
                 <p id="mylife-enable-hint" className="sr-only">
-                  {t('mylife.enableHint')}
+                  {'开关与其他设置一起保存，保存后自动应用。'}
                 </p>
               </>
             )}
@@ -317,7 +331,7 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
                 setSaveError('')
               }}
             >
-              {t('mylife.discard')}
+              {'撤销更改'}
             </Button>
             <Button disabled={!hasChanges || saving} onClick={() => void save()}>
               {saving ? (
@@ -325,7 +339,7 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
               ) : (
                 <Save className="mr-2 h-4 w-4" aria-hidden="true" />
               )}
-              {t(saving ? 'mylife.saving' : 'mylife.save')}
+              {(saving ? '正在保存' : '保存并应用')}
             </Button>
           </div>
         </header>
@@ -337,10 +351,10 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
         {repairMode ? (
           <div className="space-y-4">
             <Alert variant="destructive">
-              <AlertTitle>{t('mylife.repair')}</AlertTitle>
+              <AlertTitle>{'配置文件需要修复'}</AlertTitle>
               <AlertDescription className="space-y-2">
                 <p>{baseline.configError}</p>
-                <p>{t('mylife.repairHint')}</p>
+                <p>{'修正下方 TOML 配置并保存，即可恢复可视化设置。'}</p>
               </AlertDescription>
             </Alert>
             <CodeEditor
@@ -354,15 +368,15 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
         ) : (
           <fieldset disabled={saving} className="min-w-0 space-y-6">
             <section
-              aria-label={t(`mylife.groups.${activeGroup.id}.title`)}
+              aria-label={MYLIFE_GROUPS_TITLE_LABELS[activeGroup.id]}
               className="min-w-0 space-y-5"
             >
               <div className="space-y-1">
                 <h2 className="text-lg font-semibold">
-                  {t(`mylife.groups.${activeGroup.id}.title`)}
+                  {MYLIFE_GROUPS_TITLE_LABELS[activeGroup.id]}
                 </h2>
                 <p className="text-muted-foreground text-sm">
-                  {t(`mylife.groups.${activeGroup.id}.description`)}
+                  {MYLIFE_GROUPS_DESCRIPTION_LABELS[activeGroup.id]}
                 </p>
               </div>
               {activeGroup.sections.map((name) => {
@@ -386,7 +400,7 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
                   className="text-muted-foreground"
                   onClick={() => setResetOpen(true)}
                 >
-                  {t('mylife.reset')}
+                  {'恢复默认设置'}
                 </Button>
               )}
             </section>
@@ -401,15 +415,15 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('mylife.leaveTitle')}</DialogTitle>
-            <DialogDescription>{t('mylife.leaveHint')}</DialogDescription>
+            <DialogTitle>{'有未保存的更改'}</DialogTitle>
+            <DialogDescription>{'麦日常设置尚未保存，离开前是否保存？'}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" disabled={saving} onClick={() => blocker.reset?.()}>
-              {t('mylife.cancel')}
+              {'继续编辑'}
             </Button>
             <Button variant="outline" disabled={saving} onClick={() => blocker.proceed?.()}>
-              {t('mylife.leave')}
+              {'放弃并离开'}
             </Button>
             <Button
               disabled={saving}
@@ -417,7 +431,7 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
                 if (await save()) blocker.proceed?.()
               }}
             >
-              {t('mylife.saveAndLeave')}
+              {'保存并离开'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -430,15 +444,15 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('mylife.resetTitle')}</DialogTitle>
-            <DialogDescription>{t('mylife.resetHint')}</DialogDescription>
+            <DialogTitle>{'恢复麦日常默认设置？'}</DialogTitle>
+            <DialogDescription>{'这会重置所有设置，包括用户列表。当前配置将自动备份。'}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" disabled={saving} onClick={() => setResetOpen(false)}>
-              {t('mylife.cancel')}
+              {'继续编辑'}
             </Button>
             <Button variant="destructive" disabled={saving} onClick={() => void reset()}>
-              {t('mylife.reset')}
+              {'恢复默认设置'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -448,7 +462,6 @@ function MyLifeSettings({ bundle }: { bundle: PluginConfigBundle }) {
 }
 
 export function MyLifePage() {
-  const { t } = useTranslation()
   const query = useQuery({
     queryKey: ['mylife', 'config'],
     queryFn: () => getPluginConfigBundle(MYLIFE_PLUGIN_ID),
@@ -458,18 +471,18 @@ export function MyLifePage() {
   if (query.isPending || !query.isFetchedAfterMount)
     return (
       <p className="p-6" role="status">
-        {t('mylife.loading')}
+        {'正在加载麦日常设置…'}
       </p>
     )
   if (query.error) {
     return (
       <div className="space-y-4 p-6">
         <Alert variant="destructive">
-          <AlertTitle>{t('mylife.loadError')}</AlertTitle>
+          <AlertTitle>{'加载麦日常设置失败'}</AlertTitle>
           <AlertDescription>{query.error.message}</AlertDescription>
         </Alert>
         <Button variant="outline" onClick={() => void query.refetch()}>
-          {t('mylife.retry')}
+          {'重新加载'}
         </Button>
       </div>
     )

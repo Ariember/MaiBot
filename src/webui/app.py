@@ -2,7 +2,7 @@
 
 from os import getenv
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Dict, Tuple
 
 import asyncio
 import gzip
@@ -12,7 +12,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
 from src.common.paths import RESOURCE_ROOT, get_instance_root
-from src.common.i18n import t
+
 from src.common.logger import get_logger
 from src.webui.dependencies import require_auth
 from src.webui.middleware.compression import TextGZipMiddleware, accepts_gzip
@@ -36,7 +36,7 @@ def _resolve_safe_static_file_path(static_path: Path, full_path: str) -> Path | 
         candidate_path = (static_root / full_path).resolve()
         candidate_path.relative_to(static_root)
     except (OSError, RuntimeError, ValueError):
-        logger.warning(t("startup.webui_path_traversal_detected", full_path=full_path))
+        logger.warning(f'🚫 检测到疑似路径穿越请求: {full_path}')
         return None
 
     return candidate_path
@@ -103,13 +103,13 @@ def _resolve_statistics_report_path() -> Path:
     return (get_instance_root() / report_path).resolve()
 
 
-def _validate_static_path(static_path: Path) -> Tuple[str, Dict[str, Any]] | None:
+def _validate_static_path(static_path: Path) -> str | None:
     if not static_path.exists():
-        return "startup.webui_static_dir_missing_with_path", {"static_path": static_path}
+        return f"❌ WebUI 静态文件目录不存在: {static_path}"
 
     index_path = static_path / "index.html"
     if not index_path.exists():
-        return "startup.webui_index_missing", {"index_path": index_path}
+        return f"❌ 未找到 index.html: {index_path}"
 
     return None
 
@@ -120,10 +120,9 @@ def _ensure_static_path_ready() -> Path | None:
     if validation_error is None:
         return static_path
 
-    logger.warning(t("startup.webui_static_assets_unavailable"))
-    error_key, error_kwargs = validation_error
-    logger.warning(t(error_key, **error_kwargs))
-    logger.warning(t("startup.webui_dashboard_build_hint", command=_DASHBOARD_BUILD_COMMAND))
+    logger.warning('❌ 未找到可用的 WebUI 静态资源（dashboard/dist）')
+    logger.warning(validation_error)
+    logger.warning(f'💡 请在 dashboard 目录安装依赖并构建 WebUI: {_DASHBOARD_BUILD_COMMAND}')
     return None
 
 
@@ -162,15 +161,15 @@ def _setup_anti_crawler(app: FastAPI):
         app.add_middleware(AntiCrawlerMiddleware, mode=anti_crawler_mode)
 
         mode_descriptions = {
-            "false": t("startup.webui_anti_crawler_mode_disabled"),
-            "strict": t("startup.webui_anti_crawler_mode_strict"),
-            "loose": t("startup.webui_anti_crawler_mode_loose"),
-            "basic": t("startup.webui_anti_crawler_mode_basic"),
+            "false": '已禁用',
+            "strict": '严格模式',
+            "loose": '宽松模式',
+            "basic": '基础模式',
         }
-        mode_desc = mode_descriptions.get(anti_crawler_mode, t("startup.webui_anti_crawler_mode_basic"))
-        logger.debug(t("startup.webui_anti_crawler_configured", mode_desc=mode_desc))
+        mode_desc = mode_descriptions.get(anti_crawler_mode, '基础模式')
+        logger.debug(f'🛡️ 防爬虫中间件已配置: {mode_desc}')
     except Exception as e:
-        logger.error(t("startup.webui_anti_crawler_config_failed", error=e), exc_info=True)
+        logger.error(f'❌ 配置防爬虫中间件失败: {e}', exc_info=True)
 
 
 def _setup_robots_txt(app: FastAPI):
@@ -181,9 +180,9 @@ def _setup_robots_txt(app: FastAPI):
         async def robots_txt():
             return create_robots_txt_response()
 
-        logger.debug(t("startup.webui_robots_route_registered"))
+        logger.debug('✅ robots.txt 路由已注册')
     except Exception as e:
-        logger.error(t("startup.webui_robots_route_register_failed", error=e), exc_info=True)
+        logger.error(f'❌ 注册 robots.txt 路由失败: {e}', exc_info=True)
 
 
 def _register_api_routes(app: FastAPI):
@@ -193,9 +192,9 @@ def _register_api_routes(app: FastAPI):
         for router in get_all_routers():
             app.include_router(router)
 
-        logger.debug(t("startup.webui_api_routes_registered"))
+        logger.debug('✅ WebUI API 路由已注册')
     except Exception as e:
-        logger.error(t("startup.webui_api_routes_register_failed", error=e), exc_info=True)
+        logger.error(f'❌ 注册 WebUI API 路由失败: {e}', exc_info=True)
 
 
 def _setup_static_files(app: FastAPI):
@@ -213,7 +212,7 @@ def _setup_static_files(app: FastAPI):
     async def serve_statistics_report():
         report_path = _resolve_statistics_report_path()
         if not report_path.exists() or not report_path.is_file():
-            raise HTTPException(status_code=404, detail=t("core.not_found"))
+            raise HTTPException(status_code=404, detail='未找到资源')
 
         response = FileResponse(report_path, media_type="text/html")
         response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
@@ -222,21 +221,21 @@ def _setup_static_files(app: FastAPI):
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_spa(request: Request, full_path: str):
         if full_path == "api" or full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail=t("core.not_found"))
+            raise HTTPException(status_code=404, detail='未找到资源')
 
         if not full_path or full_path == "/":
             return await _build_static_file_response(request, static_path, static_path / "index.html")
 
         file_path = _resolve_safe_static_file_path(static_path, full_path)
         if file_path is None:
-            raise HTTPException(status_code=404, detail=t("core.not_found"))
+            raise HTTPException(status_code=404, detail='未找到资源')
 
         if file_path.exists() and file_path.is_file():
             return await _build_static_file_response(request, static_path, file_path)
 
         return await _build_static_file_response(request, static_path, static_path / "index.html")
 
-    logger.debug(t("startup.webui_static_files_configured", static_path=static_path))
+    logger.debug(f'✅ WebUI 静态文件服务已配置: {static_path}')
 
 
 def _resolve_static_path() -> Path:
@@ -251,7 +250,7 @@ def show_access_token():
         token_manager = get_token_manager()
         current_token = token_manager.get_token()
         if token_manager.should_show_startup_token():
-            logger.info(t("startup.webui_access_token", token=current_token))
-            logger.info(t("startup.webui_access_token_login_hint"))
+            logger.info(f'🔑 WebUI 登录 Token: {current_token}')
+            logger.info('💡 请使用此 Token 登录 WebUI')
     except Exception as e:
-        logger.error(t("startup.webui_access_token_failed", error=e))
+        logger.error(f'❌ 获取 Access Token 失败: {e}')

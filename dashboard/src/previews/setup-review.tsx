@@ -1,29 +1,19 @@
 import { ArrowRight } from 'lucide-react'
-import { createInstance } from 'i18next'
 import { useState } from 'react'
-import { I18nextProvider, useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import zh from '@/i18n/locales/zh.json'
 import { validateToken } from '@/lib/token-validator'
 import { CustomTokenForm } from '@/routes/setup/StepForms'
 import { SetupWizardLayout } from '@/routes/setup/SetupWizardLayout'
 
-const i18n = createInstance()
-void i18n.init({
-  lng: 'zh',
-  resources: { zh: { translation: zh } },
-  interpolation: { escapeValue: false },
-})
 
 function PasswordSetupPreview() {
-  const { t } = useTranslation()
   const [token, setToken] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const steps = [
-    { id: 'custom-token', ...zh.setupPage.steps.customToken },
-    { id: 'bot-profile', ...zh.setupPage.steps.botProfile },
-    { id: 'model-setup', ...zh.setupPage.steps.modelSetup },
+    { id: 'custom-token', title: '设置登录密码', description: '不设置的话，每次启动都会换一个随机密码。', label: '登录密码' },
+    { id: 'bot-profile', title: '基础与人格', description: '' },
+    { id: 'model-setup', title: '模型配置', description: '' },
   ]
   return (
     <div className="min-h-screen px-4">
@@ -33,7 +23,7 @@ function PasswordSetupPreview() {
         actions={
           <>
             <Button variant="ghost" disabled className="px-1">
-              {t('setupPage.actions.skip')}
+              {'跳过向导'}
             </Button>
             <Button
               size="lg"
@@ -42,7 +32,7 @@ function PasswordSetupPreview() {
               disabled={!validateToken(token).isValid}
               onClick={() => setSubmitted(true)}
             >
-              {t('setupPage.actions.saveToken')}
+              {'保存并继续'}
               <ArrowRight />
             </Button>
             {submitted && (
@@ -67,8 +57,8 @@ function PasswordSetupPreview() {
 
 export function SetupReview() {
   return (
-    <I18nextProvider i18n={i18n}>
+    <>
       <PasswordSetupPreview />
-    </I18nextProvider>
+    </>
   )
 }

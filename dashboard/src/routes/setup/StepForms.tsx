@@ -1,7 +1,7 @@
 import { Eye, EyeOff, Maximize2 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,35 +38,42 @@ import type {
   PersonalityConfig,
 } from './types'
 
+const TOKEN_RULE_LABELS: Record<string, string> = {
+  "minLength": "10 位以上",
+  "hasUppercase": "大写字母",
+  "hasLowercase": "小写字母",
+  "hasSpecialChar": "特殊符号",
+}
+
+
 interface CustomTokenFormProps {
   token: string
   onChange: (token: string) => void
 }
 
 export function CustomTokenForm({ token, onChange }: CustomTokenFormProps) {
-  const { t } = useTranslation()
   const tokenValidation = useMemo(() => validateToken(token), [token])
 
   return (
     <div className="space-y-6">
       <Label htmlFor="custom-token" className="sr-only">
-        {t('setupPage.forms.customToken.label')}
+        {'自定义密码 *'}
       </Label>
       <PasswordInput
         id="custom-token"
         controlSize="lg"
-        placeholder={t('setupPage.forms.customToken.placeholder')}
+        placeholder={'输入新密码'}
         value={token}
         onChange={(event) => onChange(event.target.value)}
-        showLabel={t('setupPage.forms.customToken.show')}
-        hideLabel={t('setupPage.forms.customToken.hide')}
+        showLabel={'显示'}
+        hideLabel={'隐藏'}
         autoComplete="new-password"
         aria-describedby="custom-token-requirements"
         className="text-base sm:text-lg md:text-xl"
       />
       <ul
         id="custom-token-requirements"
-        aria-label={t('setupPage.forms.customToken.requirements')}
+        aria-label={'密码要求'}
         className="grid grid-cols-2 gap-2.5 sm:grid-cols-4"
       >
         {tokenValidation.rules.map((rule) => (
@@ -80,13 +87,9 @@ export function CustomTokenForm({ token, onChange }: CustomTokenFormProps) {
             <StatusLight
               status={rule.passed ? 'on' : 'off'}
               glow={false}
-              label={t(
-                rule.passed
-                  ? 'setupPage.forms.customToken.met'
-                  : 'setupPage.forms.customToken.unmet'
-              )}
+              label={(rule.passed ? '已满足' : '未满足')}
             />
-            <span>{t(`setupPage.forms.customToken.rules.${rule.id}`)}</span>
+            <span>{TOKEN_RULE_LABELS[rule.id]}</span>
           </li>
         ))}
       </ul>
@@ -100,15 +103,14 @@ interface BotBasicFormProps {
 }
 
 export function BotBasicForm({ config, onChange }: BotBasicFormProps) {
-  const { t } = useTranslation()
 
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Label htmlFor="nickname">{t('setupPage.forms.botBasic.nickname.label')}</Label>
+        <Label htmlFor="nickname">{'昵称'}</Label>
         <Input
           id="nickname"
-          placeholder={t('setupPage.forms.botBasic.nickname.placeholder')}
+          placeholder={'请输入机器人的昵称'}
           value={config.nickname}
           onChange={(e) => onChange({ ...config, nickname: e.target.value })}
         />
@@ -124,14 +126,13 @@ interface PersonalityFormProps {
 }
 
 export function PersonalityPresetSelect({ config, onChange }: PersonalityFormProps) {
-  const { t } = useTranslation()
   const presets = [
     {
       id: 'default',
-      name: t('setupPage.forms.personality.presets.default'),
-      personality: t('setupPage.defaults.personality.personality'),
-      behavior_style: t('setupPage.defaults.personality.behaviorStyle'),
-      reply_style: t('setupPage.defaults.personality.replyStyle'),
+      name: '默认（麦麦）',
+      personality: '是一个大二女大学生，现在正在上网和群友聊天。有轻微攻击性',
+      behavior_style: '自然参与日常聊天，不会没话题硬找话题；先理解上下文，再决定回复或保持安静。',
+      reply_style: '你的风格平淡简短。可以参考贴吧，知乎和微博的回复风格。不浮夸不长篇大论，不要过分修辞和复杂句。',
     },
     ...PERSONALITY_PRESETS,
   ]
@@ -145,7 +146,7 @@ export function PersonalityPresetSelect({ config, onChange }: PersonalityFormPro
   return (
     <div className="flex items-center justify-end gap-3">
       <Label htmlFor="personality-preset" className="shrink-0">
-        {t('setupPage.forms.personality.presets.label')}
+        {'人设预设'}
       </Label>
       <Select
         value={selectedPreset?.id ?? ''}
@@ -161,7 +162,7 @@ export function PersonalityPresetSelect({ config, onChange }: PersonalityFormPro
         }}
       >
         <SelectTrigger id="personality-preset" className="w-48">
-          <SelectValue placeholder={t('setupPage.forms.personality.presets.default')} />
+          <SelectValue placeholder={'默认（麦麦）'} />
         </SelectTrigger>
         <SelectContent>
           {presets.map((preset) => (
@@ -174,19 +175,30 @@ export function PersonalityPresetSelect({ config, onChange }: PersonalityFormPro
 }
 
 export function PersonalityForm({ config, onChange }: PersonalityFormProps) {
-  const { t } = useTranslation()
   const fields = [
-    { key: 'personality', translation: 'personality' },
-    { key: 'behavior_style', translation: 'behaviorStyle' },
-    { key: 'reply_style', translation: 'replyStyle' },
+    {
+      key: "personality",
+      label: "人格特征",
+      placeholder: "描述机器人的人格特质和身份特征（建议 120 字以内）",
+      description: "描述bot的核心人格特征，影响bot如何认识自己",
+    },
+    {
+      key: "behavior_style",
+      label: "行为风格",
+      placeholder: "描述何时参与聊天、如何观察局面以及何时保持安静",
+      description: "描述bot的行为，决定bot行为方式",
+    },
+    {
+      key: "reply_style",
+      label: "表达风格",
+      placeholder: "描述机器人说话的表达风格、表达习惯",
+      description: "直接影响bot如何说话，说话风格",
+    },
   ] as const
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      {fields.map(({ key, translation }) => {
-        const label = t(`setupPage.forms.personality.${translation}.label`)
-        const placeholder = t(`setupPage.forms.personality.${translation}.placeholder`)
-        const description = t(`setupPage.forms.personality.${translation}.description`)
+      {fields.map(({ key, label, placeholder, description }) => {
         return (
           <div key={key} className={cn('space-y-1', key === 'reply_style' && 'md:col-span-2')}>
             <div className="flex items-center justify-between gap-2">
@@ -201,8 +213,8 @@ export function PersonalityForm({ config, onChange }: PersonalityFormProps) {
                     variant="ghost"
                     size="icon"
                     className="size-7"
-                    aria-label={t('setupPage.forms.personality.expand', { field: label })}
-                    title={t('setupPage.forms.personality.expand', { field: label })}
+                    aria-label={`展开编辑${label}`}
+                    title={`展开编辑${label}`}
                   >
                     <Maximize2 className="size-4" />
                   </Button>
@@ -248,14 +260,13 @@ interface ApiProviderSetupFormProps {
 }
 
 export function ApiProviderSetupForm({ config, onChange }: ApiProviderSetupFormProps) {
-  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
   const [showApiKey, setShowApiKey] = useState(false)
   const [customMode, setCustomMode] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState('deepseek')
   const apiKeyToggleLabel = showApiKey
-    ? t('setupPage.forms.apiProvider.apiKey.hide')
-    : t('setupPage.forms.apiProvider.apiKey.show')
+    ? '隐藏 API Key'
+    : '显示 API Key'
   const providerPresets = PROVIDER_TEMPLATES.filter(
     (template) => template.id !== 'custom' && template.id !== 'mai_replier'
   )
@@ -298,7 +309,7 @@ export function ApiProviderSetupForm({ config, onChange }: ApiProviderSetupFormP
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>{t('setupPage.forms.apiProvider.providerName.label')}</Label>
+        <Label>{'API 提供商名称 *'}</Label>
         {/* 表单纵向切换，按钮留在原位，仅线性调整宽度。 */}
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
@@ -329,12 +340,12 @@ export function ApiProviderSetupForm({ config, onChange }: ApiProviderSetupFormP
                     <Input
                       id="provider_name"
                       className="h-11 min-w-0 flex-1"
-                      placeholder={t('setupPage.forms.apiProvider.providerName.placeholder')}
+                      placeholder={'例如 OpenAI、DeepSeek、自建服务'}
                       value={config.provider_name}
                       onChange={(e) => onChange({ ...config, provider_name: e.target.value })}
                     />
                     <Input
-                      aria-label={t('setupPage.forms.apiProvider.baseUrl.label')}
+                      aria-label={'API Base URL *'}
                       className="h-11 min-w-0 flex-1 font-mono"
                       placeholder="https://api.example.com/v1"
                       value={config.base_url}
@@ -365,7 +376,7 @@ export function ApiProviderSetupForm({ config, onChange }: ApiProviderSetupFormP
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="api_key">{t('setupPage.forms.apiProvider.apiKey.label')}</Label>
+        <Label htmlFor="api_key">{'API Key *'}</Label>
         <div className="relative">
           <Input
             id="api_key"
@@ -414,7 +425,6 @@ export function ModelSetupForm({
   fetchError = '',
   providerBaseUrl = '',
 }: ModelSetupFormProps) {
-  const { t } = useTranslation()
 
   const reduceMotion = useReducedMotion()
   const providerTemplate = findTemplateByBaseUrl(providerBaseUrl)
@@ -523,9 +533,9 @@ export function ModelSetupForm({
         <div className="min-w-0 space-y-3 pb-4 md:pr-4 md:pb-0">
           <div className="space-y-2">
             <Label htmlFor="planner_model_identifier" className="flex items-center gap-1">
-              {t('setupPage.forms.modelSetup.planner.identifier.label')}
+              {'用于 规划思考 的模型'}
               <HelpTooltip
-                content={t('setupPage.forms.modelSetup.planner.identifier.description')}
+                content={'填写 API 服务商对应的模型标识，例如 deepseek-chat。'}
                 side="right"
               />
             </Label>
@@ -554,9 +564,9 @@ export function ModelSetupForm({
         <div className="border-border min-w-0 space-y-3 border-t-2 pt-4 md:border-t-0 md:border-l-2 md:pt-0 md:pl-4">
           <div className="space-y-2">
             <Label htmlFor="replyer_model_identifier" className="flex items-center gap-1">
-              {t('setupPage.forms.modelSetup.replyer.identifier.label')}
+              {'用于 回复发言 的模型'}
               <HelpTooltip
-                content={t('setupPage.forms.modelSetup.replyer.identifier.description')}
+                content={'填写 API 服务商对应的模型标识，例如 deepseek-chat。'}
                 side="right"
               />
             </Label>

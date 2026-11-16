@@ -9,7 +9,7 @@ import {
   Timer,
 } from 'lucide-react'
 import { useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import {
   Bar,
   BarChart,
@@ -129,16 +129,15 @@ function TimeRangeTextSwitch({
   value: number
   onChange: (hours: number) => void
 }) {
-  const { t } = useTranslation()
   const labels: Record<number, string> = {
-    24: t('home.timeRange.24h'),
-    168: t('home.timeRange.7d'),
-    720: t('home.timeRange.30d'),
+    24: '24小时',
+    168: '7天',
+    720: '30天',
   }
 
   return (
     <SegmentedControl
-      aria-label={t('home.stats.timeRange')}
+      aria-label={'统计时间范围'}
       value={String(value)}
       onValueChange={(next) => onChange(Number(next))}
       size="xs"
@@ -271,13 +270,12 @@ function PrimarySummaryMetric({
 }
 
 export function StatisticsOverviewCard() {
-  const { t, i18n } = useTranslation()
   const state = useStatisticsCardData()
-  const locale = i18n.resolvedLanguage || i18n.language
+  const locale = 'zh-CN'
 
   return (
     <StatisticsCardFrame
-      title={t('home.stats.overviewTitle')}
+      title={'统计概览'}
       icon={BarChart3}
       state={state}
     >
@@ -291,11 +289,11 @@ export function StatisticsOverviewCard() {
             className="divide-border grid min-h-0 w-full grid-cols-2 divide-x"
           >
             <PrimarySummaryMetric
-              label={t('home.stats.totalRequests')}
+              label={'总请求数'}
               value={formatNumber(summary.total_requests, locale)}
             />
             <PrimarySummaryMetric
-              label={t('home.stats.totalCost')}
+              label={'总花费'}
               value={`¥${summary.total_cost.toFixed(2)}`}
             />
           </div>
@@ -304,23 +302,23 @@ export function StatisticsOverviewCard() {
             className="border-border grid min-h-0 grid-cols-4 border-t pt-1"
           >
             <SummaryMetric
-              label={t('home.stats.tokenUsage')}
+              label={'Token消耗'}
               value={formatNumber(summary.total_tokens, locale)}
-              detail={`${t('home.stats.inputTokens')} ${formatNumber(summary.input_tokens, locale)} · ${t('home.stats.outputTokens')} ${formatNumber(summary.output_tokens, locale)}`}
+              detail={`输入 ${formatNumber(summary.input_tokens, locale)} · 输出 ${formatNumber(summary.output_tokens, locale)}`}
               detailOnHover
             />
             <SummaryMetric
-              label={t('home.stats.avgResponse')}
+              label={'平均响应'}
               value={`${summary.avg_response_time.toFixed(2)}s`}
             />
             <SummaryMetric
-              label={t('home.stats.onlineTime')}
+              label={'在线时长'}
               value={`${(summary.online_time / 3600).toFixed(1)}h`}
             />
             <SummaryMetric
-              label={t('home.stats.messageProcessing')}
+              label={'消息'}
               value={formatNumber(summary.total_messages, locale)}
-              detail={t('home.stats.replied', { num: formatNumber(summary.total_replies, locale) })}
+              detail={`回复 ${formatNumber(summary.total_replies, locale)} 条`}
               detailOnHover
             />
           </div>
@@ -331,15 +329,14 @@ export function StatisticsOverviewCard() {
 }
 
 function CacheBreakdown({ summary, locale }: { summary: StatisticsSummary; locale: string }) {
-  const { t } = useTranslation()
   const rates = [
     {
-      label: t('home.cache.all'),
+      label: '全部',
       hitRate: summary.cache_hit_rate,
       total: summary.cache_hit_tokens + summary.cache_miss_tokens,
     },
     {
-      label: t('home.cache.chat'),
+      label: '聊天',
       hitRate: summary.chat_cache_hit_rate,
       total: summary.chat_cache_hit_tokens + summary.chat_cache_miss_tokens,
     },
@@ -362,7 +359,7 @@ function CacheBreakdown({ summary, locale }: { summary: StatisticsSummary; local
             />
           </div>
           <div className="text-muted-foreground mt-2 truncate text-[11px]">
-            {t('home.cache.eligibleTokens', { value: formatNumber(rate.total, locale) })}
+            {`参与统计 ${formatNumber(rate.total, locale)} Token`}
           </div>
         </div>
       ))}
@@ -371,12 +368,11 @@ function CacheBreakdown({ summary, locale }: { summary: StatisticsSummary; local
 }
 
 export function PromptCacheCard() {
-  const { t, i18n } = useTranslation()
   const state = useStatisticsCardData()
-  const locale = i18n.resolvedLanguage || i18n.language
+  const locale = 'zh-CN'
 
   return (
-    <StatisticsCardFrame title={t('home.cache.title')} icon={Gauge} state={state}>
+    <StatisticsCardFrame title={'Prompt缓存'} icon={Gauge} state={state}>
       {({ summary }) => <CacheBreakdown summary={summary} locale={locale} />}
     </StatisticsCardFrame>
   )
@@ -404,22 +400,21 @@ function StatisticsChartLegend({ config }: { config: ChartConfig }) {
 }
 
 function ChartCard({ kind }: { kind: 'requests' | 'cost' | 'tokens' }) {
-  const { t, i18n } = useTranslation()
   const state = useStatisticsCardData()
-  const locale = i18n.resolvedLanguage || i18n.language
+  const locale = 'zh-CN'
   const chartConfig =
     kind === 'requests' ? requestChartConfig : kind === 'cost' ? costChartConfig : tokenChartConfig
   const metadata = {
     requests: {
-      title: t('home.charts.requestTrend'),
+      title: '请求趋势',
       icon: Activity,
     },
     cost: {
-      title: t('home.charts.costTrend'),
+      title: '花费趋势',
       icon: Coins,
     },
     tokens: {
-      title: t('home.charts.tokenUsage'),
+      title: 'Token消耗',
       icon: Database,
     },
   }[kind]
@@ -543,11 +538,10 @@ export function TokenTrendCard() {
 }
 
 export function ModelDistributionCard() {
-  const { t } = useTranslation()
   const state = useStatisticsCardData()
 
   return (
-    <StatisticsCardFrame title={t('home.charts.modelDistribution')} icon={Network} state={state}>
+    <StatisticsCardFrame title={'模型花费分布'} icon={Network} state={state}>
       {({ model_stats: modelStats }) => {
         const data = modelStats.map((item, index) => ({
           name: item.model_name,
@@ -593,12 +587,11 @@ export function ModelDistributionCard() {
 }
 
 export function ModelDetailsCard() {
-  const { t, i18n } = useTranslation()
   const state = useStatisticsCardData()
-  const locale = i18n.resolvedLanguage || i18n.language
+  const locale = 'zh-CN'
 
   return (
-    <StatisticsCardFrame title={t('home.charts.modelDetails')} icon={Timer} state={state}>
+    <StatisticsCardFrame title={'模型详细统计'} icon={Timer} state={state}>
       {({ model_stats: modelStats }) => (
         <ScrollArea className="h-full min-h-[240px] pr-3">
           <div className="space-y-2">
@@ -607,26 +600,26 @@ export function ModelDetailsCard() {
                 <div className="mb-2 truncate text-sm font-semibold">{stat.model_name}</div>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
                   <span>
-                    {t('home.charts.requestCount')}:{' '}
+                    {'请求数'}:{' '}
                     <strong>{formatNumber(stat.request_count, locale)}</strong>
                   </span>
                   <span>
-                    {t('home.stats.inputTokens')}:{' '}
+                    {'输入'}:{' '}
                     <strong>{formatNumber(stat.input_tokens, locale)}</strong>
                   </span>
                   <span>
-                    {t('home.stats.outputTokens')}:{' '}
+                    {'输出'}:{' '}
                     <strong>{formatNumber(stat.output_tokens, locale)}</strong>
                   </span>
                   <span>
-                    {t('home.cache.hitRate')}:{' '}
+                    {'缓存命中率'}:{' '}
                     <strong>{formatCacheRate(stat.cache_hit_rate)}</strong>
                   </span>
                   <span>
-                    {t('home.charts.costLabel')}: <strong>¥{stat.total_cost.toFixed(2)}</strong>
+                    {'花费'}: <strong>¥{stat.total_cost.toFixed(2)}</strong>
                   </span>
                   <span>
-                    {t('home.charts.avgTime')}:{' '}
+                    {'平均耗时'}:{' '}
                     <strong>{stat.avg_response_time.toFixed(2)}s</strong>
                   </span>
                 </div>
@@ -640,17 +633,16 @@ export function ModelDetailsCard() {
 }
 
 export function DailyStatisticsCard() {
-  const { t, i18n } = useTranslation()
   const state = useStatisticsCardData()
-  const locale = i18n.resolvedLanguage || i18n.language
+  const locale = 'zh-CN'
 
   return (
-    <StatisticsCardFrame title={t('home.charts.dailyStats')} icon={BarChart3} state={state}>
+    <StatisticsCardFrame title={'每日统计'} icon={BarChart3} state={state}>
       {(data) => {
         const chartData = selectChartTimeSeries(data, state.timeRange)
         return (
           <div className="flex h-full min-h-[240px] flex-col">
-            <ZoomableChart aria-label={t('home.charts.dailyStats')} className="min-h-0 flex-1">
+            <ZoomableChart aria-label={'每日统计'} className="min-h-0 flex-1">
               <ChartContainer config={dailyChartConfig} className="aspect-auto h-full w-full">
                 <BarChart data={chartData}>
                   <CartesianGrid

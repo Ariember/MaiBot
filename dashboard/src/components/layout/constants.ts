@@ -33,89 +33,89 @@ const DataTransferIcon: MenuIcon = (props) => createElement(HardDrive, props)
 
 export const menuSections: MenuSection[] = [
   {
-    title: 'sidebar.groups.overview',
+    title: "概览",
     items: [
       {
         icon: HomeIcon,
-        label: 'sidebar.menu.home',
+        label: "首页",
         path: '/',
-        searchDescription: 'search.items.homeDesc',
+        searchDescription: "查看仪表板概览",
       },
-      { icon: LocalChatIcon, label: 'workspace.chat', path: '/chat' },
-      { icon: Monitor, label: 'chat.computerDesktop', path: '/computer', featureFlag: 'computer' },
+      { icon: LocalChatIcon, label: "麦麦聊天", path: '/chat' },
+      { icon: Monitor, label: "电脑桌面与接管", path: '/computer', featureFlag: 'computer' },
     ],
   },
   {
-    title: 'sidebar.groups.botConfig',
+    title: "配置管理",
     items: [
       {
         icon: BotConfigIcon,
-        label: 'sidebar.menu.botMainConfig',
+        label: "麦麦设置",
         path: '/config/bot',
-        searchDescription: 'search.items.botConfigDesc',
+        searchDescription: "配置麦麦的详细设置和共享组",
       },
       {
         icon: ModelIcon,
-        label: 'sidebar.menu.modelManagement',
+        label: "模型管理",
         path: '/config/model',
-        searchDescription: 'search.items.modelDesc',
+        searchDescription: "配置模型参数",
         tourId: 'sidebar-model-management',
       },
       {
         icon: AdapterManagementIcon,
-        label: 'sidebar.menu.adapterManagement',
+        label: "适配器设置",
         path: '/adapter-management',
       },
     ],
   },
   {
-    title: 'sidebar.groups.mylife',
+    title: "麦日常",
     items: [
       {
         icon: Sun,
-        label: 'sidebar.menu.mylifeSettings',
+        label: "日常配置",
         path: '/mylife',
-        searchDescription: 'search.items.mylifeDesc',
+        searchDescription: "配置麦麦的日常生活、日程、社交与主动消息",
       },
     ],
   },
   {
-    title: 'sidebar.groups.botResources',
+    title: "资源管理",
     items: [
       {
         icon: LearningIcon,
-        label: 'sidebar.menu.learning',
+        label: "学习",
         path: '/resource/learning',
-        searchDescription: 'search.items.learningDesc',
+        searchDescription: "管理麦麦学习到的表达方式、黑话和表情包",
       },
       {
         icon: KnowledgeIcon,
-        label: 'sidebar.menu.knowledgeBase',
+        label: "长期记忆",
         path: '/resource/knowledge-base',
       },
     ],
   },
   {
-    title: 'sidebar.groups.extensionsMonitor',
+    title: "扩展集成",
     items: [
-      { icon: PluginConfigIcon, label: 'sidebar.menu.pluginConfig', path: '/plugin-config' },
+      { icon: PluginConfigIcon, label: "插件扩展", path: '/plugin-config' },
       {
         icon: PluginMarketIcon,
-        label: 'sidebar.menu.pluginMarket',
+        label: "插件市场",
         path: '/plugins',
-        searchDescription: 'search.items.pluginsDesc',
+        searchDescription: "浏览和安装插件",
       },
     ],
   },
   {
-    title: 'sidebar.groups.advancedTools',
+    title: "高级工具",
     items: [
-      { icon: PromptIcon, label: 'sidebar.menu.promptManagement', path: '/config/prompts' },
+      { icon: PromptIcon, label: "Prompt管理", path: '/config/prompts' },
       {
         icon: DataTransferIcon,
-        label: 'sidebar.menu.dataTransfer',
+        label: "数据管理",
         path: '/data-transfer',
-        searchDescription: 'search.items.dataTransferDesc',
+        searchDescription: "管理本地缓存，备份、导出或恢复 MaiBot 数据",
       },
     ],
   },

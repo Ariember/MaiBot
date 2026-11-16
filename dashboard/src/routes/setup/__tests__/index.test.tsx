@@ -13,14 +13,9 @@ import type {
 } from '../types'
 
 const mocks = vi.hoisted(() => {
-  // t 必须是稳定引用，返回 key（带参数时附加序列化参数）
-  const t = (key: string, variables?: Record<string, unknown>) =>
-    variables ? `${key}:${JSON.stringify(variables)}` : key
   return {
-    t,
     navigate: vi.fn(),
     toast: vi.fn(),
-    changeLanguage: vi.fn(),
     loadSetupStatus: vi.fn(),
     loadBotBasicConfig: vi.fn(),
     loadPersonalityConfig: vi.fn(),
@@ -36,16 +31,7 @@ const mocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: mocks.t,
-    i18n: {
-      resolvedLanguage: 'zh',
-      language: 'zh',
-      changeLanguage: mocks.changeLanguage,
-    },
-  }),
-}))
+
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mocks.navigate,
@@ -144,18 +130,18 @@ const defaultModelSetup: ModelSetupConfig = {
 /** 等待加载态结束 */
 async function waitLoadingDone() {
   await waitFor(() => {
-    expect(screen.queryByText('setupPage.loading.title')).not.toBeInTheDocument()
+    expect(screen.queryByText('加载中...')).not.toBeInTheDocument()
   })
 }
 
-/** 步骤计数器文案（t 的 mock 会把参数序列化拼在 key 后） */
+/** 步骤计数器文案 */
 function stepCounterText(current: number, total: number) {
-  return `setupPage.progress.stepCounter:${JSON.stringify({ current, total })}`
+  return `第 ${current} / ${total} 步`
 }
 
 /** 点击“下一步”并等待推进到指定步骤 */
 async function clickNextAndWaitStep(current: number, total = 3) {
-  fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.next' }))
+  fireEvent.click(screen.getByRole('button', { name: '下一步' }))
   await screen.findByText(stepCounterText(current, total))
 }
 
@@ -190,14 +176,14 @@ describe('SetupPage 加载', () => {
 
     render(<SetupPage />)
 
-    expect(screen.getByText('setupPage.loading.title')).toBeInTheDocument()
+    expect(screen.getByText('加载中...')).toBeInTheDocument()
 
     resolveStatus({ ...defaultStatus })
     await waitLoadingDone()
 
     // 第一步同时渲染 Bot 基础表单与人格表单，并回显已加载配置
-    expect(screen.getByLabelText('setupPage.forms.botBasic.nickname.label')).toHaveValue('麦麦')
-    expect(screen.getByLabelText('setupPage.forms.personality.personality.label')).toHaveValue(
+    expect(screen.getByLabelText('昵称')).toHaveValue('麦麦')
+    expect(screen.getByLabelText('人格特征')).toHaveValue(
       '活泼开朗'
     )
   })
@@ -209,7 +195,7 @@ describe('SetupPage 加载', () => {
     await waitLoadingDone()
 
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'setupPage.toast.loadFailedTitle',
+      title: '加载配置失败',
       description: '网络炸了',
       variant: 'destructive',
     })
@@ -225,12 +211,12 @@ describe('SetupPage 步骤推进', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.next' }))
+    fireEvent.click(screen.getByRole('button', { name: '下一步' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.validationFailedTitle',
-        description: 'setupPage.validation.enterNickname',
+        title: '验证失败',
+        description: '请输入昵称',
         variant: 'destructive',
       })
     })
@@ -247,14 +233,12 @@ describe('SetupPage 步骤推进', () => {
     expect(mocks.saveBotBasicConfig).toHaveBeenCalledWith(defaultBotBasic)
     expect(mocks.savePersonalityConfig).toHaveBeenCalledWith(defaultPersonality)
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'setupPage.toast.saveSuccessTitle',
-      description: `setupPage.toast.saveSuccessDescription:${JSON.stringify({
-        step: 'setupPage.steps.botProfile.title',
-      })}`,
+      title: '保存成功',
+      description: '基础与人格 配置已保存',
       duration: 1000,
     })
     // 第二步渲染 API 提供商表单并回显配置
-    expect(screen.getByLabelText('setupPage.forms.apiProvider.providerName.label')).toHaveValue(
+    expect(screen.getByLabelText('API 提供商名称 *')).toHaveValue(
       'DeepSeek'
     )
   })
@@ -265,11 +249,11 @@ describe('SetupPage 步骤推进', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.next' }))
+    fireEvent.click(screen.getByRole('button', { name: '下一步' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.saveFailedTitle',
+        title: '保存失败',
         description: '磁盘满了',
         variant: 'destructive',
       })
@@ -284,12 +268,12 @@ describe('SetupPage 步骤推进', () => {
     await waitLoadingDone()
     await clickNextAndWaitStep(2)
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.next' }))
+    fireEvent.click(screen.getByRole('button', { name: '下一步' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.validationFailedTitle',
-        description: 'setupPage.validation.enterBaseUrl',
+        title: '验证失败',
+        description: '请输入 API Base URL',
         variant: 'destructive',
       })
     })
@@ -301,7 +285,7 @@ describe('SetupPage 步骤推进', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    const previousButton = screen.getByRole('button', { name: 'setupPage.actions.previous' })
+    const previousButton = screen.getByRole('button', { name: '上一步' })
     expect(previousButton).toBeDisabled()
 
     await clickNextAndWaitStep(2)
@@ -319,7 +303,7 @@ describe('SetupPage 完成与跳过', () => {
     await clickNextAndWaitStep(2)
     await clickNextAndWaitStep(3)
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.complete' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成配置' }))
 
     await waitFor(() => {
       expect(mocks.navigate).toHaveBeenCalledWith({ to: '/' })
@@ -327,7 +311,7 @@ describe('SetupPage 完成与跳过', () => {
     expect(mocks.saveModelSetupConfig).toHaveBeenCalledWith(defaultModelSetup, 'DeepSeek')
     expect(mocks.completeSetup).toHaveBeenCalledTimes(1)
     expect(mocks.toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'setupPage.toast.completeSuccessTitle' })
+      expect.objectContaining({ title: '配置完成' })
     )
   })
 
@@ -342,12 +326,12 @@ describe('SetupPage 完成与跳过', () => {
     await clickNextAndWaitStep(2)
     await clickNextAndWaitStep(3)
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.complete' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成配置' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.validationFailedTitle',
-        description: 'setupPage.validation.enterPlannerModelIdentifier',
+        title: '验证失败',
+        description: '请输入 planner 模型标识符',
         variant: 'destructive',
       })
     })
@@ -359,7 +343,7 @@ describe('SetupPage 完成与跳过', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.skipDialog.confirm' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认跳过' }))
 
     await waitFor(() => {
       expect(mocks.navigate).toHaveBeenCalledWith({ to: '/' })
@@ -373,11 +357,11 @@ describe('SetupPage 完成与跳过', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.skipDialog.confirm' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认跳过' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.skipFailedTitle',
+        title: '跳过失败',
         description: '后端 500',
         variant: 'destructive',
       })
@@ -397,22 +381,22 @@ describe('SetupPage 自定义 Token 步骤', () => {
 
     expect(screen.getByText(stepCounterText(1, 4))).toBeInTheDocument()
     // 第一步是自定义 Token 表单
-    expect(screen.getByLabelText('setupPage.forms.customToken.label')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /setupPage.actions.skip/ })).toBeDisabled()
+    expect(screen.getByLabelText('自定义密码 *')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '跳过向导' })).toBeDisabled()
     // 主按钮文案是“保存 Token”而非“下一步”
-    expect(screen.getByRole('button', { name: 'setupPage.actions.saveToken' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '保存并继续' })).toBeInTheDocument()
   })
 
   it('Token 不满足真实校验规则时禁用保存且不提交', async () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.change(screen.getByLabelText('setupPage.forms.customToken.label'), {
+    fireEvent.change(screen.getByLabelText('自定义密码 *'), {
       target: { value: 'short' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.saveToken' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存并继续' }))
 
-    expect(screen.getByRole('button', { name: 'setupPage.actions.saveToken' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '保存并继续' })).toBeDisabled()
     expect(mocks.updateAccessToken).not.toHaveBeenCalled()
   })
 
@@ -420,20 +404,20 @@ describe('SetupPage 自定义 Token 步骤', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.change(screen.getByLabelText('setupPage.forms.customToken.label'), {
+    fireEvent.change(screen.getByLabelText('自定义密码 *'), {
       target: { value: ' Abcdefghij!123 ' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.saveToken' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存并继续' }))
 
     await waitFor(() => {
       expect(mocks.updateAccessToken).toHaveBeenCalledWith('Abcdefghij!123')
     })
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'setupPage.toast.customTokenSuccessTitle',
-      description: 'setupPage.toast.customTokenSuccessDescription',
+      title: '密码已更新',
+      description: '已自动登录，请继续完成配置。',
     })
-    expect(screen.queryByLabelText('setupPage.forms.customToken.label')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('setupPage.forms.botBasic.nickname.label')).toHaveValue('麦麦')
+    expect(screen.queryByLabelText('自定义密码 *')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('昵称')).toHaveValue('麦麦')
     expect(mocks.navigate).not.toHaveBeenCalled()
   })
 
@@ -443,14 +427,14 @@ describe('SetupPage 自定义 Token 步骤', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.change(screen.getByLabelText('setupPage.forms.customToken.label'), {
+    fireEvent.change(screen.getByLabelText('自定义密码 *'), {
       target: { value: 'Abcdefghij!123' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.saveToken' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存并继续' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.saveFailedTitle',
+        title: '保存失败',
         description: 'Token 太弱',
         variant: 'destructive',
       })
@@ -459,32 +443,19 @@ describe('SetupPage 自定义 Token 步骤', () => {
   })
 })
 
-describe('SetupPage 语言切换', () => {
-  it('点击语言菜单项调用 i18n.changeLanguage', async () => {
-    render(<SetupPage />)
-    await waitLoadingDone()
-
-    fireEvent.click(screen.getByRole('button', { name: 'English' }))
-    expect(mocks.changeLanguage).toHaveBeenCalledWith('en')
-
-    fireEvent.click(screen.getByRole('button', { name: '한국어' }))
-    expect(mocks.changeLanguage).toHaveBeenCalledWith('ko')
-  })
-})
-
 describe('SetupPage 错误态与空态', () => {
   async function goToLastStep() {
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.next' }))
-    await screen.findByRole('button', { name: 'setupPage.actions.complete' })
+    fireEvent.click(screen.getByRole('button', { name: '下一步' }))
+    await screen.findByRole('button', { name: '完成配置' })
   }
 
   it('配置未返回前显示加载态，不渲染表单', () => {
     mocks.loadSetupStatus.mockImplementation(() => new Promise(() => {}))
     render(<SetupPage />)
 
-    expect(screen.getByText('setupPage.loading.title')).toBeInTheDocument()
+    expect(screen.getByText('加载中...')).toBeInTheDocument()
     expect(
-      screen.queryByLabelText('setupPage.forms.botBasic.nickname.label')
+      screen.queryByLabelText('昵称')
     ).not.toBeInTheDocument()
   })
 
@@ -494,11 +465,11 @@ describe('SetupPage 错误态与空态', () => {
     await waitLoadingDone()
 
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'setupPage.toast.loadFailedTitle',
+      title: '加载配置失败',
       description: '网络炸了',
       variant: 'destructive',
     })
-    expect(screen.getByLabelText('setupPage.forms.botBasic.nickname.label')).toBeInTheDocument()
+    expect(screen.getByLabelText('昵称')).toBeInTheDocument()
   })
 
   it('加载失败且错误不是 Error 时使用默认失败描述', async () => {
@@ -507,8 +478,8 @@ describe('SetupPage 错误态与空态', () => {
     await waitLoadingDone()
 
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'setupPage.toast.loadFailedTitle',
-      description: 'setupPage.toast.loadFailedDescription',
+      title: '加载配置失败',
+      description: '无法加载现有配置，将使用默认值',
       variant: 'destructive',
     })
   })
@@ -518,17 +489,17 @@ describe('SetupPage 错误态与空态', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.next' }))
+    fireEvent.click(screen.getByRole('button', { name: '下一步' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.validationFailedTitle',
-        description: 'setupPage.validation.enterNickname',
+        title: '验证失败',
+        description: '请输入昵称',
         variant: 'destructive',
       })
     })
     expect(mocks.saveBotBasicConfig).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'setupPage.actions.next' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '下一步' })).toBeInTheDocument()
   })
 
   it('保存失败时提示错误并停留在当前步骤', async () => {
@@ -536,16 +507,16 @@ describe('SetupPage 错误态与空态', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.next' }))
+    fireEvent.click(screen.getByRole('button', { name: '下一步' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.saveFailedTitle',
+        title: '保存失败',
         description: '磁盘满了',
         variant: 'destructive',
       })
     })
-    expect(screen.getByRole('button', { name: 'setupPage.actions.next' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '下一步' })).toBeInTheDocument()
   })
 
   it('完成时 API Key 为空则拦截且不标记完成', async () => {
@@ -554,12 +525,12 @@ describe('SetupPage 错误态与空态', () => {
     await waitLoadingDone()
     await goToLastStep()
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.complete' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成配置' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.validationFailedTitle',
-        description: 'setupPage.validation.enterApiKey',
+        title: '验证失败',
+        description: '请输入 API Key',
         variant: 'destructive',
       })
     })
@@ -580,12 +551,12 @@ describe('SetupPage 错误态与空态', () => {
 
     await screen.findAllByPlaceholderText('手动输入模型标识符')
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.complete' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成配置' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.validationFailedTitle',
-        description: 'setupPage.validation.enterPlannerModelIdentifier',
+        title: '验证失败',
+        description: '请输入 planner 模型标识符',
         variant: 'destructive',
       })
     })
@@ -598,13 +569,13 @@ describe('SetupPage 错误态与空态', () => {
     await waitLoadingDone()
     await goToLastStep()
 
-    await screen.findAllByRole('combobox', { name: /identifier.label/ })
+    await screen.findAllByRole('combobox', { name: /用于.*的模型/ })
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.complete' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成配置' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.completeFailedTitle',
+        title: '配置失败',
         description: '写入失败',
         variant: 'destructive',
       })
@@ -618,14 +589,14 @@ describe('SetupPage 错误态与空态', () => {
     render(<SetupPage />)
     await waitLoadingDone()
 
-    fireEvent.change(screen.getByLabelText('setupPage.forms.customToken.label'), {
+    fireEvent.change(screen.getByLabelText('自定义密码 *'), {
       target: { value: 'Abcdefghij!123' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.saveToken' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存并继续' }))
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'setupPage.toast.saveFailedTitle',
+        title: '保存失败',
         description: '网络断开',
         variant: 'destructive',
       })
@@ -639,10 +610,10 @@ describe('SetupPage 错误态与空态', () => {
 it('完成模型配置后进入带试聊引导的聊天页', async () => {
   render(<SetupPage />)
   await waitLoadingDone()
-  fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.next' }))
-  await screen.findByRole('button', { name: 'setupPage.actions.complete' })
-  await screen.findAllByRole('combobox', { name: /identifier.label/ })
-  fireEvent.click(screen.getByRole('button', { name: 'setupPage.actions.complete' }))
+  fireEvent.click(screen.getByRole('button', { name: '下一步' }))
+  await screen.findByRole('button', { name: '完成配置' })
+  await screen.findAllByRole('combobox', { name: /用于.*的模型/ })
+  fireEvent.click(screen.getByRole('button', { name: '完成配置' }))
   await waitFor(() => {
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/chat', search: { setupTrial: true } })
   })

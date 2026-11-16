@@ -1,6 +1,6 @@
 import { useMemo, useState, type ComponentProps } from 'react'
 import { AlertCircle, CalendarClock, ExternalLink, RefreshCw } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+
 import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart, XAxis, YAxis } from 'recharts'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -34,6 +34,62 @@ import type {
   DetailedStatisticsTrendData,
 } from './types'
 import { useDetailedStatistics } from './useDetailedStatistics'
+
+const STATISTICSPAGE_TABLE_LABELS: Record<string, string> = {
+  "name": "名称",
+  "requests": "调用次数",
+  "inputTokens": "输入Token",
+  "outputTokens": "输出Token",
+  "totalTokens": "Token总量",
+  "cacheHitTokens": "缓存命中Token",
+  "cacheMissTokens": "缓存未命中Token",
+  "cacheHitRate": "缓存命中率",
+  "cost": "累计花费",
+  "time": "耗时",
+  "callsPerReply": "每次回复平均调用次数",
+  "tokensPerReply": "每次回复平均Token",
+  "tokensPerCall": "每次调用平均Token",
+  "chat": "联系人/群组名称",
+  "messages": "消息数量",
+}
+
+const STATISTICSPAGE_DISTRIBUTIONS_LABELS: Record<string, string> = {
+  "metric": "统计指标",
+  "costs": "花费",
+  "tokens": "Token",
+  "ownerTokens": "调用来源Token分布",
+  "modelTokens": "模型Token分布",
+  "moduleTokens": "模块Token分布",
+  "requestTypeTokens": "请求类型Token分布",
+  "chatTokens": "聊天流Token分布",
+  "ownerCosts": "调用来源花费分布",
+  "modelCosts": "模型花费分布",
+  "moduleCosts": "模块花费分布",
+  "requestTypeCosts": "请求类型花费分布",
+  "chatMessages": "聊天消息分布",
+  "chatCosts": "聊天流花费分布",
+}
+
+const STATISTICSPAGE_RANGES_LABELS: Record<string, string> = {
+  "6h": "6小时",
+  "12h": "12小时",
+  "24h": "24小时",
+  "48h": "48小时",
+  "7d": "7天",
+  "30d": "30天",
+}
+
+const STATISTICSPAGE_PERIODS_LABELS: Record<string, string> = {
+  "all_time": "自部署以来",
+  "last_30_days": "近30天",
+  "last_7_days": "近7天",
+  "last_3_days": "近3天",
+  "last_24_hours": "近1天",
+  "last_3_hours": "近3小时",
+  "last_hour": "近1小时",
+  "last_15_minutes": "近15分钟",
+}
+
 
 const PERIOD_KEYS = [
   'all_time',
@@ -190,77 +246,76 @@ function MetricItem({ label, value, detail }: MetricItemProps) {
 }
 
 function SummaryMetrics({ period, locale }: { period: DetailedStatisticsPeriod; locale: string }) {
-  const { t } = useTranslation()
   const summary = period.summary
   const items: MetricItemProps[] = [
     {
-      label: t('statisticsPage.summary.onlineTime'),
+      label: '总在线时间',
       value: formatDuration(summary.online_time, locale),
     },
     {
-      label: t('statisticsPage.summary.messages'),
+      label: '总消息数',
       value: formatNumber(summary.total_messages, locale),
     },
     {
-      label: t('statisticsPage.summary.replies'),
+      label: '总回复数',
       value: formatNumber(summary.total_replies, locale),
     },
     {
-      label: t('statisticsPage.summary.requests'),
+      label: '总请求数',
       value: formatNumber(summary.total_requests, locale),
     },
     {
-      label: t('statisticsPage.summary.tokens'),
+      label: '总Token数',
       value: formatNumber(summary.total_tokens, locale),
     },
     {
-      label: t('statisticsPage.summary.inputTokens'),
+      label: '总输入Token',
       value: formatNumber(summary.input_tokens, locale),
     },
     {
-      label: t('statisticsPage.summary.outputTokens'),
+      label: '总输出Token',
       value: formatNumber(summary.output_tokens, locale),
     },
     {
-      label: t('statisticsPage.summary.cacheHitRate'),
+      label: 'Prompt缓存命中率',
       value: formatPercent(summary.cache_hit_rate),
     },
     {
-      label: t('statisticsPage.summary.cacheHitTokens'),
+      label: '缓存命中Token',
       value: formatNumber(summary.cache_hit_tokens, locale),
     },
     {
-      label: t('statisticsPage.summary.cacheMissTokens'),
+      label: '缓存未命中Token',
       value: formatNumber(summary.cache_miss_tokens, locale),
     },
     {
-      label: t('statisticsPage.summary.totalCost'),
+      label: '总花费',
       value: formatCurrency(summary.total_cost, locale),
     },
     {
-      label: t('statisticsPage.summary.costPerMessages'),
+      label: '花费/消息数量',
       value: formatCurrency(summary.cost_per_100_messages, locale, 4),
-      detail: t('statisticsPage.units.per100'),
+      detail: '每100条',
     },
     {
-      label: t('statisticsPage.summary.costPerReceivedMessages'),
+      label: '花费/接收消息数量',
       value: formatCurrency(summary.cost_per_100_messages_excluding_replies, locale, 4),
-      detail: t('statisticsPage.units.per100'),
+      detail: '每100条',
     },
     {
-      label: t('statisticsPage.summary.costPerReplies'),
+      label: '花费/回复数量',
       value: formatCurrency(summary.cost_per_100_replies, locale, 4),
-      detail: t('statisticsPage.units.per100'),
+      detail: '每100条',
     },
     {
-      label: t('statisticsPage.summary.costPerHour'),
+      label: '花费/时间',
       value: formatCurrency(summary.cost_per_hour, locale),
-      detail: t('statisticsPage.units.perHour'),
+      detail: '每小时',
     },
     {
-      label: t('statisticsPage.summary.tokensPerHour'),
+      label: 'Token/时间',
       value: formatNumber(summary.tokens_per_hour, locale),
-      detail: t('statisticsPage.units.perHour'),
+      detail: '每小时',
     },
   ]
 
@@ -278,7 +333,6 @@ function BreakdownTable({ rows, locale, embedding = false }: {
   locale: string
   embedding?: boolean
 }) {
-  const { t } = useTranslation()
 
   if (rows.length === 0) {
     return <EmptyState />
@@ -308,7 +362,7 @@ function BreakdownTable({ rows, locale, embedding = false }: {
             <dl className="grid grid-cols-2 gap-x-3 gap-y-3 text-sm">
               {metrics.filter((metric) => Boolean(metric.primary) === primary).map((metric) => (
                 <div key={metric.key} className="min-w-0">
-                  <dt className="text-muted-foreground text-xs">{t(`statisticsPage.table.${metric.key}`)}</dt>
+                  <dt className="text-muted-foreground text-xs">{STATISTICSPAGE_TABLE_LABELS[metric.key]}</dt>
                   <dd className="mt-1 wrap-break-word font-medium tabular-nums">{metric.value}</dd>
                 </div>
               ))}
@@ -335,28 +389,28 @@ function BreakdownTable({ rows, locale, embedding = false }: {
               data-statistics-sticky-cell="true"
               className="bg-muted sticky left-0 z-10 min-w-32 font-semibold sm:min-w-52"
             >
-              {t('statisticsPage.table.name')}
+              {'名称'}
             </TableHead>
-            <TableHead>{t('statisticsPage.table.requests')}</TableHead>
-            <TableHead>{t('statisticsPage.table.inputTokens')}</TableHead>
+            <TableHead>{'调用次数'}</TableHead>
+            <TableHead>{'输入Token'}</TableHead>
             {!embedding && (
               <>
-                <TableHead>{t('statisticsPage.table.outputTokens')}</TableHead>
-                <TableHead>{t('statisticsPage.table.totalTokens')}</TableHead>
-                <TableHead>{t('statisticsPage.table.cacheHitTokens')}</TableHead>
-                <TableHead>{t('statisticsPage.table.cacheMissTokens')}</TableHead>
-                <TableHead>{t('statisticsPage.table.cacheHitRate')}</TableHead>
+                <TableHead>{'输出Token'}</TableHead>
+                <TableHead>{'Token总量'}</TableHead>
+                <TableHead>{'缓存命中Token'}</TableHead>
+                <TableHead>{'缓存未命中Token'}</TableHead>
+                <TableHead>{'缓存命中率'}</TableHead>
               </>
             )}
-            <TableHead>{t('statisticsPage.table.cost')}</TableHead>
-            <TableHead>{t('statisticsPage.table.time')}</TableHead>
+            <TableHead>{'累计花费'}</TableHead>
+            <TableHead>{'耗时'}</TableHead>
             {!embedding && (
               <>
-                <TableHead>{t('statisticsPage.table.callsPerReply')}</TableHead>
-                <TableHead>{t('statisticsPage.table.tokensPerReply')}</TableHead>
+                <TableHead>{'每次回复平均调用次数'}</TableHead>
+                <TableHead>{'每次回复平均Token'}</TableHead>
               </>
             )}
-            <TableHead>{t('statisticsPage.table.tokensPerCall')}</TableHead>
+            <TableHead>{'每次调用平均Token'}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -401,7 +455,6 @@ function BreakdownTable({ rows, locale, embedding = false }: {
 }
 
 function ChatTable({ period, locale }: { period: DetailedStatisticsPeriod; locale: string }) {
-  const { t } = useTranslation()
   if (period.chats.length === 0) {
     return <EmptyState />
   }
@@ -410,8 +463,8 @@ function ChatTable({ period, locale }: { period: DetailedStatisticsPeriod; local
       <Table>
         <TableHeader className="bg-muted/60">
           <TableRow>
-            <TableHead>{t('statisticsPage.table.chat')}</TableHead>
-            <TableHead className="whitespace-nowrap text-right sm:w-44">{t('statisticsPage.table.messages')}</TableHead>
+            <TableHead>{'联系人/群组名称'}</TableHead>
+            <TableHead className="whitespace-nowrap text-right sm:w-44">{'消息数量'}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -430,16 +483,14 @@ function ChatTable({ period, locale }: { period: DetailedStatisticsPeriod; local
 }
 
 function EmptyState() {
-  const { t } = useTranslation()
   return (
     <div className="text-muted-foreground flex min-h-40 items-center justify-center text-sm">
-      {t('statisticsPage.empty')}
+      {'当前统计时段暂无数据'}
     </div>
   )
 }
 
 function SplitBreakdownTable({ rows, locale }: { rows: DetailedStatisticsBreakdown[]; locale: string }) {
-  const { t } = useTranslation()
   const embeddingRows = rows.filter((row) => row.is_embedding)
   const otherRows = rows.filter((row) => !row.is_embedding)
   return (
@@ -449,7 +500,7 @@ function SplitBreakdownTable({ rows, locale }: { rows: DetailedStatisticsBreakdo
       )}
       {embeddingRows.length > 0 && (
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold">{t('statisticsPage.sections.embeddings')}</h3>
+          <h3 className="text-sm font-semibold">{'嵌入统计'}</h3>
           <BreakdownTable rows={embeddingRows} locale={locale} embedding />
         </section>
       )}
@@ -458,11 +509,10 @@ function SplitBreakdownTable({ rows, locale }: { rows: DetailedStatisticsBreakdo
 }
 
 function DetailTables({ period, locale }: { period: DetailedStatisticsPeriod; locale: string }) {
-  const { t } = useTranslation()
   return (
     <Card className="border-l-primary overflow-hidden border-l-4 shadow-sm">
       <CardHeader className="border-b pb-4">
-        <CardTitle className="text-lg">{t('statisticsPage.sections.breakdowns')}</CardTitle>
+        <CardTitle className="text-lg">{'分类统计'}</CardTitle>
       </CardHeader>
       <CardContent className="pt-4 sm:pt-4">
         <Tabs defaultValue="models">
@@ -470,13 +520,13 @@ function DetailTables({ period, locale }: { period: DetailedStatisticsPeriod; lo
             className="border-border/70 bg-muted/40 mb-4 h-auto w-full justify-start overflow-x-auto overflow-y-hidden rounded-md border px-1 py-2 [&>button]:shrink-0"
             style={{ touchAction: 'pan-x pan-y' }}
           >
-            <TabsTrigger value="models">{t('statisticsPage.breakdowns.models')}</TabsTrigger>
-            <TabsTrigger value="taskGroups">{t('statisticsPage.breakdowns.taskGroups')}</TabsTrigger>
-            <TabsTrigger value="modules">{t('statisticsPage.breakdowns.modules')}</TabsTrigger>
+            <TabsTrigger value="models">{'按模型'}</TabsTrigger>
+            <TabsTrigger value="taskGroups">{'按任务组'}</TabsTrigger>
+            <TabsTrigger value="modules">{'按模块'}</TabsTrigger>
             <TabsTrigger value="requestTypes">
-              {t('statisticsPage.breakdowns.requestTypes')}
+              {'按请求类型'}
             </TabsTrigger>
-            <TabsTrigger value="chats">{t('statisticsPage.breakdowns.chats')}</TabsTrigger>
+            <TabsTrigger value="chats">{'聊天消息'}</TabsTrigger>
           </TabsList>
           <TabsContent value="models" className="mt-0">
             <SplitBreakdownTable rows={period.models} locale={locale} />
@@ -510,7 +560,6 @@ function DistributionChart({
   valueKind: 'currency' | 'count'
   locale: string
 }) {
-  const { t } = useTranslation()
   const [hiddenNames, setHiddenNames] = useState<Set<string>>(() => new Set())
   const chartData = data.map((item, index) => ({
     ...item,
@@ -585,7 +634,7 @@ function DistributionChart({
                       hidden && 'text-muted-foreground line-through opacity-60'
                     )}
                     onClick={() => toggleName(item.name)}
-                    title={t('statisticsPage.charts.toggleSeries', { name: item.name })}
+                    title={`显示或隐藏 ${item.name}`}
                   >
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-sm"
@@ -611,33 +660,32 @@ function DistributionGrid({
   period: DetailedStatisticsPeriod
   locale: string
 }) {
-  const { t } = useTranslation()
   const [metric, setMetric] = useState<'costs' | 'tokens'>('costs')
   const valueKind = metric === 'costs' ? 'currency' : 'count'
   const charts = [
     [
-      t(`statisticsPage.distributions.${metric === 'costs' ? 'ownerCosts' : 'ownerTokens'}`),
+      STATISTICSPAGE_DISTRIBUTIONS_LABELS[metric === 'costs' ? 'ownerCosts' : 'ownerTokens'],
       period.distributions[`owner_${metric}`],
       valueKind,
     ],
     [
-      t(`statisticsPage.distributions.${metric === 'costs' ? 'modelCosts' : 'modelTokens'}`),
+      STATISTICSPAGE_DISTRIBUTIONS_LABELS[metric === 'costs' ? 'modelCosts' : 'modelTokens'],
       period.distributions[`model_${metric}`],
       valueKind,
     ],
     [
-      t(`statisticsPage.distributions.${metric === 'costs' ? 'moduleCosts' : 'moduleTokens'}`),
+      STATISTICSPAGE_DISTRIBUTIONS_LABELS[metric === 'costs' ? 'moduleCosts' : 'moduleTokens'],
       period.distributions[`module_${metric}`],
       valueKind,
     ],
     [
-      t(`statisticsPage.distributions.${metric === 'costs' ? 'requestTypeCosts' : 'requestTypeTokens'}`),
+      STATISTICSPAGE_DISTRIBUTIONS_LABELS[metric === 'costs' ? 'requestTypeCosts' : 'requestTypeTokens'],
       period.distributions[`request_type_${metric}`],
       valueKind,
     ],
-    [t('statisticsPage.distributions.chatMessages'), period.distributions.chat_messages, 'count'],
+    ['聊天消息分布', period.distributions.chat_messages, 'count'],
     [
-      t(`statisticsPage.distributions.${metric === 'costs' ? 'chatCosts' : 'chatTokens'}`),
+      STATISTICSPAGE_DISTRIBUTIONS_LABELS[metric === 'costs' ? 'chatCosts' : 'chatTokens'],
       period.distributions[`chat_${metric}`],
       valueKind,
     ],
@@ -647,11 +695,11 @@ function DistributionGrid({
     <section className="space-y-4">
       <div className="border-border flex flex-wrap items-center gap-3 border-b pb-3">
         <span className="bg-primary h-6 w-1 rounded-full" aria-hidden="true" />
-        <h2 className="text-lg font-semibold">{t('statisticsPage.sections.distributions')}</h2>
+        <h2 className="text-lg font-semibold">{'数据分布图表'}</h2>
         <div
           className="ml-auto flex gap-1"
           role="group"
-          aria-label={t('statisticsPage.distributions.metric')}
+          aria-label={'统计指标'}
         >
           {(['costs', 'tokens'] as const).map((value) => (
             <Button
@@ -661,7 +709,7 @@ function DistributionGrid({
               aria-pressed={metric === value}
               onClick={() => setMetric(value)}
             >
-              {t(`statisticsPage.distributions.${value}`)}
+              {STATISTICSPAGE_DISTRIBUTIONS_LABELS[value]}
             </Button>
           ))}
         </div>
@@ -682,16 +730,12 @@ function DistributionGrid({
 }
 
 function PeriodPanel({ period, locale }: { period: DetailedStatisticsPeriod; locale: string }) {
-  const { t } = useTranslation()
   return (
     <div className="space-y-5">
       <div className="border-border/80 bg-muted/35 flex items-center gap-3 rounded-md border px-4 py-3">
         <CalendarClock className="text-primary size-4 shrink-0" aria-hidden="true" />
         <div className="text-muted-foreground text-xs font-medium">
-          {t('statisticsPage.periodRange', {
-            start: formatDateTime(period.start_time, locale),
-            end: formatDateTime(period.end_time, locale),
-          })}
+          {`统计时段：${formatDateTime(period.start_time, locale)} 至 ${formatDateTime(period.end_time, locale)}`}
         </div>
       </div>
       <SummaryMetrics period={period} locale={locale} />
@@ -721,7 +765,6 @@ function MultiSeriesChart({
   valueKind: 'currency' | 'count'
   locale: string
 }) {
-  const { t } = useTranslation()
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(() => new Set())
   const definitions: SeriesDefinition[] = Object.entries(series).map(([label, values], index) => ({
     key: `series_${index}`,
@@ -805,7 +848,7 @@ function MultiSeriesChart({
                         return next
                       })
                     }
-                    title={t('statisticsPage.charts.toggleSeries', { name: definition.label })}
+                    title={`显示或隐藏 ${definition.label}`}
                   >
                     <span
                       className="h-2 w-2 shrink-0 rounded-sm"
@@ -878,10 +921,9 @@ function SingleSeriesChart({
 }
 
 function TotalCostChart({ data, locale }: { data: DetailedStatisticsTrendData; locale: string }) {
-  const { t } = useTranslation()
   return (
     <SingleSeriesChart
-      title={t('statisticsPage.trends.totalCost')}
+      title={'总花费趋势'}
       labels={data.time_labels}
       values={data.total_cost_data}
       valueKind="currency"
@@ -891,7 +933,6 @@ function TotalCostChart({ data, locale }: { data: DetailedStatisticsTrendData; l
 }
 
 function TrendsPanel({ data, locale }: { data: DetailedStatisticsData; locale: string }) {
-  const { t } = useTranslation()
   const [range, setRange] = useState('24h')
   const trendData = data.trends[range]
   if (!trendData) return <EmptyState />
@@ -899,8 +940,8 @@ function TrendsPanel({ data, locale }: { data: DetailedStatisticsData; locale: s
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">{t('statisticsPage.tabs.trends')}</h2>
-        <div className="flex flex-wrap gap-1" aria-label={t('statisticsPage.charts.timeRange')}>
+        <h2 className="text-base font-semibold">{'数据图表'}</h2>
+        <div className="flex flex-wrap gap-1" aria-label={'时间范围'}>
           {['6h', '12h', '24h', '48h'].map((value) => (
             <Button
               key={value}
@@ -910,7 +951,7 @@ function TrendsPanel({ data, locale }: { data: DetailedStatisticsData; locale: s
               aria-pressed={range === value}
               onClick={() => setRange(value)}
             >
-              {t(`statisticsPage.ranges.${value}`)}
+              {STATISTICSPAGE_RANGES_LABELS[value]}
             </Button>
           ))}
         </div>
@@ -918,21 +959,21 @@ function TrendsPanel({ data, locale }: { data: DetailedStatisticsData; locale: s
       <div className="grid grid-cols-1 gap-4">
         <TotalCostChart data={trendData} locale={locale} />
         <MultiSeriesChart
-          title={t('statisticsPage.trends.moduleCosts')}
+          title={'各模块花费趋势'}
           labels={trendData.time_labels}
           series={trendData.cost_by_module}
           valueKind="currency"
           locale={locale}
         />
         <MultiSeriesChart
-          title={t('statisticsPage.trends.modelCosts')}
+          title={'各模型花费趋势'}
           labels={trendData.time_labels}
           series={trendData.cost_by_model}
           valueKind="currency"
           locale={locale}
         />
         <MultiSeriesChart
-          title={t('statisticsPage.trends.chatMessages')}
+          title={'各聊天流消息数趋势'}
           labels={trendData.time_labels}
           series={trendData.message_by_chat}
           valueKind="count"
@@ -944,7 +985,6 @@ function TrendsPanel({ data, locale }: { data: DetailedStatisticsData; locale: s
 }
 
 function MetricsPanel({ data, locale }: { data: DetailedStatisticsData; locale: string }) {
-  const { t } = useTranslation()
   const [range, setRange] = useState('7d')
   const metrics = data.metrics[range] as DetailedStatisticsMetricsData | undefined
   if (!metrics) return <EmptyState />
@@ -952,8 +992,8 @@ function MetricsPanel({ data, locale }: { data: DetailedStatisticsData; locale: 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">{t('statisticsPage.tabs.metrics')}</h2>
-        <div className="flex flex-wrap gap-1" aria-label={t('statisticsPage.charts.timeScale')}>
+        <h2 className="text-base font-semibold">{'指标趋势'}</h2>
+        <div className="flex flex-wrap gap-1" aria-label={'时间尺度'}>
           {['24h', '7d', '30d'].map((value) => (
             <Button
               key={value}
@@ -963,35 +1003,35 @@ function MetricsPanel({ data, locale }: { data: DetailedStatisticsData; locale: 
               aria-pressed={range === value}
               onClick={() => setRange(value)}
             >
-              {t(`statisticsPage.ranges.${value}`)}
+              {STATISTICSPAGE_RANGES_LABELS[value]}
             </Button>
           ))}
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4">
         <SingleSeriesChart
-          title={t('statisticsPage.metrics.costPerMessages')}
+          title={'花费/消息数量趋势'}
           labels={metrics.time_labels}
           values={metrics.cost_per_100_messages}
           valueKind="currency"
           locale={locale}
         />
         <SingleSeriesChart
-          title={t('statisticsPage.metrics.costPerHour')}
+          title={'花费/时间趋势'}
           labels={metrics.time_labels}
           values={metrics.cost_per_hour}
           valueKind="currency"
           locale={locale}
         />
         <SingleSeriesChart
-          title={t('statisticsPage.metrics.tokensPerHour')}
+          title={'Token/时间趋势'}
           labels={metrics.time_labels}
           values={metrics.tokens_per_hour}
           valueKind="count"
           locale={locale}
         />
         <SingleSeriesChart
-          title={t('statisticsPage.metrics.costPerReplies')}
+          title={'花费/回复数量趋势'}
           labels={metrics.time_labels}
           values={metrics.cost_per_100_replies}
           valueKind="currency"
@@ -1012,8 +1052,7 @@ function getOrderedPeriods(data: DetailedStatisticsData): DetailedStatisticsPeri
 }
 
 export function StatisticsPage() {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.resolvedLanguage || i18n.language
+  const locale = 'zh-CN'
   const { data, error, loading, refresh } = useDetailedStatistics()
   const periods = useMemo(() => (data ? getOrderedPeriods(data) : []), [data])
   const [activeTab, setActiveTab] = useState('last_7_days')
@@ -1028,19 +1067,17 @@ export function StatisticsPage() {
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div className="min-w-0">
               <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                {t('statisticsPage.title')}
+                {'详细统计数据'}
               </h1>
               <div className="bg-primary mt-3 h-0.5 w-28" aria-hidden="true" />
               <p className="text-muted-foreground mt-3 max-w-2xl text-sm sm:text-base">
-                {t('statisticsPage.description')}
+                {'查看麦麦运行期间的模型调用、Token、费用、消息与在线时长。'}
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end">
               {data && (
                 <div className="border-border/80 bg-muted/35 rounded-md border px-3 py-2 text-xs font-medium tabular-nums">
-                  {t('statisticsPage.generatedAt', {
-                    time: formatDateTime(data.generated_at, locale),
-                  })}
+                  {`统计截止时间：${formatDateTime(data.generated_at, locale)}`}
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
@@ -1052,12 +1089,12 @@ export function StatisticsPage() {
                   disabled={loading}
                 >
                   <RefreshCw className={cn(loading && 'animate-spin')} />
-                  {t('statisticsPage.actions.refresh')}
+                  {'刷新'}
                 </Button>
                 <Button asChild variant="outline" size="sm">
                   <a href="/maibot_statistics.html" target="_blank" rel="noopener noreferrer">
                     <ExternalLink />
-                    {t('statisticsPage.actions.openHtml')}
+                    {'打开 HTML 版'}
                   </a>
                 </Button>
               </div>
@@ -1068,8 +1105,8 @@ export function StatisticsPage() {
         {error && !data ? (
           <Alert variant="destructive">
             <AlertCircle />
-            <AlertTitle>{t('statisticsPage.error.title')}</AlertTitle>
-            <AlertDescription>{error || t('statisticsPage.error.description')}</AlertDescription>
+            <AlertTitle>{'详细统计加载失败'}</AlertTitle>
+            <AlertDescription>{error || '请稍后重试'}</AlertDescription>
           </Alert>
         ) : loading && !data ? (
           <StatisticsPageSkeleton />
@@ -1082,14 +1119,14 @@ export function StatisticsPage() {
             <DashboardTabBar className="border-border/70 bg-muted/45 rounded-md border">
               {periods.map((period) => (
                 <DashboardTabTrigger key={period.key} value={period.key}>
-                  {t(`statisticsPage.periods.${period.key}`)}
+                  {STATISTICSPAGE_PERIODS_LABELS[period.key] ?? period.key}
                 </DashboardTabTrigger>
               ))}
               <DashboardTabTrigger value="trends">
-                {t('statisticsPage.tabs.trends')}
+                {'数据图表'}
               </DashboardTabTrigger>
               <DashboardTabTrigger value="metrics">
-                {t('statisticsPage.tabs.metrics')}
+                {'指标趋势'}
               </DashboardTabTrigger>
             </DashboardTabBar>
 

@@ -83,7 +83,6 @@ function makePlugin(
       license: 'MIT',
       host_application: { min_version: '1.0.0' },
       keywords: [],
-      default_locale: 'zh',
       ...manifest,
     },
     ...rest,

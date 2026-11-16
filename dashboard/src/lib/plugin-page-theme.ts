@@ -15,7 +15,6 @@ const APPEARANCE = [
 
 export interface PluginPageContext {
   theme: string
-  language: string
   dashboardStyle: string
   styles: string
 }
@@ -58,7 +57,7 @@ export async function pluginPageFonts(family: string): Promise<PluginPageFont[]>
   )
 }
 
-export function readPluginPageTheme(probes: HTMLElement, language: string): PluginPageContext {
+export function readPluginPageTheme(probes: HTMLElement): PluginPageContext {
   // Sampling animated colors would freeze an intermediate frame in the child.
   const samples: Record<string, CSSStyleDeclaration> = {}
   for (const probe of probes.querySelectorAll<HTMLElement>('[data-theme-probe]')) {
@@ -120,7 +119,6 @@ export function readPluginPageTheme(probes: HTMLElement, language: string): Plug
   `
   return {
     theme: root.classList.contains('dark') ? 'dark' : 'light',
-    language,
     dashboardStyle,
     styles: css,
   }

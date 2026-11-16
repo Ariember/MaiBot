@@ -5,9 +5,7 @@ import { APP_VERSION } from '@/lib/version'
 
 import { AboutTab } from '../AboutTab'
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}))
+
 
 // 更新卡片会请求后端，由自己的测试覆盖。
 vi.mock('../SelfUpdateCard', () => ({ SelfUpdateCard: () => null }))
@@ -64,12 +62,12 @@ describe('AboutTab', () => {
     render(<AboutTab />)
 
     expect(
-      screen.getByRole('heading', { name: 'settings.about.aboutApp' }),
+      screen.getByRole('heading', { name: '关于 MaiBot Dashboard' }),
     ).toBeInTheDocument()
-    expect(screen.getByText(`settings.about.version ${APP_VERSION}`)).toBeInTheDocument()
-    expect(screen.getByText('settings.about.appDesc')).toBeInTheDocument()
+    expect(screen.getByText(`版本: ${APP_VERSION}`)).toBeInTheDocument()
+    expect(screen.getByText('Ariember 维护的 MaiBot 个人分支 Web 管理界面。')).toBeInTheDocument()
 
-    const githubLink = screen.getByRole('link', { name: /settings.about.visitGitHub/ })
+    const githubLink = screen.getByRole('link', { name: /前往 GitHub/ })
     expect(githubLink).toHaveAttribute('href', 'https://github.com/Ariember/MaiBot')
     expect(githubLink).toHaveAttribute('target', '_blank')
     expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer')
@@ -79,13 +77,13 @@ describe('AboutTab', () => {
     expect(authorLink).toHaveAttribute('target', '_blank')
     expect(authorLink).toHaveAttribute('rel', 'noopener noreferrer')
 
-    expect(screen.getByRole('heading', { name: 'settings.about.openSource' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'settings.about.author' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'settings.about.techStack' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'settings.about.openSourceThanks' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'settings.about.openSourceLicense' })).toBeInTheDocument()
-    expect(screen.getByText('settings.about.licenseDesc')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.licenseDeps')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '开源项目' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '分支维护者' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '技术栈' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '开源致谢' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '开源许可' })).toBeInTheDocument()
+    expect(screen.getByText('本项目采用 GNU General Public License v3.0 开源许可证。您可以自由地使用、修改和分发本软件，但必须保持相同的开源许可。')).toBeInTheDocument()
+    expect(screen.getByText('本项目依赖的所有开源库均遵循各自的开源许可证（MIT、Apache-2.0、BSD 等）。感谢所有开源贡献者的无私奉献。')).toBeInTheDocument()
     expect(screen.getByText('MaiBot WebUI')).toBeInTheDocument()
   })
 
@@ -96,24 +94,24 @@ describe('AboutTab', () => {
       expect(screen.getAllByText(item).length).toBeGreaterThan(0)
     }
 
-    expect(screen.getByText('settings.about.frontendFramework')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.uiComponents')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.backend')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.buildTool')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.uiFrameworkGroup')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.routingStateGroup')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.formGroup')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.utilsGroup')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.animationGroup')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.backendGroup')).toBeInTheDocument()
-    expect(screen.getByText('settings.about.devToolsGroup')).toBeInTheDocument()
+    expect(screen.getByText('前端框架')).toBeInTheDocument()
+    expect(screen.getByText('UI 组件')).toBeInTheDocument()
+    expect(screen.getByText('后端')).toBeInTheDocument()
+    expect(screen.getByText('构建工具')).toBeInTheDocument()
+    expect(screen.getByText('UI 框架与组件')).toBeInTheDocument()
+    expect(screen.getByText('路由与状态管理')).toBeInTheDocument()
+    expect(screen.getByText('表单处理')).toBeInTheDocument()
+    expect(screen.getByText('工具库')).toBeInTheDocument()
+    expect(screen.getByText('动画效果')).toBeInTheDocument()
+    expect(screen.getByText('后端框架')).toBeInTheDocument()
+    expect(screen.getByText('开发工具')).toBeInTheDocument()
 
     for (const [name, license] of LIBRARY_ITEMS) {
       const nameNode = screen.getByText(name, { selector: 'p.font-medium' })
       const row = nameNode.closest('div')?.parentElement
       expect(row, `找不到 ${name} 的许可证行`).not.toBeNull()
       expect(row).toHaveTextContent(license)
-      expect(row).toHaveTextContent('settings.about.lib.')
+      expect(row?.querySelector('p.text-muted-foreground')).toHaveTextContent(/\S/)
     }
 
     expect(screen.getAllByText('CC BY 4.0')).toHaveLength(2)

@@ -1,6 +1,6 @@
 import { Link, useParams } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { ErrorBoundary } from '@/components/error-boundary'
 import { PluginCustomPage } from '@/components/plugin-custom-page'
@@ -89,7 +89,6 @@ function argumentsFor(
 }
 
 function ExtensionPage({ pluginId, page }: { pluginId: string; page: DeclarativePage }) {
-  const { t } = useTranslation()
   const [values, setValues] = useState(() => pageValues(page))
   const valuesRef = useRef(values)
   const [data, setData] = useState<Record<string, unknown>>({})
@@ -201,7 +200,7 @@ function ExtensionPage({ pluginId, page }: { pluginId: string; page: Declarative
     try {
       await invokePluginWebUI(pluginId, page.id, 'actions', name, args, confirmed, operation.signal)
       if (alive.current && !operation.signal.aborted) {
-        setMessage(t('pluginWebUI.completed'))
+        setMessage('操作已完成')
         // 写入已经成功，即使随后刷新失败，也不能继续使用旧行详情执行操作。
         setSelectionRevision((value) => value + 1)
       }
@@ -223,7 +222,7 @@ function ExtensionPage({ pluginId, page }: { pluginId: string; page: Declarative
         <div>
           <h1
             className="text-2xl font-semibold"
-            title={t('pluginWebUI.providedBy', { plugin: pluginId })}
+            title={`由插件 ${pluginId} 提供`}
           >
             {page.title}
           </h1>
@@ -236,7 +235,7 @@ function ExtensionPage({ pluginId, page }: { pluginId: string; page: Declarative
             void refresh()
           }}
         >
-          {t('pluginWebUI.refresh')}
+          {'刷新'}
         </Button>
       </div>
       {error && (
@@ -249,7 +248,7 @@ function ExtensionPage({ pluginId, page }: { pluginId: string; page: Declarative
           {message}
         </p>
       )}
-      {!loaded && busy && <p role="status">{t('pluginWebUI.loading')}</p>}
+      {!loaded && busy && <p role="status">{'加载中…'}</p>}
       {
         <ErrorBoundary
           key={revision}
@@ -258,7 +257,7 @@ function ExtensionPage({ pluginId, page }: { pluginId: string; page: Declarative
           }}
           fallback={
             <Alert variant="destructive">
-              <AlertDescription>{t('pluginWebUI.invalidData')}</AlertDescription>
+              <AlertDescription>{'插件返回的数据与组件声明不一致。'}</AlertDescription>
             </Alert>
           }
         >
@@ -307,19 +306,19 @@ function ExtensionPage({ pluginId, page }: { pluginId: string; page: Declarative
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('pluginWebUI.confirmTitle')}</AlertDialogTitle>
+            <AlertDialogTitle>{'确认插件操作'}</AlertDialogTitle>
             <AlertDialogDescription>
               {confirmation ? page.actions[confirmation.name].confirmation : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('pluginWebUI.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{'取消'}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (confirmation) void execute(confirmation.name, confirmation.args, true)
               }}
             >
-              {t('pluginWebUI.confirm')}
+              {'确认'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -331,10 +330,9 @@ function ExtensionPage({ pluginId, page }: { pluginId: string; page: Declarative
 export function PluginWebUIPage() {
   const { pluginId, pageId } = useParams({ from: '/protected/extensions/$pluginId/$pageId' })
   const registry = usePluginWebUI()
-  const { t } = useTranslation()
   const extension = registry.extensions.find((item) => item.plugin_id === pluginId)
   const page = extension?.pages.find((item) => item.id === pageId)
-  if (registry.loading) return <p className="p-6">{t('pluginWebUI.loading')}</p>
+  if (registry.loading) return <p className="p-6">{'加载中…'}</p>
   if (registry.error)
     return (
       <div className="space-y-4 p-6">
@@ -346,7 +344,7 @@ export function PluginWebUIPage() {
             void refreshPluginWebUI()
           }}
         >
-          {t('pluginWebUI.refresh')}
+          {'刷新'}
         </Button>
       </div>
     )
@@ -359,9 +357,9 @@ export function PluginWebUIPage() {
   if (!page || registry.preferences.hidden.includes(pluginId))
     return (
       <p className="p-6">
-        {t('pluginWebUI.unavailable')}{' '}
+        {'页面已下线或已隐藏。'}{' '}
         <Link to="/plugin-config" hash="webui-extensions">
-          {t('pluginWebUI.manage')}
+          {'管理插件页面'}
         </Link>
       </p>
     )

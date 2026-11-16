@@ -17,15 +17,8 @@ import type {
   DetailedStatisticsTrendData,
 } from '../types'
 
-const i18nState = vi.hoisted(() => ({
-  resolvedLanguage: 'zh-CN' as string | undefined,
-  language: 'zh-CN',
-}))
 
-vi.mock('react-i18next', () => {
-  const t = (key: string) => key
-  return { useTranslation: () => ({ t, i18n: i18nState }) }
-})
+
 
 vi.mock('recharts', async () => {
   const { cloneElement, isValidElement } = await import('react')
@@ -248,14 +241,14 @@ async function renderFreshPage() {
 
 async function waitForPageData() {
   await waitFor(() => {
-    expect(screen.getByText('statisticsPage.summary.requests')).toBeInTheDocument()
+    expect(screen.getByText('总请求数')).toBeInTheDocument()
   })
 }
 
 describe('StatisticsPage', () => {
   beforeEach(() => {
-    i18nState.resolvedLanguage = 'zh-CN'
-    i18nState.language = 'zh-CN'
+
+
     vi.mocked(backendApi.get).mockResolvedValue(detailedData)
   })
 
@@ -271,14 +264,14 @@ describe('StatisticsPage', () => {
       expect(screen.getAllByText('model-a').length).toBeGreaterThan(0)
     })
     expect(backendApi.get).toHaveBeenCalledWith('/api/webui/statistics/detailed')
-    expect(screen.getByText('statisticsPage.summary.requests')).toBeInTheDocument()
+    expect(screen.getByText('总请求数')).toBeInTheDocument()
 
-    const htmlLink = screen.getByRole('link', { name: 'statisticsPage.actions.openHtml' })
+    const htmlLink = screen.getByRole('link', { name: '打开 HTML 版' })
     expect(htmlLink).toHaveAttribute('href', '/maibot_statistics.html')
     expect(htmlLink).toHaveAttribute('target', '_blank')
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.tabs.trends' }))
-    expect(screen.getByText('statisticsPage.trends.totalCost')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: '数据图表' }))
+    expect(screen.getByText('总花费趋势')).toBeInTheDocument()
   })
 
   it('接口失败时展示错误提示', async () => {
@@ -286,9 +279,9 @@ describe('StatisticsPage', () => {
     await renderFreshPage()
 
     expect(await screen.findByRole('alert')).toBeInTheDocument()
-    expect(screen.getByText('statisticsPage.error.title')).toBeInTheDocument()
+    expect(screen.getByText('详细统计加载失败')).toBeInTheDocument()
     expect(screen.getByText('统计接口挂了')).toBeInTheDocument()
-    expect(screen.queryByText('statisticsPage.summary.requests')).not.toBeInTheDocument()
+    expect(screen.queryByText('总请求数')).not.toBeInTheDocument()
   })
 
   it('非 Error 失败时不展示错误页也不展示数据', async () => {
@@ -296,10 +289,10 @@ describe('StatisticsPage', () => {
     await renderFreshPage()
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'statisticsPage.actions.refresh' })).not.toBeDisabled()
+      expect(screen.getByRole('button', { name: '刷新' })).not.toBeDisabled()
     })
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.queryByText('statisticsPage.summary.requests')).not.toBeInTheDocument()
+    expect(screen.queryByText('总请求数')).not.toBeInTheDocument()
     expect(document.querySelector('.animate-pulse')).toBeNull()
   })
 
@@ -309,7 +302,7 @@ describe('StatisticsPage', () => {
 
     const view = await renderFreshPage()
     expect(view.container.querySelector('.animate-pulse')).not.toBeNull()
-    expect(screen.getByRole('button', { name: 'statisticsPage.actions.refresh' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '刷新' })).toBeDisabled()
 
     await act(async () => {
       deferred.resolve(detailedData)
@@ -337,16 +330,16 @@ describe('StatisticsPage', () => {
     await renderFreshPage()
     await waitForPageData()
 
-    expect(screen.getAllByText('statisticsPage.empty').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('当前统计时段暂无数据').length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.breakdowns.modules' }))
-    expect(screen.getAllByText('statisticsPage.empty').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('tab', { name: '按模块' }))
+    expect(screen.getAllByText('当前统计时段暂无数据').length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.breakdowns.requestTypes' }))
-    expect(screen.getAllByText('statisticsPage.empty').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('tab', { name: '按请求类型' }))
+    expect(screen.getAllByText('当前统计时段暂无数据').length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.breakdowns.chats' }))
-    expect(screen.getAllByText('statisticsPage.empty').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('tab', { name: '聊天消息' }))
+    expect(screen.getAllByText('当前统计时段暂无数据').length).toBeGreaterThan(0)
   })
 
   it('可切换趋势时间范围与指标尺度，缺失范围展示空状态', async () => {
@@ -371,39 +364,39 @@ describe('StatisticsPage', () => {
     await renderFreshPage()
     await waitForPageData()
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.tabs.trends' }))
-    expect(screen.getByText('statisticsPage.trends.totalCost')).toBeInTheDocument()
-    expect(screen.getAllByText('statisticsPage.empty').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('tab', { name: '数据图表' }))
+    expect(screen.getByText('总花费趋势')).toBeInTheDocument()
+    expect(screen.getAllByText('当前统计时段暂无数据').length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('button', { name: 'statisticsPage.ranges.6h' }))
-    expect(screen.getByRole('button', { name: 'statisticsPage.ranges.6h' })).toHaveAttribute(
+    await user.click(screen.getByRole('button', { name: '6小时' }))
+    expect(screen.getByRole('button', { name: '6小时' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
-    await user.click(screen.getByRole('button', { name: 'statisticsPage.ranges.12h' }))
-    expect(screen.getByRole('button', { name: 'statisticsPage.ranges.12h' })).toHaveAttribute(
+    await user.click(screen.getByRole('button', { name: '12小时' }))
+    expect(screen.getByRole('button', { name: '12小时' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
-    await user.click(screen.getByRole('button', { name: 'statisticsPage.ranges.48h' }))
-    expect(screen.getByText('statisticsPage.empty')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'statisticsPage.ranges.24h' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '48小时' }))
+    expect(screen.getByText('当前统计时段暂无数据')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '24小时' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.tabs.metrics' }))
-    expect(screen.getByText('statisticsPage.metrics.costPerMessages')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'statisticsPage.ranges.30d' }))
-    expect(screen.getByRole('button', { name: 'statisticsPage.ranges.30d' })).toHaveAttribute(
+    await user.click(screen.getByRole('tab', { name: '指标趋势' }))
+    expect(screen.getByText('花费/消息数量趋势')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '30天' }))
+    expect(screen.getByRole('button', { name: '30天' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
-    await user.click(screen.getByRole('button', { name: 'statisticsPage.ranges.24h' }))
-    expect(screen.getByText('statisticsPage.empty')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '24小时' }))
+    expect(screen.getByText('当前统计时段暂无数据')).toBeInTheDocument()
   })
 
   it('展示缓存命中率，异常 breakdown 显示 N/A，并按周期排序回退默认页签', async () => {
     const user = userEvent.setup()
-    i18nState.resolvedLanguage = undefined
-    i18nState.language = 'zh-CN'
+
+
 
     vi.mocked(backendApi.get).mockResolvedValue(
       makeData({
@@ -457,19 +450,18 @@ describe('StatisticsPage', () => {
     const periodTabs = screen
       .getAllByRole('tab')
       .map((tab) => tab.textContent)
-      .filter((text) => text?.startsWith('statisticsPage.periods.') || text?.startsWith('statisticsPage.tabs.'))
     expect(periodTabs.slice(0, 5)).toEqual([
-      'statisticsPage.periods.last_7_days',
-      'statisticsPage.periods.last_15_minutes',
-      'statisticsPage.periods.weird_period',
-      'statisticsPage.tabs.trends',
-      'statisticsPage.tabs.metrics',
+      '近7天',
+      '近15分钟',
+      'weird_period',
+      '数据图表',
+      '指标趋势',
     ])
 
     expect(screen.getByText('1天 1小时 1分钟')).toBeInTheDocument()
     expect(screen.getByText('50.00%')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.periods.last_15_minutes' }))
+    await user.click(screen.getByRole('tab', { name: '近15分钟' }))
     expect(screen.getByText('45秒')).toBeInTheDocument()
     expect(screen.getByText('1.5万')).toBeInTheDocument()
     expect(screen.getByText('1万')).toBeInTheDocument()
@@ -477,11 +469,11 @@ describe('StatisticsPage', () => {
     expect(screen.getAllByText('broken-model').length).toBeGreaterThan(0)
     expect(screen.getAllByText('0.0±0.0s').length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.breakdowns.chats' }))
+    await user.click(screen.getByRole('tab', { name: '聊天消息' }))
     expect(screen.getByText('私聊用户')).toBeInTheDocument()
     expect(screen.getByText('1.2万')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.periods.weird_period' }))
+    await user.click(screen.getByRole('tab', { name: 'weird_period' }))
     expect(screen.getByText('0秒')).toBeInTheDocument()
     expect(screen.getByText('0.00%')).toBeInTheDocument()
     expect(screen.getAllByText('N/A').length).toBeGreaterThan(0)
@@ -501,19 +493,19 @@ describe('StatisticsPage', () => {
     await waitForPageData()
 
     expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0)
-    expect(screen.getByText('statisticsPage.summary.cacheHitTokens')).toBeInTheDocument()
-    expect(screen.getByText('statisticsPage.summary.cacheMissTokens')).toBeInTheDocument()
+    expect(screen.getAllByText('缓存命中Token').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('缓存未命中Token').length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.breakdowns.modules' }))
+    await user.click(screen.getByRole('tab', { name: '按模块' }))
     expect(screen.getAllByText('replyer').length).toBeGreaterThan(0)
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.breakdowns.requestTypes' }))
+    await user.click(screen.getByRole('tab', { name: '按请求类型' }))
     expect(screen.getAllByText('replyer.chat').length).toBeGreaterThan(0)
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.breakdowns.chats' }))
+    await user.click(screen.getByRole('tab', { name: '聊天消息' }))
     const chatTable = screen.getByRole('table')
     expect(within(chatTable).getByText('测试群聊')).toBeInTheDocument()
     expect(within(chatTable).getByText('10')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'statisticsPage.tabs.trends' }))
+    await user.click(screen.getByRole('tab', { name: '数据图表' }))
     const seriesButton = screen.getByRole('button', { name: 'replyer' })
     expect(seriesButton).toHaveAttribute('aria-pressed', 'true')
     await user.click(seriesButton)
@@ -523,7 +515,7 @@ describe('StatisticsPage', () => {
 
     vi.mocked(backendApi.get).mockClear()
     vi.mocked(backendApi.get).mockResolvedValue(detailedData)
-    await user.click(screen.getByRole('button', { name: 'statisticsPage.actions.refresh' }))
+    await user.click(screen.getByRole('button', { name: '刷新' }))
     await waitFor(() => {
       expect(backendApi.get).toHaveBeenCalledWith('/api/webui/statistics/detailed')
     })
@@ -543,16 +535,16 @@ describe('StatisticsPage', () => {
       await Promise.resolve()
     })
 
-    expect(screen.getByText('statisticsPage.summary.requests')).toBeInTheDocument()
+    expect(screen.getByText('总请求数')).toBeInTheDocument()
     expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0)
     expect(view.container.querySelector('.animate-pulse')).toBeNull()
-    expect(screen.getByRole('button', { name: 'statisticsPage.actions.refresh' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '刷新' })).toBeDisabled()
 
     await act(async () => {
       deferred.resolve(detailedData)
     })
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'statisticsPage.actions.refresh' })).not.toBeDisabled()
+      expect(screen.getByRole('button', { name: '刷新' })).not.toBeDisabled()
     })
   })
 
@@ -567,12 +559,12 @@ describe('StatisticsPage', () => {
     await renderFreshPage()
 
     await waitFor(() => {
-      expect(screen.getByRole('tab', { name: 'statisticsPage.tabs.trends' })).toHaveAttribute(
+      expect(screen.getByRole('tab', { name: '数据图表' })).toHaveAttribute(
         'data-state',
         'active'
       )
     })
-    expect(screen.getByText('statisticsPage.empty')).toBeInTheDocument()
-    expect(screen.getByText('statisticsPage.generatedAt')).toBeInTheDocument()
+    expect(screen.getByText('当前统计时段暂无数据')).toBeInTheDocument()
+    expect(screen.getByText(/^统计截止时间：/)).toBeInTheDocument()
   })
 })

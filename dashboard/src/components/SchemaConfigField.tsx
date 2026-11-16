@@ -1,6 +1,6 @@
 import { Eye, EyeOff } from 'lucide-react'
 import { useId, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { ListFieldEditor } from '@/components/ListFieldEditor'
 import { Button } from '@/components/ui/button'
@@ -18,8 +18,8 @@ import {
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import type { ConfigFieldSchema, ItemFieldDefinition } from '@/lib/plugin-api'
-import { resolveLocalizedText } from '@/lib/schema-config-label'
+import type { ConfigFieldSchema } from '@/lib/plugin-api'
+
 
 // 字段渲染组件
 interface SchemaConfigFieldProps {
@@ -28,41 +28,12 @@ interface SchemaConfigFieldProps {
   onChange: (value: unknown) => void
 }
 
-function localizeItemFields(
-  itemFields: Record<string, ItemFieldDefinition> | undefined,
-  language: string
-): Record<string, ItemFieldDefinition> | undefined {
-  if (!itemFields) return undefined
-
-  return Object.fromEntries(
-    Object.entries(itemFields).map(([fieldName, field]) => [
-      fieldName,
-      {
-        ...field,
-        label: resolveLocalizedText(field.label, language, fieldName, field.i18n, 'label'),
-        placeholder:
-          resolveLocalizedText(field.placeholder, language, '', field.i18n, 'placeholder') ||
-          undefined,
-      },
-    ])
-  )
-}
-
 export function SchemaConfigField({ field, value, onChange }: SchemaConfigFieldProps) {
   const fieldId = useId()
   const [showPassword, setShowPassword] = useState(false)
-  const { i18n } = useTranslation()
-  const language = i18n.resolvedLanguage || i18n.language || 'zh'
-  const label = resolveLocalizedText(field.label, language, field.name, field.i18n, 'label')
-  const hint = resolveLocalizedText(field.hint, language, '', field.i18n, 'hint')
-  const placeholder = resolveLocalizedText(
-    field.placeholder,
-    language,
-    '',
-    field.i18n,
-    'placeholder'
-  )
-  const localizedItemFields = localizeItemFields(field.item_fields, language)
+  const label = (field.label || field.name)
+  const hint = (field.hint || '')
+  const placeholder = (field.placeholder || '')
 
   // 根据 ui_type 渲染不同的控件
   switch (field.ui_type) {
@@ -274,7 +245,7 @@ export function SchemaConfigField({ field, value, onChange }: SchemaConfigFieldP
             value={Array.isArray(value) ? value : Array.isArray(field.default) ? field.default : []}
             onChange={(newValue) => onChange(newValue)}
             itemType={field.item_type ?? 'string'}
-            itemFields={localizedItemFields}
+            itemFields={field.item_fields}
             minItems={field.min_items}
             maxItems={field.max_items}
             disabled={field.disabled}

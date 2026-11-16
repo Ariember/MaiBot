@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import { Download, Plus, Wrench } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -37,7 +37,6 @@ export function PersonalityProfiles({ values, onChange }: {
   const [originalName, setOriginalName] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const { toast } = useToast()
-  const { t } = useTranslation()
   const profiles = ((values.profiles ?? []) as Profile[]).map((profile) => ({
     ...profile, dialogue_examples: profile.dialogue_examples ?? [],
   }))
@@ -135,9 +134,9 @@ export function PersonalityProfiles({ values, onChange }: {
     try {
       const profile = parsePersonalityImport(JSON.stringify({ format: 'maibot.personality', version: 1, profile: draft }))
       await navigator.clipboard.writeText(JSON.stringify({ format: 'maibot.personality', version: 1, profile }, null, 2))
-      toast({ title: t('personalityExamples.copied') })
+      toast({ title: '人设 JSON 已复制' })
     } catch (error) {
-      toast({ title: t('personalityExamples.copyFailed'), description: (error as Error).message, variant: 'destructive' })
+      toast({ title: '复制人设失败', description: (error as Error).message, variant: 'destructive' })
     }
   }
 
@@ -222,7 +221,7 @@ export function PersonalityProfiles({ values, onChange }: {
             <Button type="button" variant="destructive" onClick={deleteProfile}>确认删除</Button>
           </div> : <div className="flex flex-wrap items-center justify-end gap-2">
             {originalName !== null && <Button type="button" variant="destructive" className="mr-auto" onClick={() => setConfirmDelete(true)}>删除人设</Button>}
-            {draft && <Button type="button" variant="outline" onClick={() => void copyProfile()}>{t('personalityExamples.copy')}</Button>}
+            {draft && <Button type="button" variant="outline" onClick={() => void copyProfile()}>{'复制人设 JSON'}</Button>}
             <Button type="button" variant="outline" onClick={closePanel}>取消</Button>
             {panel === 'import' && <Button type="button" disabled={!imported.profile} onClick={() => {
               if (!imported.profile) return

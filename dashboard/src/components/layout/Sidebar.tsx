@@ -1,7 +1,7 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { BackgroundLayer } from '@/components/background-layer'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -35,7 +35,6 @@ export function Sidebar({
   onSidebarFix,
   onSidebarToggle,
 }: SidebarProps) {
-  const { t } = useTranslation()
   // 侧栏模式开关放在 Logo 行右侧。
   const { config: sidebarBg, inheritedFrom } = useBackground('sidebar')
   const inheritsPageBackground = inheritedFrom === 'page'
@@ -47,8 +46,8 @@ export function Sidebar({
     refetchOnWindowFocus: true,
     refetchInterval: 60_000,
   }, queryClient)
-  const hasPromptWarnings = Object.values(promptCatalog?.files ?? {}).some((files) =>
-    files.some((file) => file.validation?.valid === false)
+  const hasPromptWarnings = (promptCatalog?.files ?? []).some((file) =>
+    file.validation?.valid === false
   )
   const [hoverExpanded, setHoverExpanded] = useState(false)
   const [fixTransitionActive, setFixTransitionActive] = useState(false)
@@ -148,8 +147,8 @@ export function Sidebar({
           <button
             type="button"
             data-dashboard-sidebar-fix-switch="true"
-            aria-label={t('header.switchSidebarToFixed')}
-            title={t('header.switchSidebarToFixed')}
+            aria-label={'切换为固定模式'}
+            title={'切换为固定模式'}
             onClick={() => {
               // 在父级切到固定模式前保持展开，避免 pointerleave 造成一帧收缩闪烁。
               setFixTransitionActive(true)
@@ -164,9 +163,9 @@ export function Sidebar({
           <button
             type="button"
             data-dashboard-sidebar-mode-switch="true"
-            aria-label={t('header.switchSidebarToHover')}
+            aria-label={'切换为悬浮模式'}
             aria-expanded="true"
-            title={t('header.switchSidebarToHover')}
+            title={'切换为悬浮模式'}
             onClick={onSidebarToggle}
             className="text-muted-foreground/55 hover:text-primary focus-visible:ring-ring absolute right-4 bottom-3 z-20 hidden h-7 w-7 items-center justify-center border-0 bg-transparent p-0 shadow-none transition-colors focus-visible:ring-2 focus-visible:outline-none lg:flex"
           >
@@ -185,7 +184,7 @@ export function Sidebar({
         viewportClassName="[&>div]:!block"
       >
         <nav
-          aria-label={t('a11y.sidebarNav')}
+          aria-label={'主导航'}
           className={cn(
             'px-(--layout-sidebar-nav-padding-collapsed) py-(--layout-sidebar-nav-padding)',
             !visuallyOpen && 'lg:w-(--layout-sidebar-collapsed-width)'
@@ -207,7 +206,7 @@ export function Sidebar({
                 <div
                   className={cn(
                     'h-(--layout-sidebar-section-title-height) px-(--layout-sidebar-nav-item-padding-x)',
-                    section.title === 'sidebar.groups.overview' && 'hidden',
+                    section.title === "概览" && 'hidden',
                     // 移动端始终显示，桌面端根据状态切换
                     'mb-(--layout-sidebar-section-title-margin-bottom)',
                     'transition-opacity duration-220 motion-reduce:transition-none',
@@ -220,7 +219,7 @@ export function Sidebar({
                     data-dashboard-sidebar-section-title="true"
                     className="text-muted-foreground/60 text-sm font-semibold tracking-wider whitespace-nowrap uppercase"
                   >
-                    {section.literalTitle ? section.title : t(section.title)}
+                    {section.title}
                   </h3>
                 </div>
 

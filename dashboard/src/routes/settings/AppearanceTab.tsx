@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card'
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import {
   AlertTriangle,
   Download,
@@ -68,26 +68,26 @@ type ThemeMode = 'light' | 'dark' | 'system'
 
 const themeModeOptions: Array<{
   value: ThemeMode
-  labelKey: string
-  descriptionKey: string
+  label: string
+  description: string
   icon: typeof Monitor
 }> = [
   {
     value: 'light',
-    labelKey: 'settings.appearance.light',
-    descriptionKey: 'settings.appearance.lightDesc',
+    label: "浅色",
+    description: "始终使用浅色主题",
     icon: Sun,
   },
   {
     value: 'dark',
-    labelKey: 'settings.appearance.dark',
-    descriptionKey: 'settings.appearance.darkDesc',
+    label: "深色",
+    description: "始终使用深色主题",
     icon: Moon,
   },
   {
     value: 'system',
-    labelKey: 'settings.appearance.system',
-    descriptionKey: 'settings.appearance.systemDesc',
+    label: "跟随系统",
+    description: "根据系统设置自动切换",
     icon: Monitor,
   },
 ]
@@ -137,7 +137,6 @@ export function AppearanceTab() {
   const { theme, setTheme, themeConfig, updateThemeConfig, resolvedTheme, resetTheme } = useTheme()
   const { enableAnimations, setEnableAnimations } = useAnimation()
   const { toast } = useToast()
-  const { t } = useTranslation()
   const dashboardStyle = themeConfig.dashboardStyle
   const activeCustomCSS = themeConfig.styleCustomCSS?.[dashboardStyle] ?? ''
   const activeBackgroundConfig = useMemo(
@@ -258,13 +257,13 @@ export function AppearanceTab() {
       if (result.success) {
         // 导入成功后需要刷新页面使配置生效（因为 ThemeProvider 需要重新读取 localStorage）
         toast({
-          title: t('settings.appearance.importSuccess'),
-          description: t('settings.appearance.importSuccessDesc'),
+          title: '导入成功',
+          description: '主题配置已导入，页面将自动刷新',
         })
         setTimeout(() => window.location.reload(), 1000)
       } else {
         toast({
-          title: t('settings.appearance.importFailed'),
+          title: '导入失败',
           description: result.errors.join('; '),
           variant: 'destructive',
         })
@@ -280,8 +279,8 @@ export function AppearanceTab() {
     setLocalCSS('')
     setCssWarnings([])
     toast({
-      title: t('settings.appearance.resetSuccess'),
-      description: t('settings.appearance.resetSuccessDesc'),
+      title: '重置成功',
+      description: '主题已重置为默认值',
     })
   }
 
@@ -354,10 +353,10 @@ export function AppearanceTab() {
       {/* 主题模式 */}
       <div>
         <h3 className="mb-3 text-base font-semibold sm:mb-4 sm:text-lg">
-          {t('settings.appearance.themeMode')}
+          {'主题模式'}
         </h3>
         <SegmentedControl
-          aria-label={t('settings.appearance.themeMode')}
+          aria-label={'主题模式'}
           value={theme}
           onValueChange={(value) => {
             const option = themeModeOptions.find((item) => item.value === value)
@@ -367,7 +366,7 @@ export function AppearanceTab() {
             const Icon = option.icon
             return {
               value: option.value,
-              label: <span className="inline-flex items-center gap-2" title={t(option.descriptionKey)}><Icon />{t(option.labelKey)}</span>,
+              label: <span className="inline-flex items-center gap-2" title={option.description}><Icon />{option.label}</span>,
             }
           })}
         />
@@ -376,13 +375,13 @@ export function AppearanceTab() {
       {/* 样式微调 */}
       <div>
         <h3 className="mb-3 text-base font-semibold sm:mb-4 sm:text-lg">
-          {t('settings.appearance.styleTweaks')}
+          {'界面样式微调'}
         </h3>
 
         <Accordion type="single" collapsible className="w-full">
           {/* 1. 字体排版 (Typography) */}
           <AccordionItem value="typography">
-            <AccordionTrigger>{t('settings.appearance.typographyGroup')}</AccordionTrigger>
+            <AccordionTrigger>{'字体排版 (Typography)'}</AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4 pt-2">
                 <div className="flex justify-end">
@@ -394,12 +393,12 @@ export function AppearanceTab() {
                     className="h-8 text-xs"
                   >
                     <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                    {t('settings.appearance.resetDefault')}
+                    {'重置默认'}
                   </Button>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('settings.appearance.fontFamilyLabel')}</Label>
+                  <Label>{'字体族 (Font Family)'}</Label>
                   <Select
                     value={(() => {
                       const fontFamily = getTokenValue(
@@ -431,21 +430,21 @@ export function AppearanceTab() {
                   >
                     <SelectTrigger>
                       <SelectValue
-                        placeholder={t('settings.appearance.fontFamilyPlaceholder')}
+                        placeholder={'选择字体族'}
                       />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="system">
-                        {t('settings.appearance.fontFamilySystem')}
+                        {'系统默认 (System)'}
                       </SelectItem>
                       <SelectItem value="sans">
-                        {t('settings.appearance.fontFamilySans')}
+                        {'无衬线 (Sans-serif)'}
                       </SelectItem>
                       <SelectItem value="serif">
-                        {t('settings.appearance.fontFamilySerif')}
+                        {'衬线 (Serif)'}
                       </SelectItem>
                       <SelectItem value="mono">
-                        {t('settings.appearance.fontFamilyMono')}
+                        {'等宽 (Monospace)'}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -453,7 +452,7 @@ export function AppearanceTab() {
 
                 <div className="space-y-4">
                   <div className="flex justify-between">
-                    <Label>{t('settings.appearance.baseFontSize')}</Label>
+                    <Label>{'基准字体大小 (Base Size)'}</Label>
                     <span className="text-muted-foreground text-sm">{baseFontSizePx}px</span>
                   </div>
                   <Slider
@@ -471,7 +470,7 @@ export function AppearanceTab() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('settings.appearance.lineHeight')}</Label>
+                  <Label>{'行高 (Line Height)'}</Label>
                   <Select
                     value={String(
                       getTokenValue(
@@ -489,18 +488,18 @@ export function AppearanceTab() {
                   >
                     <SelectTrigger>
                       <SelectValue
-                        placeholder={t('settings.appearance.lineHeightPlaceholder')}
+                        placeholder={'选择行高'}
                       />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="1.2">
-                        {t('settings.appearance.lineHeightCompact')}
+                        {'紧凑 (1.2)'}
                       </SelectItem>
                       <SelectItem value="1.5">
-                        {t('settings.appearance.lineHeightNormal')}
+                        {'正常 (1.5)'}
                       </SelectItem>
                       <SelectItem value="1.75">
-                        {t('settings.appearance.lineHeightLoose')}
+                        {'宽松 (1.75)'}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -511,7 +510,7 @@ export function AppearanceTab() {
 
           {/* 2. 视觉效果 (Visual) */}
           <AccordionItem value="visual">
-            <AccordionTrigger>{t('settings.appearance.visualGroup')}</AccordionTrigger>
+            <AccordionTrigger>{'视觉效果 (Visual)'}</AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4 pt-2">
                 <div className="flex justify-end">
@@ -523,13 +522,13 @@ export function AppearanceTab() {
                     className="h-8 text-xs"
                   >
                     <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                    {t('settings.appearance.resetDefault')}
+                    {'重置默认'}
                   </Button>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex justify-between">
-                    <Label>{t('settings.appearance.borderRadiusLabel')}</Label>
+                    <Label>{'圆角大小 (Radius)'}</Label>
                     <span className="text-muted-foreground text-sm">
                       {Math.round(
                         parseFloat(
@@ -573,7 +572,7 @@ export function AppearanceTab() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('settings.appearance.shadowLabel')}</Label>
+                  <Label>{'阴影强度 (Shadow)'}</Label>
                   <Select
                     value={(() => {
                       const shadowMd = String(
@@ -603,22 +602,22 @@ export function AppearanceTab() {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={t('settings.appearance.shadowPlaceholder')} />
+                      <SelectValue placeholder={'选择阴影强度'} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">
-                        {t('settings.appearance.shadowNone')}
+                        {'无阴影 (None)'}
                       </SelectItem>
-                      <SelectItem value="sm">{t('settings.appearance.shadowSm')}</SelectItem>
-                      <SelectItem value="md">{t('settings.appearance.shadowMd')}</SelectItem>
-                      <SelectItem value="lg">{t('settings.appearance.shadowLg')}</SelectItem>
-                      <SelectItem value="xl">{t('settings.appearance.shadowXl')}</SelectItem>
+                      <SelectItem value="sm">{'轻微 (Small)'}</SelectItem>
+                      <SelectItem value="md">{'中等 (Medium)'}</SelectItem>
+                      <SelectItem value="lg">{'强烈 (Large)'}</SelectItem>
+                      <SelectItem value="xl">{'极强 (Extra Large)'}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="blur-switch">{t('settings.appearance.blurLabel')}</Label>
+                  <Label htmlFor="blur-switch">{'模糊效果 (Blur)'}</Label>
                   <Switch
                     id="blur-switch"
                     checked={
@@ -642,7 +641,7 @@ export function AppearanceTab() {
 
           {/* 3. 布局 (Layout) */}
           <AccordionItem value="layout">
-            <AccordionTrigger>{t('settings.appearance.layoutGroup')}</AccordionTrigger>
+            <AccordionTrigger>{'布局 (Layout)'}</AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4 pt-2">
                 <div className="flex justify-end">
@@ -654,13 +653,13 @@ export function AppearanceTab() {
                     className="h-8 text-xs"
                   >
                     <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                    {t('settings.appearance.resetDefault')}
+                    {'重置默认'}
                   </Button>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex justify-between">
-                    <Label>{t('settings.appearance.sidebarWidthLabel')}</Label>
+                    <Label>{'侧边栏宽度 (Sidebar Width)'}</Label>
                     <span className="text-muted-foreground text-sm">
                       {getTokenValue(
                         activeTokenOverrides,
@@ -698,7 +697,7 @@ export function AppearanceTab() {
 
           {/* 4. 动画 (Animation) */}
           <AccordionItem value="animation">
-            <AccordionTrigger>{t('settings.appearance.animationGroup')}</AccordionTrigger>
+            <AccordionTrigger>{'动画 (Animation)'}</AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4 pt-2">
                 <div className="flex justify-end">
@@ -710,12 +709,12 @@ export function AppearanceTab() {
                     className="h-8 text-xs"
                   >
                     <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                    {t('settings.appearance.resetDefault')}
+                    {'重置默认'}
                   </Button>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('settings.appearance.animationSpeedLabel')}</Label>
+                  <Label>{'动画速度 (Speed)'}</Label>
                   <Select
                     value={(() => {
                       const duration = String(
@@ -751,21 +750,21 @@ export function AppearanceTab() {
                   >
                     <SelectTrigger>
                       <SelectValue
-                        placeholder={t('settings.appearance.animationSpeedPlaceholder')}
+                        placeholder={'选择动画速度'}
                       />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="fast">
-                        {t('settings.appearance.animationFast')}
+                        {'快速 (100ms)'}
                       </SelectItem>
                       <SelectItem value="normal">
-                        {t('settings.appearance.animationNormal')}
+                        {'正常 (300ms)'}
                       </SelectItem>
                       <SelectItem value="slow">
-                        {t('settings.appearance.animationSlow')}
+                        {'慢速 (500ms)'}
                       </SelectItem>
                       <SelectItem value="off">
-                        {t('settings.appearance.animationOff')}
+                        {'关闭 (0ms)'}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -776,14 +775,14 @@ export function AppearanceTab() {
 
           {/* 5. 背景设置 (Backgrounds) */}
           <AccordionItem value="backgrounds">
-            <AccordionTrigger>{t('settings.appearance.backgroundGroup')}</AccordionTrigger>
+            <AccordionTrigger>{'背景设置 (Backgrounds)'}</AccordionTrigger>
             <AccordionContent>
               <div className="pt-2">
                 <Tabs defaultValue="page">
                   <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="page">{t('settings.appearance.bgPage')}</TabsTrigger>
+                    <TabsTrigger value="page">{'页面'}</TabsTrigger>
                     <TabsTrigger value="sidebar">
-                      {t('settings.appearance.bgSidebar')}
+                      {'侧边栏'}
                     </TabsTrigger>
                     <TabsTrigger value="header">Header</TabsTrigger>
                     <TabsTrigger value="card">Card</TabsTrigger>
@@ -803,10 +802,10 @@ export function AppearanceTab() {
                               <div className="bg-muted/30 flex items-center justify-between rounded-lg border px-4 py-3">
                                 <div className="space-y-0.5">
                                   <Label className="text-sm font-medium">
-                                    {t('settings.appearance.inheritParentBg')}
+                                    {'继承上级背景'}
                                   </Label>
                                   <p className="text-muted-foreground text-xs">
-                                    {t('settings.appearance.inheritParentBgDesc')}
+                                    {'开启后将使用上级层级的背景配置'}
                                   </p>
                                 </div>
                                 <Switch
@@ -852,10 +851,10 @@ export function AppearanceTab() {
         <div className="mb-3 flex items-center justify-between sm:mb-4">
           <div>
             <h3 className="text-base font-semibold sm:text-lg">
-              {t('settings.appearance.customCss')}
+              {'自定义 CSS'}
             </h3>
             <p className="text-muted-foreground mt-1 text-sm">
-              {t('settings.appearance.cssDescription')}
+              {'编写自定义 CSS 来进一步个性化界面。危险的 CSS（如 @import、url()）将被自动过滤。'}
             </p>
           </div>
           <Button
@@ -874,7 +873,7 @@ export function AppearanceTab() {
             disabled={!activeCustomCSS}
           >
             <Trash2 className="mr-1 h-4 w-4" />
-            {t('settings.appearance.clearCss')}
+            {'清除'}
           </Button>
         </div>
 
@@ -883,7 +882,7 @@ export function AppearanceTab() {
             value={localCSS}
             language="css"
             height="250px"
-            placeholder={t('settings.appearance.cssPlaceholder')}
+            placeholder={'/* 在这里输入自定义 CSS */\n\n/* 例如: */\n/* .sidebar { background: #1a1a2e; } */'}
             onChange={handleCSSChange}
           />
 
@@ -891,7 +890,7 @@ export function AppearanceTab() {
             <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-950/30">
               <div className="mb-1 flex items-center gap-2 text-sm font-medium text-yellow-800 dark:text-yellow-200">
                 <AlertTriangle className="h-4 w-4" />
-                {t('settings.appearance.cssWarningTitle')}
+                {'以下内容已被安全过滤：'}
               </div>
               <ul className="ml-6 list-disc space-y-0.5 text-xs text-yellow-700 dark:text-yellow-300">
                 {cssWarnings.map((w, i) => (
@@ -906,7 +905,7 @@ export function AppearanceTab() {
       {/* 动效设置 */}
       <div>
         <h3 className="mb-3 text-base font-semibold sm:mb-4 sm:text-lg">
-          {t('settings.appearance.animationEffect')}
+          {'动画效果'}
         </h3>
         <div className="space-y-2 sm:space-y-3">
           {/* 全局动画开关 */}
@@ -914,10 +913,10 @@ export function AppearanceTab() {
             <div className="flex items-center justify-between">
               <div className="flex-1 space-y-0.5">
                 <Label htmlFor="animations" className="cursor-pointer text-base font-medium">
-                  {t('settings.appearance.enableAnimations')}
+                  {'启用动画效果'}
                 </Label>
                 <p className="text-muted-foreground text-sm">
-                  {t('settings.appearance.enableAnimationsDesc')}
+                  {'关闭后将禁用所有过渡动画和特效，提升性能'}
                 </p>
               </div>
               <Switch
@@ -933,14 +932,14 @@ export function AppearanceTab() {
       {/* 主题导入/导出 */}
       <div>
         <h3 className="mb-3 text-base font-semibold sm:mb-4 sm:text-lg">
-          {t('settings.appearance.importExportTheme')}
+          {'主题导入/导出'}
         </h3>
         <Card className="space-y-3 p-3 sm:p-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {/* 导出按钮 */}
             <Button onClick={handleExport} variant="outline" className="gap-2">
               <Download className="h-4 w-4" />
-              {t('settings.appearance.exportTheme')}
+              {'导出主题'}
             </Button>
 
             {/* 导入按钮 */}
@@ -950,7 +949,7 @@ export function AppearanceTab() {
               className="gap-2"
             >
               <Upload className="h-4 w-4" />
-              {t('settings.appearance.importTheme')}
+              {'导入主题'}
             </Button>
 
             {/* 重置按钮 */}
@@ -958,22 +957,22 @@ export function AppearanceTab() {
               <AlertDialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <RotateCcw className="h-4 w-4" />
-                  {t('settings.appearance.resetTheme')}
+                  {'重置为默认'}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>
-                    {t('settings.appearance.confirmResetTheme')}
+                    {'确认重置主题'}
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                    {t('settings.appearance.confirmResetThemeDesc')}
+                    {'这将重置所有主题设置为默认值，包括颜色、字体、布局和自定义 CSS。此操作不可撤销，确定要继续吗？'}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                  <AlertDialogCancel>{'取消'}</AlertDialogCancel>
                   <AlertDialogAction onClick={handleResetTheme}>
-                    {t('settings.appearance.confirmResetAction')}
+                    {'确认重置'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -989,7 +988,7 @@ export function AppearanceTab() {
             className="hidden"
           />
 
-          <p className="text-muted-foreground text-xs">{t('settings.appearance.exportDesc')}</p>
+          <p className="text-muted-foreground text-xs">{'导出主题为 JSON 文件便于分享或备份，导入时会自动应用所有配置。'}</p>
         </Card>
       </div>
     </div>

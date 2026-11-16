@@ -84,7 +84,6 @@ function makePlugin(overrides: Partial<PluginInfo> = {}): PluginInfo {
       repository_url: 'https://github.com/owner/repo.git',
       keywords: ['聊天'],
       plugin_type: 'chat',
-      default_locale: 'zh-CN',
     },
     downloads: 5,
     rating: 0,

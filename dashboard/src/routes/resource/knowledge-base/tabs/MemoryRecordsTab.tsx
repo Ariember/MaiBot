@@ -19,7 +19,7 @@ import {
   Trash2,
   UserRound,
 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+
 
 import { MemoryFactEditorDialog } from '@/components/memory/MemoryFactEditorDialog'
 import { MemoryMiniTabs } from '@/components/memory/MemoryMiniTabs'
@@ -116,36 +116,36 @@ const FACT_TRANSITION_LABELS: Record<string, string> = {
 }
 
 const GRAPH_JOB_STATUS_LABELS: Record<string, string> = {
-  pending: 'memory.records.graphJobStatus.pending',
-  running: 'memory.records.graphJobStatus.running',
-  failed: 'memory.records.graphJobStatus.failed',
-  completed: 'memory.records.graphJobStatus.completed',
-  cancelled: 'memory.records.graphJobStatus.cancelled',
+  pending: "待处理",
+  running: "处理中",
+  failed: "失败",
+  completed: "已完成",
+  cancelled: "已取消",
 }
 
 const RECORD_STATUS_LABELS: Record<string, string> = {
-  active: 'memory.records.status.active',
-  inactive: 'memory.records.status.inactive',
-  deleted: 'memory.records.status.deleted',
-  conflicted: 'memory.records.status.conflicted',
-  superseded: 'memory.records.status.superseded',
-  retracted: 'memory.records.status.retracted',
+  active: "有效",
+  inactive: "已停用",
+  deleted: "已删除",
+  conflicted: "有冲突",
+  superseded: "已取代",
+  retracted: "已撤回",
 }
 
 const EVIDENCE_TYPE_LABELS: Record<string, string> = {
-  paragraph: 'memory.records.evidenceType.paragraph',
-  relation: 'memory.records.evidenceType.relation',
-  entity: 'memory.records.evidenceType.entity',
-  fact: 'memory.records.evidenceType.fact',
-  episode: 'memory.records.evidenceType.episode',
-  profile: 'memory.records.evidenceType.profile',
-  manual: 'memory.records.evidenceType.manual',
-  unknown: 'memory.records.evidenceType.unknown',
+  paragraph: "段落",
+  relation: "关系",
+  entity: "实体",
+  fact: "事实",
+  episode: "情景",
+  profile: "画像",
+  manual: "人工",
+  unknown: "未知",
 }
 
 const EVIDENCE_STANCE_LABELS: Record<string, string> = {
-  support: 'memory.records.evidenceStance.support',
-  refute: 'memory.records.evidenceStance.refute',
+  support: "支持",
+  refute: "反证",
 }
 
 const RELATED_TAB_LABELS: Record<string, string> = {
@@ -162,10 +162,8 @@ const LEDGER_TAB_LABELS: Record<string, string> = {
   transitions: '变更',
 }
 
-function LocalizedEnumLabel({ value, labels }: { value: string; labels: Record<string, string> }) {
-  const { t } = useTranslation()
-  const translationKey = labels[value]
-  return <>{translationKey ? t(translationKey) : value}</>
+function EnumLabel({ value, labels }: { value: string; labels: Record<string, string> }) {
+  return <>{labels[value] || value}</>
 }
 
 interface MemoryRecordsTabProps {
@@ -278,7 +276,7 @@ function RecordButton({
             {knowledgeTypeLabel ? <Badge variant="secondary">{knowledgeTypeLabel}</Badge> : null}
             {record.status !== 'active' ? (
               <Badge variant="outline">
-                <LocalizedEnumLabel value={record.status} labels={RECORD_STATUS_LABELS} />
+                <EnumLabel value={record.status} labels={RECORD_STATUS_LABELS} />
               </Badge>
             ) : null}
             {/* 只展示可读来源（聊天流名称 / 人物姓名 / 导入来源），不暴露内部来源标记 */}
@@ -872,7 +870,7 @@ export function MemoryRecordsTab({ onAction, onCorrectionPlan, searchModeTabs }:
                     ) : null}
                     {detail.record.status !== 'active' ? (
                       <Badge variant="outline">
-                        <LocalizedEnumLabel
+                        <EnumLabel
                           value={detail.record.status}
                           labels={RECORD_STATUS_LABELS}
                         />
@@ -938,7 +936,7 @@ export function MemoryRecordsTab({ onAction, onCorrectionPlan, searchModeTabs }:
                           >
                             <div className="flex flex-wrap items-center gap-2">
                               <Badge variant={status === 'failed' ? 'destructive' : 'secondary'}>
-                                <LocalizedEnumLabel
+                                <EnumLabel
                                   value={status}
                                   labels={GRAPH_JOB_STATUS_LABELS}
                                 />
@@ -1050,7 +1048,7 @@ export function MemoryRecordsTab({ onAction, onCorrectionPlan, searchModeTabs }:
                               className="flex flex-wrap gap-x-3 gap-y-1 px-3 py-2.5"
                             >
                               <span>
-                                <LocalizedEnumLabel
+                                <EnumLabel
                                   value={String(evidence.evidence_type || 'unknown')}
                                   labels={EVIDENCE_TYPE_LABELS}
                                 />
@@ -1059,7 +1057,7 @@ export function MemoryRecordsTab({ onAction, onCorrectionPlan, searchModeTabs }:
                                 {String(evidence.evidence_id || '')}
                               </span>
                               <span className="text-muted-foreground">
-                                <LocalizedEnumLabel
+                                <EnumLabel
                                   value={String(evidence.stance || '')}
                                   labels={EVIDENCE_STANCE_LABELS}
                                 />
@@ -1095,7 +1093,7 @@ export function MemoryRecordsTab({ onAction, onCorrectionPlan, searchModeTabs }:
                                 {transition.evidence_type || transition.evidence_id ? (
                                   <div className="text-muted-foreground flex flex-wrap gap-x-2 gap-y-1">
                                     <span>
-                                      <LocalizedEnumLabel
+                                      <EnumLabel
                                         value={String(transition.evidence_type || 'unknown')}
                                         labels={EVIDENCE_TYPE_LABELS}
                                       />

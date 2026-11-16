@@ -7,8 +7,7 @@ import pytest
 from src.chat.replyer.document_generator import DocumentReplyGenerator
 from src.chat.replyer.maisaka_generator_base import BaseMaisakaReplyGenerator, MaisakaReplyContext, select_persona_expressions
 from src.common.data_models.llm_service_data_models import LLMResponseResult
-from src.common.i18n import use_locale
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.config.config import global_config
 from src.llm_models.payload_content.context_item import CONTEXT_ITEM_SCHEMA_VERSION, ContextItemBuilder, RoleType, get_item_text
 from src.maisaka.builtin_tool import reply
@@ -16,22 +15,13 @@ from src.maisaka.chat_loop_service import MaisakaChatLoopService
 from src.plugin_runtime.prompt_sources import collect_prompt_changes
 
 
-@pytest.mark.parametrize(
-    ("locale", "short_marker", "normal_marker", "long_marker"),
-    [
-        ("zh-CN", "一到两句", "简洁", "关键细节"),
-        ("en-US", "one or two short sentences", "concise", "key details"),
-        ("ja-JP", "一文か二文", "簡潔", "掘り下げ"),
-    ],
-)
-def test_reply_length_instructions_follow_locale(locale, short_marker, normal_marker, long_marker) -> None:
+def test_reply_length_instructions_use_chinese() -> None:
     build_style = BaseMaisakaReplyGenerator._build_requested_reply_style_message
-    with use_locale(locale):
-        assert short_marker in build_style("简短表达")
-        assert normal_marker in build_style("正常回复")
-        assert long_marker in build_style("长回复")
-        assert build_style("") == build_style("正常回复")
-        assert build_style("未声明的篇幅") == build_style("正常回复")
+    assert '一到两句' in build_style("简短表达")
+    assert '简洁' in build_style("正常回复")
+    assert '关键细节' in build_style("长回复")
+    assert build_style("") == build_style("正常回复")
+    assert build_style("未声明的篇幅") == build_style("正常回复")
 
 
 def test_planner_context_includes_personality_and_behavior_style(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -59,12 +49,8 @@ def test_replyer_keeps_using_personality(monkeypatch: pytest.MonkeyPatch) -> Non
 
 @pytest.mark.parametrize("is_group_chat", [True, False])
 @pytest.mark.parametrize("prompt_name", ["maisaka_chat", "maisaka_chat_focus", "maisaka_replyer"])
-@pytest.mark.parametrize(
-    ("locale", "heading"),
-    [("zh-CN", "注意力漂移风格："), ("en-US", "Attention drift style:"), ("ja-JP", "注意ドリフトスタイル：")],
-)
 def test_attention_drift_follows_live_config_in_planner_and_replyer(
-    monkeypatch: pytest.MonkeyPatch, prompt_name: str, locale: str, heading: str, is_group_chat: bool
+    monkeypatch: pytest.MonkeyPatch, prompt_name: str, is_group_chat: bool
 ) -> None:
     if prompt_name == "maisaka_replyer":
         generator = object.__new__(BaseMaisakaReplyGenerator)
@@ -95,30 +81,27 @@ def test_attention_drift_follows_live_config_in_planner_and_replyer(
         else global_config.experimental.group_attention_drift
     )
     monkeypatch.setattr(other_config, "enabled", True)
-    with use_locale(locale):
-        monkeypatch.setattr(config, "enabled", False)
-        baseline = build_prompt()
-        if prompt_name == "maisaka_replyer":
-            assert "测试人设" in baseline
-        assert heading not in baseline
-        monkeypatch.setattr(config, "enabled", True)
-        assert build_prompt().count(heading) == 1
-        monkeypatch.setattr(config, "enabled", False)
-        assert build_prompt() == baseline
+    monkeypatch.setattr(config, "enabled", False)
+    baseline = build_prompt()
+    if prompt_name == "maisaka_replyer":
+        assert "测试人设" in baseline
+    assert '注意力漂移风格：' not in baseline
+    monkeypatch.setattr(config, "enabled", True)
+    assert build_prompt().count('注意力漂移风格：') == 1
+    monkeypatch.setattr(config, "enabled", False)
+    assert build_prompt() == baseline
 
 
 @pytest.mark.parametrize("prompt_name", ["maisaka_chat", "maisaka_chat_focus"])
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
 def test_planner_personality_precedes_behavior_style(
-    monkeypatch: pytest.MonkeyPatch, prompt_name: str, locale: str
+    monkeypatch: pytest.MonkeyPatch, prompt_name: str
 ) -> None:
     monkeypatch.setattr(global_config.personality, "personality", "核心人格测试标记")
     monkeypatch.setattr(global_config.personality, "behavior_style", "行为风格测试标记")
     service = MaisakaChatLoopService()
     monkeypatch.setattr(service, "_get_chat_prompt_name", lambda: prompt_name)
 
-    with use_locale(locale):
-        prompt = service._build_chat_system_prompt()
+    prompt = service._build_chat_system_prompt()
 
     assert prompt.index("核心人格测试标记") < prompt.index("行为风格测试标记")
 
@@ -136,14 +119,12 @@ def test_reply_tool_offers_configured_scene_and_slang_choices(monkeypatch):
     assert "persona_expressions" not in reply.get_tool_spec().parameters_schema["properties"]
 
 
-@pytest.mark.parametrize("locale,group_marker", [("en-US", "QQ group"), ("ja-JP", "QQ グループ")])
-def test_replyer_template_does_not_assume_group_chat(locale, group_marker):
-    with use_locale(locale):
-        prompt = load_prompt(
-            "maisaka_replyer", identity="PERSONA", reply_style="STYLE", group_chat_attention_block="PRIVATE",
-            replyer_output_instruction="OUTPUT",
-        )
-    assert group_marker not in prompt
+def test_replyer_template_does_not_assume_group_chat():
+    prompt = load_prompt(
+        "maisaka_replyer", identity="PERSONA", reply_style="STYLE", group_chat_attention_block="PRIVATE",
+        replyer_output_instruction="OUTPUT",
+    )
+    assert 'QQ群' not in prompt
     assert all(marker in prompt for marker in ("PERSONA", "STYLE", "PRIVATE", "OUTPUT"))
 
 
@@ -176,10 +157,7 @@ async def test_reply_tool_rejects_unknown_persona_expressions(monkeypatch):
 
 @pytest.mark.parametrize("mode", ["modern", "retro", "document"])
 @pytest.mark.parametrize("selected", [False, True])
-@pytest.mark.parametrize(
-    "locale,example_notice", [("zh-CN", "不是真实聊天记录"), ("en-US", "not actual chat history"), ("ja-JP", "実際の会話履歴")],
-)
-def test_only_selected_scene_and_slang_reach_replyer(monkeypatch, mode, selected, locale, example_notice):
+def test_only_selected_scene_and_slang_reach_replyer(monkeypatch, mode, selected):
     sample = "情境：拒绝\n用户：帮我写作业\n麦麦：我可以陪你理思路，代写就算啦"
     slang = "黑话：破防，形容心态受到冲击"
     unselected = "情景：祝贺升职"
@@ -193,18 +171,17 @@ def test_only_selected_scene_and_slang_reach_replyer(monkeypatch, mode, selected
     generator.chat_stream = SimpleNamespace(is_group_session=False)
     generator._load_prompt = load_prompt
     sources = []
-    with use_locale(locale):
-        items = generator._build_request_messages(
-            chat_history=[], reply_message=None, reply_reason="回答当前问题", stream_id="test", prompt_sources=sources,
-            reply_requirements="直接回答",
-            reply_tool_args={"persona_expressions": [sample, slang]} if selected else {},
-        )
+    items = generator._build_request_messages(
+        chat_history=[], reply_message=None, reply_reason="回答当前问题", stream_id="test", prompt_sources=sources,
+        reply_requirements="直接回答",
+        reply_tool_args={"persona_expressions": [sample, slang]} if selected else {},
+    )
     text = "\n".join(get_item_text(item) for item in items)
     assert "基础表达标记" in text
     assert unselected not in text
     assert (sample in text) == selected
     assert (slang in text) == selected
-    assert (example_notice in text) == selected
+    assert ('不是真实聊天记录' in text) == selected
     assert [source["source"] for source in sources].count("personality.dialogue_examples") == int(selected)
 
 

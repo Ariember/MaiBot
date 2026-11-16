@@ -14,8 +14,7 @@
 import { BookOpen, ClipboardCheck, FileText, HardDrive, MessageSquare, Puzzle, RotateCcw, Settings } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import type { TFunction } from 'i18next'
+
 
 import { getBotConfigSchema } from '@/lib/config-api'
 import { buildTabGroupsFromSchema } from '@/lib/config-tab-groups'
@@ -27,6 +26,21 @@ import {
 } from '@/lib/plugin-api'
 
 import type { QuickShortcutDefinition } from '../types'
+
+const HOME_QUICKACTIONS_LOGS_LABELS: Record<string, string> = {
+  "view": "查看日志",
+  "replyer": "回复日志",
+  "planner": "规划日志",
+  "reasoning": "推理日志",
+}
+
+const HOME_QUICKACTIONS_DESCRIPTIONS_LOGS_LABELS: Record<string, string> = {
+  "view": "查看 WebUI 日志",
+  "replyer": "查看回复阶段的推理记录",
+  "planner": "查看规划阶段的推理记录",
+  "reasoning": "打开推理日志",
+}
+
 
 const QUICK_SHORTCUT_STORAGE_KEY = 'maibot-home-quick-shortcuts'
 const DEFAULT_QUICK_SHORTCUT_IDS = [
@@ -117,13 +131,13 @@ function getPluginConfigHref(pluginId: string, tabId?: string): string {
   return `/plugin-config?${params.toString()}`
 }
 
-function buildBasePluginShortcut(plugin: InstalledPlugin, t: TFunction): QuickShortcutDefinition {
+function buildBasePluginShortcut(plugin: InstalledPlugin): QuickShortcutDefinition {
   const pluginName = plugin.manifest.name || plugin.id
   return {
     id: getPluginShortcutId(plugin.id),
     category: 'plugin',
-    label: t('home.pluginShortcuts.baseLabel', { plugin: pluginName }),
-    description: t('home.pluginShortcuts.baseDescription', { plugin: pluginName }),
+    label: `${pluginName} 配置`,
+    description: `打开 ${pluginName} 的插件配置页面`,
     icon: Puzzle,
     href: getPluginConfigHref(plugin.id),
   }
@@ -131,7 +145,6 @@ function buildBasePluginShortcut(plugin: InstalledPlugin, t: TFunction): QuickSh
 
 async function loadPluginTabShortcuts(
   plugin: InstalledPlugin,
-  t: TFunction,
   selectedTabIds?: Set<string>
 ): Promise<QuickShortcutDefinition[]> {
   // 单个插件 schema 拉取失败不应中断整体快捷入口加载，按空处理
@@ -149,10 +162,7 @@ async function loadPluginTabShortcuts(
     id: getPluginShortcutId(plugin.id, tab.id),
     category: 'plugin' as const,
     label: `${pluginName} / ${tab.title || tab.id}`,
-    description: t('home.pluginShortcuts.tabDescription', {
-      plugin: pluginName,
-      tab: tab.title || tab.id,
-    }),
+    description: `打开 ${pluginName} 的 ${tab.title || tab.id} 标签页`,
     icon: Puzzle,
     href: getPluginConfigHref(plugin.id, tab.id),
   }))
@@ -184,7 +194,7 @@ function getSelectedPluginIds(ids: string[]): Set<string> {
   return selectedPluginIds
 }
 
-function getFallbackPluginShortcut(id: string, t: TFunction): QuickShortcutDefinition | null {
+function getFallbackPluginShortcut(id: string): QuickShortcutDefinition | null {
   const parsed = parsePluginShortcutId(id)
   if (!parsed) {
     return null
@@ -194,11 +204,11 @@ function getFallbackPluginShortcut(id: string, t: TFunction): QuickShortcutDefin
     id,
     category: 'plugin',
     label: parsed.tabId
-      ? t('home.pluginShortcuts.fallbackTabLabel', { plugin: parsed.pluginId, tab: parsed.tabId })
-      : t('home.pluginShortcuts.fallbackLabel', { plugin: parsed.pluginId }),
+      ? `插件配置：${parsed.pluginId} / ${parsed.tabId}`
+      : `插件配置：${parsed.pluginId}`,
     description: parsed.tabId
-      ? t('home.pluginShortcuts.fallbackTabDescription')
-      : t('home.pluginShortcuts.fallbackDescription'),
+      ? '打开指定插件配置标签页'
+      : '打开指定插件配置页面',
     icon: Puzzle,
     href: getPluginConfigHref(parsed.pluginId, parsed.tabId),
   }
@@ -217,7 +227,6 @@ export function useQuickShortcuts({
   uncheckedCount,
   onOpenReviewer,
 }: UseQuickShortcutsParams) {
-  const { t } = useTranslation()
   const [quickShortcutIds, setQuickShortcutIds] = useState<string[]>(loadQuickShortcutIds)
   const [quickShortcutDialogOpen, setQuickShortcutDialogOpen] = useState(false)
   const [quickShortcutSearch, setQuickShortcutSearch] = useState('')
@@ -235,12 +244,12 @@ export function useQuickShortcuts({
             id: `route:bot-config:${tab.id}`,
             category: 'config' as const,
             label: tab.label,
-            description: t('home.quickActions.descriptions.configSection', { section: tab.label }),
+            description: `打开主程序配置 / ${tab.label}`,
             icon: Settings,
             href: `/config/bot?${new URLSearchParams({ tab: tab.id }).toString()}`,
           }))
         : [],
-    [configSchemaQuery.data, t]
+    [configSchemaQuery.data]
   )
 
   useEffect(() => {
@@ -269,7 +278,7 @@ export function useQuickShortcuts({
         const visiblePlugins = quickShortcutDialogOpen
           ? enabledPlugins
           : enabledPlugins.filter((plugin) => selectedPluginIds.has(plugin.id))
-        const baseShortcuts = visiblePlugins.map((plugin) => buildBasePluginShortcut(plugin, t))
+        const baseShortcuts = visiblePlugins.map((plugin) => buildBasePluginShortcut(plugin))
         if (!cancelled) {
           setPluginShortcuts(baseShortcuts)
         }
@@ -288,7 +297,7 @@ export function useQuickShortcuts({
               }
 
               try {
-                return await loadPluginTabShortcuts(plugin, t, selectedTabIds)
+                return await loadPluginTabShortcuts(plugin, selectedTabIds)
               } catch (error) {
                 console.warn(`加载插件 ${plugin.id} 已选配置页签快捷入口失败:`, error)
                 return []
@@ -314,15 +323,15 @@ export function useQuickShortcuts({
     return () => {
       cancelled = true
     }
-  }, [quickShortcutDialogOpen, quickShortcutIds, t])
+  }, [quickShortcutDialogOpen, quickShortcutIds])
 
   const quickShortcutOptions = useMemo<QuickShortcutDefinition[]>(
     () => [
       {
         id: 'action:restart',
         category: 'system',
-        label: isRestarting ? t('home.quickActions.restarting') : t('home.quickActions.restart'),
-        description: t('home.quickActions.descriptions.restart'),
+        label: isRestarting ? '重启中...' : '重启麦麦',
+        description: '重启麦麦主程序',
         icon: RotateCcw,
         action: handleRestart,
         disabled: isRestarting,
@@ -330,8 +339,8 @@ export function useQuickShortcuts({
       {
         id: 'action:expression-review',
         category: 'resource',
-        label: t('home.quickActions.expressionReview'),
-        description: t('home.quickActions.descriptions.expressionReview'),
+        label: '表达审核',
+        description: '打开表达学习审核弹窗',
         icon: ClipboardCheck,
         action: onOpenReviewer,
         badge:
@@ -340,24 +349,24 @@ export function useQuickShortcuts({
       {
         id: 'route:logs',
         category: 'monitor',
-        label: t('home.quickActions.viewLogs'),
-        description: t('home.quickActions.descriptions.viewLogs'),
+        label: '查看日志',
+        description: '查看 WebUI 日志',
         icon: FileText,
         href: '/logs',
       },
       {
         id: 'route:chat',
         category: 'system',
-        label: t('home.quickActions.chat'),
-        description: t('home.quickActions.descriptions.chat'),
+        label: '麦麦聊聊',
+        description: '打开麦麦聊天',
         icon: MessageSquare,
         href: '/chat',
       },
       {
         id: 'external:docs',
         category: 'external',
-        label: t('home.quickActions.docs'),
-        description: t('home.quickActions.descriptions.docs'),
+        label: '前往文档',
+        description: '打开麦麦使用文档',
         icon: BookOpen,
         href: 'https://docs.mai-mai.org',
         external: true,
@@ -365,8 +374,8 @@ export function useQuickShortcuts({
       ...(['replyer', 'planner', 'reasoning'] as const).map((stage) => ({
         id: `route:logs:${stage}`,
         category: 'monitor' as const,
-        label: t(`home.quickActions.${stage}Logs`),
-        description: t(`home.quickActions.descriptions.${stage}Logs`),
+        label: HOME_QUICKACTIONS_LOGS_LABELS[stage],
+        description: HOME_QUICKACTIONS_DESCRIPTIONS_LOGS_LABELS[stage],
         icon: FileText,
         href: stage === 'reasoning' ? '/reasoning-process' : `/reasoning-process?stage=${stage}`,
       })),
@@ -374,38 +383,38 @@ export function useQuickShortcuts({
       {
         id: 'route:settings-appearance',
         category: 'system',
-        label: t('home.quickActions.appearanceSettings'),
-        description: t('home.quickActions.descriptions.appearanceSettings'),
+        label: '外观设置',
+        description: '打开设置 / 外观',
         icon: Settings,
         href: '/settings?tab=appearance',
       },
       {
         id: 'route:settings-local-cache',
         category: 'system',
-        label: t('home.quickActions.localCache'),
-        description: t('home.quickActions.descriptions.localCache'),
+        label: '本地缓存',
+        description: '打开设置 / 本地缓存',
         icon: HardDrive,
         href: '/settings?tab=local-cache',
       },
       {
         id: 'route:model-list',
         category: 'config',
-        label: t('home.quickActions.modelList'),
-        description: t('home.quickActions.descriptions.modelList'),
+        label: '模型列表',
+        description: '打开模型管理 / 模型列表',
         icon: Settings,
         href: '/config/model?tab=models',
       },
       {
         id: 'route:model-tasks',
         category: 'config',
-        label: t('home.quickActions.modelTasks'),
-        description: t('home.quickActions.descriptions.modelTasks'),
+        label: '模型功能分配',
+        description: '打开模型管理 / 为模型分配功能',
         icon: Settings,
         href: '/config/model?tab=tasks',
       },
       ...pluginShortcuts,
     ],
-    [configShortcuts, handleRestart, isRestarting, onOpenReviewer, pluginShortcuts, t, uncheckedCount]
+    [configShortcuts, handleRestart, isRestarting, onOpenReviewer, pluginShortcuts, uncheckedCount]
   )
 
   const quickShortcutMap = useMemo(
@@ -416,9 +425,9 @@ export function useQuickShortcuts({
   const selectedQuickShortcuts = useMemo(
     () =>
       quickShortcutIds
-        .map((id) => quickShortcutMap.get(id) ?? getFallbackPluginShortcut(id, t))
+        .map((id) => quickShortcutMap.get(id) ?? getFallbackPluginShortcut(id))
         .filter((shortcut): shortcut is QuickShortcutDefinition => Boolean(shortcut)),
-    [quickShortcutIds, quickShortcutMap, t]
+    [quickShortcutIds, quickShortcutMap]
   )
 
   const filteredQuickShortcutOptions = useMemo(() => {

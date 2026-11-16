@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 
 import { Textarea } from '@/components/ui/textarea'
 import { fieldTitleClassName } from '@/components/dynamic-form/fieldStyle'
-import { resolveLocalizedText } from '@/lib/config-label'
+
 import type { FieldHookComponent } from '@/lib/field-hooks'
 import type { ConfigSchema, FieldSchema } from '@/types/config-schema'
 
@@ -18,7 +18,7 @@ function resolveLabel(schema?: ConfigSchema | FieldSchema, fieldPath?: string): 
     return fieldPath?.split('.').at(-1) || 'JSON 配置'
   }
   if ('label' in schema && schema.label) {
-    return resolveLocalizedText(schema.label, undefined, fieldPath?.split('.').at(-1) || 'JSON 配置')
+    return (schema.label || fieldPath?.split('.').at(-1) || 'JSON 配置')
   }
   if ('uiLabel' in schema && schema.uiLabel) {
     return schema.uiLabel

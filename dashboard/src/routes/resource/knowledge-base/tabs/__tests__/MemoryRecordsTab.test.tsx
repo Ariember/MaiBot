@@ -1,10 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Tabs } from '@/components/ui/tabs'
-import i18n from '@/i18n'
 import {
   getMemoryRecordContext,
   previewMemoryCorrection,
@@ -101,7 +100,7 @@ function renderTab(onAction = vi.fn(), onCorrectionPlan = vi.fn()) {
 }
 
 beforeEach(async () => {
-  await i18n.changeLanguage('zh')
+
   searchMock.mockReset()
   contextMock.mockReset()
   previewMock.mockReset()
@@ -308,7 +307,7 @@ describe('MemoryRecordsTab', () => {
     expect(screen.getByText('有 1 条关系图投影任务未完成')).toBeInTheDocument()
   })
 
-  it('状态和证据标签跟随当前语言切换', async () => {
+  it('状态和证据标签显示中文', async () => {
     const inactiveRelation: MemoryRecordPayload = {
       type: 'relation',
       id: 'relation-inactive',
@@ -353,20 +352,18 @@ describe('MemoryRecordsTab', () => {
       ],
     })
 
-    await i18n.changeLanguage('en')
     const user = userEvent.setup()
     renderTab()
 
     await user.click(await screen.findByRole('button', { name: /小明 偏好 浅色主题/ }))
-    expect(await screen.findAllByText('Inactive')).not.toHaveLength(0)
+    expect(await screen.findAllByText('已停用')).not.toHaveLength(0)
     expect(await screen.findByText('事实账本')).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: /事实/ }))
-    expect(screen.getByText('Retracted')).toBeInTheDocument()
+    expect(screen.getByText('已撤回')).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: /证据/ }))
-    expect(screen.getByText('Paragraph')).toBeInTheDocument()
-    expect(screen.getByText('Support')).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).getByText('段落')).toBeInTheDocument()
+    expect(screen.getByText('支持')).toBeInTheDocument()
 
-    await i18n.changeLanguage('zh')
     await waitFor(() => {
       expect(screen.getAllByText('已停用')).not.toHaveLength(0)
       expect(screen.getByText('已撤回')).toBeInTheDocument()

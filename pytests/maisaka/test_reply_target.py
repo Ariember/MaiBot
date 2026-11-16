@@ -8,7 +8,6 @@ import pytest
 
 from src.common.data_models.message_component_data_model import MessageSequence, TextComponent
 from src.common.data_models.reply_generation_data_models import LLMCompletionResult, ReplyGenerationResult
-from src.common.i18n import get_locale, set_locale
 from src.core.tooling import ToolExecutionResult
 from src.maisaka import reasoning_engine
 from src.maisaka.builtin_tool import reply
@@ -149,23 +148,17 @@ async def test_planner_text_can_reply_without_real_message(monkeypatch):
     assert state.cycle_end.reason == "planner_reply_end"
 
 
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
 @pytest.mark.parametrize("prompt_name", ["maisaka_chat", "maisaka_chat_focus", "maisaka_chat_passive"])
-def test_only_passive_planner_prompt_lists_current_persona_expressions(monkeypatch, locale, prompt_name):
+def test_only_passive_planner_prompt_lists_current_persona_expressions(monkeypatch, prompt_name):
     service = MaisakaChatLoopService()
     monkeypatch.setattr(service, "_get_chat_prompt_name", lambda: prompt_name)
     personality = reasoning_engine.global_config.personality
     monkeypatch.setattr(personality, "dialogue_examples", ["  场景：调侃\n表达：绷不住了  ", "", "场景：调侃\n表达：绷不住了"])
-    previous_locale = get_locale()
-    set_locale(locale)
-    try:
-        prompt = service._build_chat_system_prompt()
-        assert prompt.count("场景：调侃\n表达：绷不住了") == (1 if prompt_name == "maisaka_chat_passive" else 0)
-        assert "{persona_expressions}" not in prompt
+    prompt = service._build_chat_system_prompt()
+    assert prompt.count("场景：调侃\n表达：绷不住了") == (1 if prompt_name == "maisaka_chat_passive" else 0)
+    assert "{persona_expressions}" not in prompt
 
-        monkeypatch.setattr(personality, "dialogue_examples", ["场景：鼓励\n表达：稳住，能赢"])
-        updated_prompt = service._build_chat_system_prompt()
-        assert "绷不住了" not in updated_prompt
-        assert ("稳住，能赢" in updated_prompt) == (prompt_name == "maisaka_chat_passive")
-    finally:
-        set_locale(previous_locale)
+    monkeypatch.setattr(personality, "dialogue_examples", ["场景：鼓励\n表达：稳住，能赢"])
+    updated_prompt = service._build_chat_system_prompt()
+    assert "绷不住了" not in updated_prompt
+    assert ("稳住，能赢" in updated_prompt) == (prompt_name == "maisaka_chat_passive")

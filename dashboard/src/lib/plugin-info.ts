@@ -23,8 +23,6 @@ export function buildLocalPluginInfo(installedPlugin: InstalledPlugin): PluginIn
       plugin_type: installedPlugin.manifest.plugin_type || 'extension',
       display: installedPlugin.manifest.display,
       changelog: installedPlugin.manifest.changelog,
-      default_locale: (installedPlugin.manifest.default_locale as string) || 'zh-CN',
-      locales_path: installedPlugin.manifest.locales_path as string | undefined,
     },
     downloads: 0,
     rating: 0,

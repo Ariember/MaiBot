@@ -18,7 +18,7 @@ vi.mock('@tanstack/react-router', () => ({
     select: (state: { location: { searchStr: string; hash: string } }) => string
   }) => select({ location: routerState }),
 }))
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+
 vi.mock('../AppearanceTab', () => ({ AppearanceTab: () => <div>外观页内容</div> }))
 vi.mock('../GeneralTab', () => ({ GeneralTab: () => <div>常规页内容</div> }))
 vi.mock('../SecurityTab', () => ({ SecurityTab: () => <div>安全页内容</div> }))
@@ -37,7 +37,7 @@ describe('独立 WebUI 设置页与关于页', () => {
     routerState.searchStr = '?mode=webui&tab=security&extra=keep'
     const view = render(<SettingsPage />)
     expect(screen.getByText('安全页内容')).toBeInTheDocument()
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'settings.tabs.other' }))
+    await userEvent.setup().click(screen.getByRole('tab', { name: '其他' }))
     expect(navigateMock).toHaveBeenCalledWith({
       href: '/settings?tab=other&extra=keep',
       replace: true,
@@ -53,23 +53,23 @@ describe('独立 WebUI 设置页与关于页', () => {
     routerState.searchStr = '?tab=unknown'
     view.rerender(<SettingsPage />)
     expect(screen.getByText('常规页内容')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'settings.title' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'WEBUI设置' })).not.toBeInTheDocument()
   })
 
   it('切回常规页删除 tab 与旧版 mode 参数，回到独立设置页', async () => {
     routerState.searchStr = '?tab=about&mode=webui'
     render(<SettingsPage />)
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'settings.tabs.general' }))
+    await userEvent.setup().click(screen.getByRole('tab', { name: '通用' }))
     expect(navigateMock).toHaveBeenCalledWith({ href: '/settings', replace: true })
   })
 
   it('关于页展示版本、技术栈、许可证和安全的外部链接属性', () => {
     render(<AboutTab />)
-    expect(screen.getByRole('heading', { name: 'settings.about.aboutApp' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '关于 MaiBot Dashboard' })).toBeInTheDocument()
     expect(screen.getByText('React 19.2.0')).toBeInTheDocument()
     expect(screen.getByText('GPLv3')).toBeInTheDocument()
     expect(screen.getByText('TypeScript')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /settings.about.visitGitHub/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /前往 GitHub/ })).toHaveAttribute(
       'href',
       'https://github.com/Ariember/MaiBot'
     )

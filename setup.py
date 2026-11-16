@@ -16,7 +16,7 @@ class BuildPy(build_py):
         super().run()
         destination = Path(self.build_lib) / "src" / "_resources"
         destination.mkdir(parents=True, exist_ok=True)
-        for name in ("prompts", "locales"):
+        for name in ("prompts",):
             for source in (root / name).rglob("*"):
                 if source.is_file() and source.suffix in {".prompt", ".toml", ".json"}:
                     target = destination / name / source.relative_to(root / name)

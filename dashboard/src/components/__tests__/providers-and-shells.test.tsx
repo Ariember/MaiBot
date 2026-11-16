@@ -16,9 +16,7 @@ const { authState } = vi.hoisted(() => ({
   authState: { checking: false },
 }))
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}))
+
 
 vi.mock('@/hooks/use-auth', () => ({
   useAuthGuard: () => ({ checking: authState.checking }),
@@ -190,22 +188,22 @@ describe('HttpWarningBanner', () => {
     vi.stubGlobal('location', { protocol: 'http:', hostname: 'example.com' })
     render(<HttpWarningBanner />)
 
-    expect(screen.getByText('httpWarning.title')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'httpWarning.dismiss' }))
-    expect(screen.queryByText('httpWarning.title')).not.toBeInTheDocument()
+    expect(screen.getByText('安全提示：')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '关闭 HTTP 安全提示' }))
+    expect(screen.queryByText('安全提示：')).not.toBeInTheDocument()
     expect(sessionStorage.getItem('http-warning-dismissed')).toBe('true')
   })
 
   it.each(['localhost', '127.0.0.1', '::1'])('本地地址 %s 不显示警告', (hostname) => {
     vi.stubGlobal('location', { protocol: 'http:', hostname })
     render(<HttpWarningBanner />)
-    expect(screen.queryByText('httpWarning.title')).not.toBeInTheDocument()
+    expect(screen.queryByText('安全提示：')).not.toBeInTheDocument()
   })
 
   it('HTTPS 或已关闭状态不显示警告', () => {
     sessionStorage.setItem('http-warning-dismissed', 'true')
     vi.stubGlobal('location', { protocol: 'https:', hostname: 'example.com' })
     render(<HttpWarningBanner />)
-    expect(screen.queryByText('httpWarning.title')).not.toBeInTheDocument()
+    expect(screen.queryByText('安全提示：')).not.toBeInTheDocument()
   })
 })

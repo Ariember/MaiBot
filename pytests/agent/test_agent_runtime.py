@@ -59,9 +59,8 @@ async def prepare_agent(service: AgentService, monkeypatch, reason: str = "end_t
     return agent
 
 
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
-def test_policy_separates_partner_identity_and_optional_computer(service, monkeypatch, locale):
-    monkeypatch.setattr("src.common.prompt_i18n.get_locale", lambda: locale)
+def test_policy_separates_partner_identity_and_optional_computer(service, monkeypatch):
+
     policy = service.policy()
     assert '"nickname": "TestMai"' in policy
     assert '"personality": "你是测试猫娘"' in policy
@@ -205,15 +204,14 @@ def test_rpc_failure_reports_sources_and_runs_queued_followup(service, monkeypat
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
-def test_failure_notification_targets_original_chat(service, monkeypatch, locale):
+def test_failure_notification_targets_original_chat(service, monkeypatch):
     from src.chat.heart_flow.heartflow_manager import heartflow_manager
 
     runtime = SimpleNamespace(enqueue_internal_task=Mock())
     resolve = Mock()
     get_runtime = AsyncMock(return_value=runtime)
     monkeypatch.setattr(messaging, "resolve_chat", resolve)
-    monkeypatch.setattr("src.common.prompt_i18n.get_locale", lambda: locale)
+
     monkeypatch.setattr(heartflow_manager, "get_or_create_heartflow_chat", get_runtime)
     asyncio.run(messaging.report_failure(service, "real-chat", ["task-1", "task-2"], "PI_AI_ERROR request_id=test"))
     resolve.assert_called_once_with("real-chat")

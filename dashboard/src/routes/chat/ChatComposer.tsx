@@ -1,6 +1,6 @@
 import { ImagePlus, Paperclip, Send, X } from 'lucide-react'
 import { useRef } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -56,7 +56,6 @@ export function ChatComposer({
   onUpdateUserAvatar,
   onUpdateUserName,
 }: ChatComposerProps) {
-  const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const attachmentInputRef = useRef<HTMLInputElement>(null)
 
@@ -78,7 +77,7 @@ export function ChatComposer({
               <div key={image.id} className="relative h-16 w-16 shrink-0">
                 <img
                   src={image.data_url}
-                  alt={image.name || t('chat.media.image')}
+                  alt={image.name || '图片'}
                   className="h-full w-full object-cover"
                 />
                 <Button
@@ -86,7 +85,7 @@ export function ChatComposer({
                   size="icon-xs"
                   variant="outline"
                   className="absolute top-0 right-0"
-                  aria-label={t('chat.actions.removeImage')}
+                  aria-label={'移除图片'}
                   onClick={() => onRemoveImage(image.id)}
                 >
                   <X />
@@ -101,10 +100,10 @@ export function ChatComposer({
           {onAddFiles && <>
             <input ref={attachmentInputRef} className="hidden" type="file" multiple disabled={disabled}
               onChange={e => { if (e.target.files) onAddFiles(e.target.files); e.currentTarget.value = '' }} />
-            <Button type="button" size="icon-sm" variant="ghost" disabled={disabled} aria-label={t('files.upload')}
-              title={t('files.upload')} onClick={() => attachmentInputRef.current?.click()}><Paperclip /></Button>
+            <Button type="button" size="icon-sm" variant="ghost" disabled={disabled} aria-label={'上传文件'}
+              title={'上传文件'} onClick={() => attachmentInputRef.current?.click()}><Paperclip /></Button>
             {files.map(file => <Button key={file.file_ref} type="button" variant="outline" size="sm"
-              onClick={() => onRemoveFile?.(file.file_ref)} title={t('files.removeAttachment')}>
+              onClick={() => onRemoveFile?.(file.file_ref)} title={'移除待发送附件（原件仍保存在文件管理中）'}>
               <span className="max-w-32 truncate">{file.name}</span><X />
             </Button>)}
           </>}
@@ -125,8 +124,8 @@ export function ChatComposer({
             size="icon-sm"
             variant="ghost"
             disabled={!isConnected}
-            aria-label={t('chat.actions.addImage')}
-            title={t('chat.actions.addImage')}
+            aria-label={'添加图片'}
+            title={'添加图片'}
             onClick={() => fileInputRef.current?.click()}
           >
             <ImagePlus />
@@ -151,28 +150,28 @@ export function ChatComposer({
           </Popover>
         </>
       }
-      hint={t('chat.composer.hint')}
+      hint={'Enter 发送 · Shift + Enter 换行'}
       submit={
         <Button
           type="button"
           size="sm"
           disabled={!canSend}
           onClick={onSend}
-          aria-label={t('chat.actions.send')}
+          aria-label={'发送消息'}
         >
           <Send />
-          {t('chat.actions.send')}
+          {'发送消息'}
         </Button>
       }
     >
       <Textarea
-        aria-label={t('chat.input.placeholder')}
+        aria-label={'输入消息...'}
         autoResize
         variant="composer"
         disabled={!isConnected}
         maxHeight={160}
         minHeight={56}
-        placeholder={isConnected ? t('chat.input.placeholder') : t('chat.input.waiting')}
+        placeholder={isConnected ? '输入消息...' : '等待连接...'}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}

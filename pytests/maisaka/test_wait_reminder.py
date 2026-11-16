@@ -3,24 +3,19 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-import pytest
-
-from src.common.i18n import use_locale
 from src.maisaka.chat_loop_service import MaisakaChatLoopService
 from src.maisaka.focus.group_runtime import FocusGroupRuntime
 from src.maisaka.mode_policy import build_consecutive_wait_reminders
 from src.maisaka.runtime import MaisakaHeartFlowChatting
 
 
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
-def test_reminder_starts_at_three_and_survives_further_waits(locale: str) -> None:
-    with use_locale(locale):
-        assert build_consecutive_wait_reminders(2) == []
-        reminders = build_consecutive_wait_reminders(3)
-        assert len(reminders) == 1
-        assert "wait" in reminders[0] and "stop" in reminders[0]
-        assert build_consecutive_wait_reminders(4) == reminders
-        assert build_consecutive_wait_reminders(0) == []
+def test_reminder_starts_at_three_and_survives_further_waits() -> None:
+    assert build_consecutive_wait_reminders(2) == []
+    reminders = build_consecutive_wait_reminders(3)
+    assert len(reminders) == 1
+    assert "wait" in reminders[0] and "stop" in reminders[0]
+    assert build_consecutive_wait_reminders(4) == reminders
+    assert build_consecutive_wait_reminders(0) == []
 
 
 def test_normal_wait_keeps_waiting_beyond_three_and_can_reset() -> None:
@@ -46,10 +41,9 @@ def test_focus_wait_keeps_waiting_beyond_three_and_stop_resets() -> None:
 
 def test_wait_reminder_is_in_request_tail_without_persisting_in_history() -> None:
     service = MaisakaChatLoopService(is_group_chat=True)
-    with use_locale("zh-CN"):
-        reminders = build_consecutive_wait_reminders(3)
-        items, history_count = service._build_request_messages(
-            [], enable_visual_message=False, tail_user_messages=reminders, system_prompt="test"
-        )
+    reminders = build_consecutive_wait_reminders(3)
+    items, history_count = service._build_request_messages(
+        [], enable_visual_message=False, tail_user_messages=reminders, system_prompt="test"
+    )
     assert history_count == 0
     assert any(reminders[0] in str(item) for item in items[1:])

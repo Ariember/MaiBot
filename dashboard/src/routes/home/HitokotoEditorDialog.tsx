@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Button } from '@/components/ui/button'
 import {
@@ -39,7 +39,6 @@ export function HitokotoEditorDialog({
   onOpenChange,
   onSave,
 }: HitokotoEditorDialogProps) {
-  const { t } = useTranslation()
   const [settings, setSettings] = useState<HitokotoSettings>(() => ({
     defaultEnabled: initialSettings.defaultEnabled,
     customItems: initialSettings.customItems.map((item) => ({ ...item })),
@@ -76,16 +75,16 @@ export function HitokotoEditorDialog({
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent style={{ '--dialog-width': '44rem' } as CSSProperties}>
         <DialogHeader>
-          <DialogTitle>{t('home.hitokoto.editor.title')}</DialogTitle>
-          <DialogDescription>{t('home.hitokoto.editor.description')}</DialogDescription>
+          <DialogTitle>{'编辑一言'}</DialogTitle>
+          <DialogDescription>{'管理首页展示的一言来源与自定义内容。'}</DialogDescription>
         </DialogHeader>
         <DialogBody viewportClassName="max-h-[62vh]">
           <div className="space-y-5 pr-1">
             <div className="bg-muted/25 flex items-center justify-between gap-4 rounded-lg border p-4">
               <div className="min-w-0">
-                <div className="font-semibold">{t('home.hitokoto.editor.defaultSource')}</div>
+                <div className="font-semibold">{'使用默认一言'}</div>
                 <div className="text-muted-foreground mt-1 text-sm">
-                  {t('home.hitokoto.editor.defaultSourceDescription')}
+                  {'开启后会从一言接口获取内容，并与自定义内容轮换展示。'}
                 </div>
               </div>
               <Switch
@@ -93,16 +92,16 @@ export function HitokotoEditorDialog({
                 onCheckedChange={(checked) =>
                   setSettings((current) => ({ ...current, defaultEnabled: checked }))
                 }
-                aria-label={t('home.hitokoto.editor.defaultSource')}
+                aria-label={'使用默认一言'}
               />
             </div>
 
             <section className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold">{t('home.hitokoto.editor.customList')}</h3>
+                  <h3 className="font-semibold">{'自定义内容'}</h3>
                   <p className="text-muted-foreground mt-0.5 text-sm">
-                    {t('home.hitokoto.editor.customListDescription')}
+                    {'可添加多条内容，出处可以留空。'}
                   </p>
                 </div>
                 <Button
@@ -118,7 +117,7 @@ export function HitokotoEditorDialog({
                   }
                 >
                   <Plus className="h-4 w-4" />
-                  {t('home.hitokoto.editor.add')}
+                  {'新增内容'}
                 </Button>
               </div>
 
@@ -134,7 +133,7 @@ export function HitokotoEditorDialog({
                   }
                 >
                   <Plus className="h-5 w-5" />
-                  <span>{t('home.hitokoto.editor.empty')}</span>
+                  <span>{'还没有自定义内容，点击添加第一条'}</span>
                 </button>
               ) : (
                 <div className="space-y-3">
@@ -142,14 +141,14 @@ export function HitokotoEditorDialog({
                     <div key={item.id} className="rounded-lg border p-3">
                       <div className="mb-2 flex items-center justify-between">
                         <span className="text-muted-foreground text-xs font-semibold">
-                          {t('home.hitokoto.editor.item', { index: index + 1 })}
+                          {`内容 ${index + 1}`}
                         </span>
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           className="text-muted-foreground hover:text-destructive h-7 w-7"
-                          aria-label={t('home.hitokoto.editor.remove', { index: index + 1 })}
+                          aria-label={`删除内容 ${index + 1}`}
                           onClick={() => removeItem(item.id)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -159,15 +158,15 @@ export function HitokotoEditorDialog({
                         value={item.content}
                         minHeight={72}
                         maxHeight={160}
-                        placeholder={t('home.hitokoto.editor.contentPlaceholder')}
-                        aria-label={t('home.hitokoto.editor.content', { index: index + 1 })}
+                        placeholder={'输入想在首页展示的内容'}
+                        aria-label={`内容 ${index + 1} 正文`}
                         onChange={(event) => updateItem(item.id, { content: event.target.value })}
                       />
                       <Input
                         value={item.source}
                         className="mt-2"
-                        placeholder={t('home.hitokoto.editor.sourcePlaceholder')}
-                        aria-label={t('home.hitokoto.editor.source', { index: index + 1 })}
+                        placeholder={'出处（可选）'}
+                        aria-label={`内容 ${index + 1} 出处`}
                         onChange={(event) => updateItem(item.id, { source: event.target.value })}
                       />
                     </div>
@@ -177,7 +176,7 @@ export function HitokotoEditorDialog({
 
               {!settings.defaultEnabled && settings.customItems.length === 0 && (
                 <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-xs">
-                  {t('home.hitokoto.editor.blankHint')}
+                  {'默认一言已停用且自定义列表为空，首页一言区域将保持留白。'}
                 </p>
               )}
             </section>
@@ -185,10 +184,10 @@ export function HitokotoEditorDialog({
         </DialogBody>
         <DialogFooter>
           <Button variant="outline" disabled={isSaving} onClick={() => onOpenChange(false)}>
-            {t('common.cancel')}
+            {'取消'}
           </Button>
           <Button disabled={isSaving} onClick={() => void handleSave()}>
-            {isSaving ? t('home.hitokoto.editor.saving') : t('common.save')}
+            {isSaving ? '保存中...' : '保存'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,6 @@
 import { Search, Settings, X } from 'lucide-react'
 import { memo, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { ConversationAvatar, ConversationListItem } from '@/components/ui/conversation'
 import { Button } from '@/components/ui/button'
@@ -54,11 +54,10 @@ const ConversationItem = memo(function ConversationItem({
   onSwitch: (id: string) => void
   onClose: (id: string, e?: React.MouseEvent | React.KeyboardEvent) => void
 }) {
-  const { t } = useTranslation()
   const isVirtual = tab.type === 'virtual'
   const lastMessage = tab.messages[tab.messages.length - 1]
-  const preview = getMessagePreview(lastMessage, t('chat.sidebar.emptyPreview'))
-  const displayName = getChatTabDisplayName(tab, t('chat.botNameFallback'))
+  const preview = getMessagePreview(lastMessage, '暂无消息')
+  const displayName = getChatTabDisplayName(tab, '麦麦')
   const avatarUrl = useResolvedAvatarUrl(
     isVirtual ? tab.virtualConfig?.platform : 'qq',
     isVirtual ? tab.virtualConfig?.userId : tab.sessionInfo.bot_qq
@@ -68,7 +67,7 @@ const ConversationItem = memo(function ConversationItem({
       title={displayName}
       selected={active}
       onSelect={() => onSwitch(tab.id)}
-      status={isVirtual ? <span>{t('chat.sidebar.virtualBadge')}</span> : undefined}
+      status={isVirtual ? <span>{'虚拟'}</span> : undefined}
       avatar={<ConversationAvatar src={avatarUrl} name={displayName} bot={!isVirtual} />}
       preview={
         <>
@@ -77,8 +76,8 @@ const ConversationItem = memo(function ConversationItem({
             preview
           ) : (
             <>
-              {isVirtual ? t('chat.sidebar.virtualBadge') : '本地聊天室'} ·{' '}
-              {t(tab.isConnected ? 'chat.sidebar.online' : 'chat.sidebar.offline')}
+              {isVirtual ? '虚拟' : '本地聊天室'} ·{' '}
+              {(tab.isConnected ? '在线' : '离线')}
             </>
           )}
         </>
@@ -89,7 +88,7 @@ const ConversationItem = memo(function ConversationItem({
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label={t('chat.sidebar.closeConversation', { label: displayName })}
+            aria-label={`关闭 ${displayName}`}
             onClick={(e) => onClose(tab.id, e)}
           >
             <X />
@@ -115,13 +114,12 @@ const ObservedConversationItem = memo(function ObservedConversationItem({
   onSelect: (sessionId: string) => void
   onOpenSettings: (sessionId: string) => void
 }) {
-  const { t } = useTranslation()
   const targetId = session.isGroupChat ? session.groupId : session.userId
   const targetType = session.isGroupChat ? 'group' : 'user'
   const avatarUrl = useResolvedAvatarUrl(session.platform, targetId ?? undefined, targetType)
   // 最新消息预览：优先正文，纯媒体消息退回媒体占位文案
   const messagePreview =
-    latestMessage?.content || latestMessage?.mediaText || t('chat.sidebar.emptyPreview')
+    latestMessage?.content || latestMessage?.mediaText || '暂无消息'
   const previewText =
     session.isGroupChat && latestMessage?.speakerName
       ? `${latestMessage.speakerName}: ${messagePreview}`
@@ -158,14 +156,14 @@ const ObservedConversationItem = memo(function ObservedConversationItem({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label={t('chat.sidebar.openSettings', { name: session.sessionName })}
+                aria-label={`打开 ${session.sessionName} 的聊天设置`}
                 onClick={() => onOpenSettings(session.sessionId)}
               >
                 <Settings />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              {t('chat.sidebar.openSettings', { name: session.sessionName })}
+              {`打开 ${session.sessionName} 的聊天设置`}
             </TooltipContent>
           </Tooltip>
         }
@@ -209,7 +207,6 @@ export function ChatWorkspaceSidebar({
   onOpenObservedSettings,
   onClose,
 }: ChatWorkspaceSidebarProps) {
-  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
   const sortedObservedSessions = useMemo(
     () => Array.from(observedSessions.values()).sort((a, b) => b.lastActivity - a.lastActivity),
@@ -220,7 +217,7 @@ export function ChatWorkspaceSidebar({
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const filteredTabs = normalizedQuery
     ? tabs.filter((tab) =>
-        getChatTabDisplayName(tab, t('chat.botNameFallback'))
+        getChatTabDisplayName(tab, '麦麦')
           .toLowerCase()
           .includes(normalizedQuery)
       )
@@ -233,7 +230,7 @@ export function ChatWorkspaceSidebar({
       : sortedObservedSessions,
     [normalizedQuery, sortedObservedSessions]
   )
-  const showAgent = agentEnabled && (!normalizedQuery || t('sidebar.menu.agent').toLowerCase().includes(normalizedQuery))
+  const showAgent = agentEnabled && (!normalizedQuery || '独立 Agent'.toLowerCase().includes(normalizedQuery))
   const showLocalSection = !normalizedQuery || filteredTabs.length > 0
   const showObservedSection = !normalizedQuery || filteredObservedSessions.length > 0
   const showNoResults =
@@ -253,8 +250,8 @@ export function ChatWorkspaceSidebar({
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={t('chat.sidebar.searchPlaceholder')}
-              aria-label={t('chat.sidebar.searchPlaceholder')}
+              placeholder={'搜索聊天流…'}
+              aria-label={'搜索聊天流…'}
               controlSize="sm"
               className="pl-8 text-xs"
             />
@@ -263,7 +260,7 @@ export function ChatWorkspaceSidebar({
 
         {/* 会话列表：「与麦麦聊天」固定在上方，其余聊天流在下方独立滚动 */}
         <nav
-          aria-label={t('chat.sidebar.conversations')}
+          aria-label={'聊天会话'}
           data-chat-sidebar-list="true"
           className="flex min-h-0 flex-1 flex-col"
         >
@@ -277,7 +274,7 @@ export function ChatWorkspaceSidebar({
                 id="chat-sidebar-local-heading"
                 className="text-muted-foreground px-2.5 pt-0.5 pb-1 text-[11px] font-medium tracking-wide"
               >
-                {t('chat.sidebar.myChats')}
+                {'与麦麦聊天'}
               </h2>
               <DataPanel padding="none">
                 {filteredTabs.map((tab) => (
@@ -296,11 +293,11 @@ export function ChatWorkspaceSidebar({
           {showAgent && onSelectAgent && (
             <DataPanel padding="none" className="shrink-0">
               <ConversationListItem
-                title={t('sidebar.menu.agent')}
+                title={'独立 Agent'}
                 preview=""
                 selected={agentActive}
                 onSelect={onSelectAgent}
-                avatar={<ConversationAvatar name={t('sidebar.menu.agent')} bot />}
+                avatar={<ConversationAvatar name={'独立 Agent'} bot />}
               />
             </DataPanel>
           )}
@@ -315,7 +312,7 @@ export function ChatWorkspaceSidebar({
                 id="chat-sidebar-observed-heading"
                 className="text-muted-foreground px-2.5 pt-0.5 pb-1 text-[11px] font-medium tracking-wide"
               >
-                {t('chat.sidebar.observedChats')}
+                {'麦麦的聊天流'}
                 <span>{filteredObservedSessions.length}</span>
               </h2>
               <DataPanel padding="none" className="flex min-h-0 flex-1 flex-col">
@@ -329,11 +326,11 @@ export function ChatWorkspaceSidebar({
                   <div>
                     {observedSessionsError ? (
                       <p className="text-destructive px-2.5 py-2 text-xs">
-                        {t('chat.sidebar.loadObservedChatsFailed')}
+                        {'加载聊天流失败，请刷新重试'}
                       </p>
                     ) : filteredObservedSessions.length === 0 ? (
                       <p className="text-muted-foreground px-2.5 py-2 text-xs">
-                        {t('chat.sidebar.waitingObservedChats')}
+                        {'等待聊天流…'}
                       </p>
                     ) : (
                       filteredObservedSessions.map((session) => (
@@ -356,7 +353,7 @@ export function ChatWorkspaceSidebar({
 
           {showNoResults && (
             <p className="text-muted-foreground px-4.5 py-2 text-xs">
-              {t('chat.sidebar.noSearchResults')}
+              {'没有匹配的会话'}
             </p>
           )}
         </nav>

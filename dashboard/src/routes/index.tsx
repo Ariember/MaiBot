@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { AlertCircle, ArrowRight, ExternalLink, Pencil, RefreshCw, Settings } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { createContext, lazy, memo, Suspense, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { RestartOverlay } from '@/components/restart-overlay'
@@ -58,6 +58,23 @@ import {
   TokenTrendCard,
 } from './home/StatisticsCards'
 import type { BotStatus, TimeSeriesData } from './home/types'
+
+const HOME_BOTSTATUS_LABELS: Record<string, string> = {
+  "loading": "读取中",
+  "running": "活动",
+  "stopped": "已停止",
+  "unknown": "未知",
+}
+
+const HOME_QUICKACTIONS_CATEGORIES_LABELS: Record<string, string> = {
+  "system": "系统",
+  "config": "配置",
+  "resource": "资源",
+  "plugin": "插件",
+  "monitor": "监控",
+  "external": "外部",
+}
+
 
 const ExpressionReviewer = lazy(() =>
   import('@/components/expression-reviewer').then((module) => ({
@@ -146,7 +163,6 @@ function BotStatusFlipCard({
   onlineData: TimeSeriesData[]
   visualEnabled: boolean
 }) {
-  const { i18n, t } = useTranslation()
   const prefersReducedMotion = useReducedMotion()
   const [isFlipped, setIsFlipped] = useState(false)
   const [isFlipping, setIsFlipping] = useState(false)
@@ -154,13 +170,8 @@ function BotStatusFlipCard({
   const botRuntimeState: BotRuntimeState =
     isBotStatusLoading && !botStatus ? 'loading'
       : botStatus?.running === true ? 'running' : botStatus ? 'stopped' : 'unknown'
-  const botRuntimeLabel = t(`home.botStatus.${botRuntimeState}`)
-  const uptime = botStatus ? t('home.botStatus.uptime', {
-    time: t('home.time.hoursMinutes', {
-      hours: Math.floor(botStatus.uptime / 3600),
-      minutes: Math.floor((botStatus.uptime % 3600) / 60),
-    }),
-  }) : null
+  const botRuntimeLabel = HOME_BOTSTATUS_LABELS[botRuntimeState]
+  const uptime = botStatus ? `${Math.floor(botStatus.uptime / 3600)}小时${Math.floor((botStatus.uptime % 3600) / 60)}分` : null
   // 状态轮询不改变在线曲线的数据引用，避免重新启动图表动画。
   const recentOnlineData = useMemo(() => onlineData.slice(-24), [onlineData])
   const recentOnlineSeconds = recentOnlineData.reduce(
@@ -171,7 +182,7 @@ function BotStatusFlipCard({
     const totalMinutes = Math.round(seconds / 60)
     const hours = Math.floor(totalMinutes / 60)
     const minutes = totalMinutes % 60
-    return t('home.time.hoursMinutes', { hours, minutes })
+    return `${hours}小时${minutes}分`
   }
   const faceClassName =
     'absolute inset-0 isolate h-full overflow-visible rounded-lg [backface-visibility:hidden] [will-change:transform]'
@@ -182,7 +193,7 @@ function BotStatusFlipCard({
     <button
       type="button"
       data-maibot-status-flip-card="true"
-      aria-label={t(isFlipped ? 'home.botStatus.showStatus' : 'home.botStatus.showRecentOnline')}
+      aria-label={(isFlipped ? '返回活动状态' : '查看最近在线图表')}
       aria-pressed={isFlipped}
       className="group focus-visible:ring-primary/55 focus-visible:ring-offset-background relative isolate block h-full min-h-[136px] w-full overflow-visible rounded-lg text-left [perspective:900px] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       onClick={() => {
@@ -248,16 +259,16 @@ function BotStatusFlipCard({
                   className="grid grid-cols-2 gap-2 border-t pt-2"
                 >
                   <FeatureStatusLight
-                    disabledLabel={t('home.botStatus.disabled')}
+                    disabledLabel={'未启用'}
                     enabled={visualEnabled}
-                    enabledLabel={t('home.botStatus.enabled')}
-                    label={t('home.botStatus.visualEnabled')}
+                    enabledLabel={'已启用'}
+                    label={'启用视觉'}
                   />
                   <FeatureStatusLight
-                    disabledLabel={t('home.botStatus.disabled')}
+                    disabledLabel={'未启用'}
                     enabled={memoryEnabled}
-                    enabledLabel={t('home.botStatus.enabled')}
-                    label={t('home.botStatus.memoryEnabled')}
+                    enabledLabel={'已启用'}
+                    label={'启用记忆'}
                   />
                 </div>
               </div>
@@ -281,15 +292,15 @@ function BotStatusFlipCard({
             >
               <div className="flex items-baseline justify-between gap-2">
                 <div className="text-sm font-black tracking-tight">
-                  {t('home.botStatus.recentOnline')}
+                  {'最近在线'}
                 </div>
                 <div className="text-muted-foreground text-[10px] font-semibold tracking-wide">
-                  {t('home.botStatus.recentOnlineRange')}
+                  {'最近 24 小时'}
                 </div>
               </div>
               <div
                 role="img"
-                aria-label={t('home.botStatus.recentOnlineChart')}
+                aria-label={'最近 24 小时在线时长图表'}
                 className="mt-1 min-h-0 flex-1"
               >
                 <ResponsiveContainer width="100%" height="100%" initialDimension={CHART_INITIAL_DIMENSION}>
@@ -313,10 +324,10 @@ function BotStatusFlipCard({
                         }}
                         formatter={(value) => [
                           formatOnlineTime(Number(value)),
-                          t('home.botStatus.online'),
+                          '在线',
                         ]}
                         labelFormatter={(value) =>
-                          new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+                          new Intl.DateTimeFormat('zh-CN', {
                             hour: '2-digit',
                             minute: '2-digit',
                           }).format(new Date(String(value)))
@@ -334,12 +345,10 @@ function BotStatusFlipCard({
               </div>
               <div className="flex items-center justify-between gap-2 border-t pt-1.5">
                 <span className="text-muted-foreground text-[10px]">
-                  {t('home.botStatus.clickToReturn')}
+                  {'点击返回状态'}
                 </span>
                 <span className="text-xs font-bold tabular-nums">
-                  {t('home.botStatus.recentOnlineTotal', {
-                    time: formatOnlineTime(recentOnlineSeconds),
-                  })}
+                  {`在线 ${formatOnlineTime(recentOnlineSeconds)}`}
                 </span>
               </div>
             </CardContent>
@@ -361,7 +370,6 @@ function formatStorageBytes(bytes: number): string {
 }
 
 const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVersion: string | undefined }) {
-  const { i18n, t } = useTranslation()
   const { triggerRestart, isRestarting } = useRestart()
 
   // 各数据源领域 hook（页面逻辑下沉，主文件退化为薄渲染层）
@@ -493,40 +501,34 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
   const storageDetails = [
     {
       key: 'images',
-      label: t('home.storage.images'),
+      label: '图片',
       size: imageCacheSize,
-      detail: t('home.storage.files', { count: imageCacheDirectory?.file_count ?? 0 }),
+      detail: `${imageCacheDirectory?.file_count ?? 0} 个文件`,
     },
     {
       key: 'emoji',
-      label: t('home.storage.emoji'),
+      label: '表情',
       size: emojiCacheSize,
-      detail: t('home.storage.filesAndRecords', {
-        files: emojiCacheDirectory?.file_count ?? 0,
-        records: emojiCacheDirectory?.db_records ?? 0,
-      }),
+      detail: `${emojiCacheDirectory?.file_count ?? 0} 个文件 · ${emojiCacheDirectory?.db_records ?? 0} 条记录`,
     },
     {
       key: 'logs',
-      label: t('home.storage.logs'),
+      label: '日志',
       size: logCacheSize,
-      detail: t('home.storage.files', { count: logCacheDirectory?.file_count ?? 0 }),
+      detail: `${logCacheDirectory?.file_count ?? 0} 个文件`,
     },
     {
       key: 'database',
-      label: t('home.storage.database'),
+      label: '数据库',
       size: databaseSize,
-      detail: t('home.storage.databaseDetail', {
-        files: localCacheStats?.database.files.length ?? 0,
-        tables: localCacheStats?.database.tables.length ?? 0,
-      }),
+      detail: `${localCacheStats?.database.files.length ?? 0} 个文件 · ${localCacheStats?.database.tables.length ?? 0} 张表`,
     },
   ]
 
   const homeCards: HomeCardDefinition[] = [
     {
       id: 'builtin:bot-status',
-      title: t('home.botStatus.title'),
+      title: '麦麦状态',
       width: 'small',
       category: 'status',
       source: 'builtin',
@@ -540,10 +542,10 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:quick-actions',
-      title: t('home.quickActions.title'),
+      title: '快速操作',
       width: 'medium',
       category: 'status',
-      editLabel: t('home.quickActions.customize'),
+      editLabel: '自定义',
       onEdit: () => setQuickShortcutDialogOpen(true),
       source: 'builtin',
       render: () => (
@@ -554,13 +556,13 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
           >
             {selectedQuickShortcuts.length === 0 ? (
               <div className="text-muted-foreground flex flex-col gap-3 rounded-lg border border-dashed p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <span>{t('home.quickActions.empty')}</span>
+                <span>{'还没有选择快捷入口'}</span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setQuickShortcutDialogOpen(true)}
                 >
-                  {t('home.quickActions.add')}
+                  {'添加入口'}
                 </Button>
               </div>
             ) : (
@@ -642,8 +644,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:stats-overview',
-      title: t('home.stats.overviewTitle'),
-      description: t('home.stats.overviewDesc'),
+      title: '统计概览',
+      description: '关键运行指标',
       width: 'large',
       allowedWidths: ['large', 'wide', 'full'],
       preferredHeight: 'low',
@@ -653,8 +655,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:news',
-      title: t('home.updates.title'),
-      description: t('home.updates.description'),
+      title: '最近更新',
+      description: '最近三个版本的更新梗概',
       width: 'small',
       allowedWidths: ['small', 'medium', 'large'],
       preferredHeight: 'low',
@@ -664,8 +666,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:prompt-cache',
-      title: t('home.cache.title'),
-      description: t('home.cache.description'),
+      title: 'Prompt缓存',
+      description: '缓存输入Token的命中情况',
       width: 'medium',
       allowedWidths: ['medium', 'large'],
       preferredHeight: 'low',
@@ -675,8 +677,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:request-trend',
-      title: t('home.charts.requestTrend'),
-      description: t('home.charts.requestTrendDescCompact'),
+      title: '请求趋势',
+      description: '分时请求量变化',
       width: 'large',
       allowedWidths: ['large', 'wide', 'full'],
       preferredHeight: 'high',
@@ -686,8 +688,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:token-trend',
-      title: t('home.charts.tokenUsage'),
-      description: t('home.charts.tokenUsageSplitDesc'),
+      title: 'Token消耗',
+      description: '输入与输出Token变化',
       width: 'large',
       allowedWidths: ['large', 'wide', 'full'],
       preferredHeight: 'high',
@@ -697,8 +699,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:cost-trend',
-      title: t('home.charts.costTrend'),
-      description: t('home.charts.costTrendDesc'),
+      title: '花费趋势',
+      description: 'API调用成本变化',
       width: 'large',
       allowedWidths: ['large', 'wide', 'full'],
       preferredHeight: 'high',
@@ -709,8 +711,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:model-distribution',
-      title: t('home.charts.modelDistribution'),
-      description: t('home.charts.modelDistributionCardDesc'),
+      title: '模型花费分布',
+      description: '各模型的累计花费占比',
       width: 'large',
       allowedWidths: ['large', 'wide'],
       preferredHeight: 'high',
@@ -721,8 +723,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:model-details',
-      title: t('home.charts.modelDetails'),
-      description: t('home.charts.modelDetailsTokenDesc'),
+      title: '模型详细统计',
+      description: '模型调用、Token、缓存和费用',
       width: 'large',
       allowedWidths: ['large', 'wide', 'full'],
       preferredHeight: 'high',
@@ -733,8 +735,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:daily-statistics',
-      title: t('home.charts.dailyStats'),
-      description: t('home.charts.dailyStatsRangeDesc'),
+      title: '每日统计',
+      description: '所选时段的每日汇总',
       width: 'full',
       allowedWidths: ['wide', 'full'],
       preferredHeight: 'high',
@@ -745,7 +747,7 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:storage',
-      title: t('home.storage.title'),
+      title: '存储占用',
       width: 'large',
       category: 'status',
       source: 'builtin',
@@ -758,7 +760,7 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
             <button
               type="button"
               className="text-muted-foreground/55 hover:text-muted-foreground absolute top-2.5 right-3 flex items-center gap-1 text-[10px] transition-colors"
-              aria-label={t('home.storage.switchDisplay')}
+              aria-label={'切换存储信息显示方式'}
               onClick={() => setStorageDisplayMode((mode) => (mode === 'size' ? 'count' : 'size'))}
             >
               <span
@@ -767,7 +769,7 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
                   storageDisplayMode === 'size' && 'text-primary font-semibold'
                 )}
               >
-                {t('home.storage.sizeMode')}
+                {'大小'}
               </span>
               <span aria-hidden="true">/</span>
               <span
@@ -776,7 +778,7 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
                   storageDisplayMode === 'count' && 'text-primary font-semibold'
                 )}
               >
-                {t('home.storage.countMode')}
+                {'数量'}
               </span>
             </button>
             <div className="flex h-full flex-col gap-3">
@@ -790,20 +792,16 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
                   {hasLocalCacheStats
                     ? storageDisplayMode === 'size'
                       ? formatStorageBytes(totalStorageSize)
-                      : t('home.storage.countSummary', {
-                          files: totalStorageFileCount,
-                          records: totalStorageRecordCount,
-                          tables: totalStorageTableCount,
-                        })
+                      : `${totalStorageFileCount} 文件 · ${totalStorageRecordCount} 记录 · ${totalStorageTableCount} 表`
                     : isLocalCacheStatsLoading
-                      ? t('home.storage.reading')
+                      ? '读取中'
                       : '-'}
                 </div>
                 {!hasLocalCacheStats && (
                   <p className="text-muted-foreground mt-1 text-xs">
                     {isLocalCacheStatsLoading
-                      ? t('home.storage.readingDescription')
-                      : t('home.storage.unavailable')}
+                      ? '正在读取本地存储占用...'
+                      : '暂未获取到本地存储占用'}
                   </p>
                 )}
               </div>
@@ -857,7 +855,7 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
                   hash="local-cache"
                   className="group text-muted-foreground hover:text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1.5 py-1 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 >
-                  <span>{t('home.storage.manage')}</span>
+                  <span>{'管理存储'}</span>
                   <ArrowRight className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none" />
                 </Link>
               </div>
@@ -868,10 +866,10 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
     },
     {
       id: 'builtin:hitokoto',
-      title: t('home.hitokoto.title'),
+      title: '一言',
       width: 'full',
       category: 'status',
-      editLabel: t('home.hitokoto.edit'),
+      editLabel: '编辑一言',
       onEdit: () => setHitokotoEditorOpen(true),
       source: 'builtin',
       variant: 'separator',
@@ -894,8 +892,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
           <button
             type="button"
             data-home-hitokoto-edit="true"
-            aria-label={t('home.hitokoto.edit')}
-            title={t('home.hitokoto.edit')}
+            aria-label={'编辑一言'}
+            title={'编辑一言'}
             className="text-muted-foreground/55 hover:bg-accent/50 hover:text-foreground focus-visible:ring-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
             onClick={() => setHitokotoEditorOpen(true)}
           >
@@ -944,17 +942,17 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
           </Card>
         )}
         <MobilePageHeader
-          eyebrow={new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+          eyebrow={new Intl.DateTimeFormat('zh-CN', {
             month: 'long',
             day: 'numeric',
             weekday: 'long',
           }).format(new Date())}
-          title={t('home.mobile.title')}
+          title={'麦麦'}
           trailing={
             <Link
               to="/settings"
               data-home-avatar-entry="true"
-              aria-label={t('home.mobile.openSettings')}
+              aria-label={'WebUI 设置'}
               className="bg-muted text-foreground flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
             >
               <Settings className="h-[22px] w-[22px]" strokeWidth={1.7} aria-hidden="true" />
@@ -975,10 +973,10 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
             onClick={() => openUpdateNotice('maibot')}
           >
             <span className="text-[11px] tracking-[0.2em] opacity-70">
-              {t('home.versionCard.maibotVersion')}
+              {'MAIBOT'}
             </span>
             <span className="text-base">
-              {botVersion ? `V${botVersion}` : t('home.versionCard.unknown')}
+              {botVersion ? `V${botVersion}` : '未知'}
             </span>
           </button>
           <button
@@ -988,11 +986,11 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
             onClick={() => openUpdateNotice('console')}
           >
             <span className="text-[11px] tracking-[0.2em] opacity-70">
-              {t('home.versionCard.consoleVersion')}
+              {'CONSOLE'}
             </span>
             <span className="text-base">V{APP_VERSION}</span>
           </button>
-          {versionsMismatch && <span className="text-sm">{t('home.versionCard.mismatch')}</span>}
+          {versionsMismatch && <span className="text-sm">{'版本不匹配'}</span>}
           <NewsStrip news={newsState.news} readState={newsReadState} onOpen={openNews} />
           <span
             aria-hidden="true"
@@ -1024,15 +1022,15 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
         <Dialog open={quickShortcutDialogOpen} onOpenChange={setQuickShortcutDialogOpen}>
           <DialogContent style={{ '--dialog-width': '46rem' } as CSSProperties}>
             <DialogHeader>
-              <DialogTitle>{t('home.quickActions.dialog.title')}</DialogTitle>
-              <DialogDescription>{t('home.quickActions.dialog.description')}</DialogDescription>
+              <DialogTitle>{'自定义快捷入口'}</DialogTitle>
+              <DialogDescription>{'选择首页快捷操作卡片中显示的入口，可包含页面标签页和插件配置页。'}</DialogDescription>
             </DialogHeader>
             <DialogBody viewportClassName="max-h-[60vh]">
               <div className="space-y-4 pr-1">
                 <Input
                   value={quickShortcutSearch}
                   onChange={(event) => setQuickShortcutSearch(event.target.value)}
-                  placeholder={t('home.quickActions.dialog.searchPlaceholder')}
+                  placeholder={'搜索入口、插件或标签页...'}
                 />
                 <div className="space-y-2">
                   {filteredQuickShortcutOptions.map((shortcut) => {
@@ -1058,7 +1056,7 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
                           <span className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{shortcut.label}</span>
                             <Badge variant="outline" className="text-[10px]">
-                              {t(`home.quickActions.categories.${shortcut.category}`)}
+                              {HOME_QUICKACTIONS_CATEGORIES_LABELS[shortcut.category]}
                             </Badge>
                           </span>
                           <span className="text-muted-foreground mt-1 block text-sm">
@@ -1071,8 +1069,8 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
                   {filteredQuickShortcutOptions.length === 0 && (
                     <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
                       {isPluginShortcutsLoading
-                        ? t('home.quickActions.dialog.loadingPluginEntries')
-                        : t('home.quickActions.dialog.noMatches')}
+                        ? '正在加载插件入口...'
+                        : '没有找到匹配的入口'}
                     </div>
                   )}
                 </div>
@@ -1080,10 +1078,10 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
             </DialogBody>
             <DialogFooter>
               <Button variant="outline" onClick={resetQuickShortcuts}>
-                {t('home.quickActions.dialog.restoreDefault')}
+                {'恢复默认'}
               </Button>
               <Button onClick={() => setQuickShortcutDialogOpen(false)}>
-                {t('home.quickActions.dialog.done')}
+                {'完成'}
               </Button>
             </DialogFooter>
           </DialogContent>

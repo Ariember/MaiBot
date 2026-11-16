@@ -6,25 +6,9 @@ import { ChatScrollContext } from '../ChatScrollContext'
 import { RenderMessageContent, RenderMessageSegment } from '../MessageRenderer'
 import type { ChatMessage, MessageSegment } from '../types'
 
-// t 必须是稳定引用，返回 key 并拼上关心的插值参数，方便断言
-const { tMock, toastMock } = vi.hoisted(() => {
-  const tMock = (key: string, options?: Record<string, unknown>) => {
-    if (options) {
-      const extras = ['type', 'data']
-        .filter((name) => options[name] !== undefined)
-        .map((name) => String(options[name]))
-      if (extras.length > 0) {
-        return `${key}:${extras.join(':')}`
-      }
-    }
-    return key
-  }
-  return { tMock, toastMock: vi.fn() }
-})
+const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }))
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: tMock }),
-}))
+
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
@@ -48,19 +32,19 @@ describe('RenderMessageSegment', () => {
       <RenderMessageSegment segment={{ type: 'image', data: 'https://example.com/a.png' }} />
     )
 
-    const thumbnail = screen.getByRole('img', { name: 'chat.media.image' })
+    const thumbnail = screen.getByRole('img', { name: '图片' })
     expect(thumbnail).toHaveAttribute('src', 'https://example.com/a.png')
     // 图片段使用较大的展示高度
     expect(thumbnail.className).toContain('max-h-64')
 
     await user.click(
-      screen.getByRole('button', { name: 'chat.media.openPreview:chat.media.image' })
+      screen.getByRole('button', { name: '放大查看图片' })
     )
     const dialog = screen.getByRole('dialog')
     expect(
-      within(dialog).getByText('chat.media.previewTitle:chat.media.image')
+      within(dialog).getByText('图片预览')
     ).toBeInTheDocument()
-    expect(within(dialog).getByRole('img', { name: 'chat.media.image' })).toHaveAttribute(
+    expect(within(dialog).getByRole('img', { name: '图片' })).toHaveAttribute(
       'src',
       'https://example.com/a.png'
     )
@@ -68,7 +52,7 @@ describe('RenderMessageSegment', () => {
 
   it('表情段使用较小的展示高度', () => {
     render(<RenderMessageSegment segment={{ type: 'emoji', data: '/emoji/1.gif' }} />)
-    const image = screen.getByRole('img', { name: 'chat.media.emoji' })
+    const image = screen.getByRole('img', { name: '表情包' })
     expect(image.className).toContain('max-h-32')
   })
 
@@ -76,10 +60,10 @@ describe('RenderMessageSegment', () => {
     render(
       <RenderMessageSegment segment={{ type: 'image', data: 'https://example.com/bad.png' }} />
     )
-    const image = screen.getByRole('img', { name: 'chat.media.image' })
+    const image = screen.getByRole('img', { name: '图片' })
     fireEvent.error(image)
     expect(image.style.display).toBe('none')
-    expect(screen.getByText('chat.media.loadFailed:chat.media.image')).toBeInTheDocument()
+    expect(screen.getByText('[图片加载失败]')).toBeInTheDocument()
   })
 
   it('语音段渲染音频控件，视频段渲染视频控件', () => {
@@ -95,13 +79,13 @@ describe('RenderMessageSegment', () => {
   })
 
   it.each<[MessageSegment, string]>([
-    [{ type: 'face', data: 123 }, 'chat.media.face:123'],
-    [{ type: 'music', data: '' }, 'chat.media.music'],
+    [{ type: 'face', data: 123 }, '[表情:123]'],
+    [{ type: 'music', data: '' }, '[音乐分享]'],
     [{ type: 'file', data: '报告.pdf' }, '报告.pdf'],
-    [{ type: 'forward', data: '' }, 'chat.media.forward'],
-    [{ type: 'unknown', data: '', original_type: 'xml' }, 'chat.media.unknown:xml'],
+    [{ type: 'forward', data: '' }, '[转发消息]'],
+    [{ type: 'unknown', data: '', original_type: 'xml' }, '[xml]'],
     // 无 original_type 时退回未知消息文案
-    [{ type: 'unknown', data: '' }, 'chat.media.unknown:chat.media.unknownMessage'],
+    [{ type: 'unknown', data: '' }, '[未知消息]'],
   ])('特殊段 %o 显示占位文案 %s', (segment, expected) => {
     render(<RenderMessageSegment segment={segment} />)
     expect(screen.getByText(expected)).toBeInTheDocument()
@@ -135,7 +119,7 @@ describe('RenderMessageSegment', () => {
 
     // 空负载显示未知消息占位，title 只剩 @
     rerender(<RenderMessageSegment segment={{ type: 'at', data: '' }} />)
-    expect(screen.getByText('@chat.media.unknownMessage')).toHaveAttribute('title', '@')
+    expect(screen.getByText('@未知消息')).toHaveAttribute('title', '@')
   })
 })
 
@@ -206,8 +190,8 @@ describe('回复消息块', () => {
     // 没有可点击能力时不渲染按钮
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     // 发送者与内容都缺失时使用占位文案（纯空白内容视为缺失）
-    expect(screen.getByText('chat.message.replyUnknownSender')).toBeInTheDocument()
-    expect(screen.getByText('chat.media.replyMissing')).toBeInTheDocument()
+    expect(screen.getByText('未知发送者')).toBeInTheDocument()
+    expect(screen.getByText('原消息内容不可用')).toBeInTheDocument()
   })
 
   it('缺少原消息 ID 时即使有上下文也不可点击', () => {
@@ -248,7 +232,7 @@ describe('回复消息块', () => {
     await user.click(screen.getByRole('button'))
     expect(toastMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'chat.toast.replyNotFoundTitle',
+        title: '原始消息不在当前视图',
         variant: 'destructive',
       })
     )

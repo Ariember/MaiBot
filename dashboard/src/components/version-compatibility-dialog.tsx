@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import { AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -27,7 +27,6 @@ function VersionValue({ value }: { value: string }) {
 }
 
 export function VersionCompatibilityDialog() {
-  const { t } = useTranslation()
   const [compatibility, setCompatibility] = useState<VersionCompatibilityResult | null>(null)
   const [dismissed, setDismissed] = useState(false)
   const [remainingSeconds, setRemainingSeconds] = useState(CONFIRM_DELAY_SECONDS)
@@ -83,21 +82,14 @@ export function VersionCompatibilityDialog() {
 
   const webuiOutdated = compatibility.status === 'webui_outdated'
   const title = webuiOutdated
-    ? t('versionCompatibility.webuiOutdated.title')
-    : t('versionCompatibility.mainProgramOutdated.title')
+    ? 'WebUI 版本过低'
+    : '主程序版本过低'
   const description = webuiOutdated
-    ? t('versionCompatibility.webuiOutdated.description', {
-        currentVersion: compatibility.webui_version,
-        requiredVersion: compatibility.required_webui_version,
-      })
-    : t('versionCompatibility.mainProgramOutdated.description', {
-        mainVersion: compatibility.main_program_version,
-        webuiVersion: compatibility.webui_version,
-        requiredVersion: compatibility.required_webui_version,
-      })
+    ? `当前 WebUI v${compatibility.webui_version} 低于主程序要求的 v${compatibility.required_webui_version}。请更新 WebUI 静态资源包。`
+    : `当前主程序 v${compatibility.main_program_version} 仅声明支持 WebUI v${compatibility.required_webui_version}，但正在运行 WebUI v${compatibility.webui_version}。请更新 MaiBot 主程序。`
   const updateTarget = webuiOutdated
-    ? t('versionCompatibility.webuiOutdated.updateTarget')
-    : t('versionCompatibility.mainProgramOutdated.updateTarget')
+    ? 'WebUI'
+    : 'MaiBot 主程序'
 
   return (
     <Dialog
@@ -124,19 +116,19 @@ export function VersionCompatibilityDialog() {
         <div className="grid gap-3 rounded-md border bg-muted/40 p-4 sm:grid-cols-3">
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              {t('versionCompatibility.mainProgramVersion')}
+              {'主程序版本'}
             </p>
             <VersionValue value={compatibility.main_program_version} />
           </div>
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              {t('versionCompatibility.webuiVersion')}
+              {'当前 WebUI 版本'}
             </p>
             <VersionValue value={compatibility.webui_version} />
           </div>
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              {t('versionCompatibility.requiredWebuiVersion')}
+              {'主程序要求的 WebUI 版本'}
             </p>
             <VersionValue value={compatibility.required_webui_version} />
           </div>
@@ -144,18 +136,18 @@ export function VersionCompatibilityDialog() {
 
         <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
           <p className="font-medium">
-            {t('versionCompatibility.updateTargetLabel', { target: updateTarget })}
+            {`需要更新：${updateTarget}`}
           </p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {t('versionCompatibility.riskWarning')}
+            {'继续使用不匹配的版本可能导致页面异常、接口不可用或配置错误。建议完成更新后再继续操作。'}
           </p>
         </div>
 
         <DialogFooter className="items-center gap-3 sm:justify-between sm:space-x-0">
           <p className="text-left text-xs leading-5 text-muted-foreground">
             {remainingSeconds > 0
-              ? t('versionCompatibility.countdownHint', { seconds: remainingSeconds })
-              : t('versionCompatibility.confirmHint')}
+              ? `请阅读以上提示，${remainingSeconds} 秒后可以关闭此页面。`
+              : '你现在可以确认风险并继续使用。'}
           </p>
           <Button
             type="button"
@@ -164,8 +156,8 @@ export function VersionCompatibilityDialog() {
             className="shrink-0"
           >
             {remainingSeconds > 0
-              ? t('versionCompatibility.countdownButton', { seconds: remainingSeconds })
-              : t('versionCompatibility.confirmButton')}
+              ? `${remainingSeconds} 秒后可确认`
+              : '关闭提示并继续'}
           </Button>
         </DialogFooter>
       </DialogContent>

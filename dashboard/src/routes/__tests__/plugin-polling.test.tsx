@@ -7,7 +7,7 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ pluginId: 'test.plugin', pageId: 'jobs' }),
   Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }))
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+
 vi.mock('@/lib/plugin-webui', async (importOriginal) => {
   const registry = {
     loading: false,
@@ -105,7 +105,7 @@ describe('background job page polling', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start' })).not.toBeDisabled())
     expect(mocks.invoke.mock.calls[0][4]).toEqual({ job_id: 'old' })
     fireEvent.click(screen.getByRole('button', { name: 'Start' }))
-    await screen.findByText('pluginWebUI.completed')
+    await screen.findByText('操作已完成')
     expect(new URLSearchParams(window.location.search).get('state')).toBe(
       JSON.stringify({ job_id: 'old' })
     )

@@ -1,8 +1,7 @@
 import { TimeRangeTrack, TimeRangeTicks } from '@/components/ui/time-range-track'
 import { formatTalkTimeRange, getTimelineSegments, parseTalkTimeRange, type TimelineRange } from '@/lib/time-range'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
-import type { TFunction } from 'i18next'
+
 
 import {
   AlertCircle,
@@ -111,11 +110,7 @@ const LEARNING_ITEM_FALLBACK_SCHEMA: ConfigSchema = {
     {
       name: 'platform',
       type: 'string',
-      label: {
-        zh_CN: '平台',
-        en_US: 'Platform',
-        ja_JP: 'プラットフォーム',
-      },
+      label: '平台',
       description: '平台，与 ID 一起留空表示全局。',
       required: false,
       default: '',
@@ -124,11 +119,7 @@ const LEARNING_ITEM_FALLBACK_SCHEMA: ConfigSchema = {
     {
       name: 'item_id',
       type: 'string',
-      label: {
-        zh_CN: '聊天流 ID',
-        en_US: 'Chat stream ID',
-        ja_JP: 'チャットストリーム ID',
-      },
+      label: '聊天流 ID',
       description: '要单独配置的群号或用户 ID；留空表示默认规则。',
       required: false,
       default: '',
@@ -137,11 +128,7 @@ const LEARNING_ITEM_FALLBACK_SCHEMA: ConfigSchema = {
     {
       name: 'type',
       type: 'select',
-      label: {
-        zh_CN: '聊天类型',
-        en_US: 'Chat type',
-        ja_JP: 'チャット種別',
-      },
+      label: '聊天类型',
       description: '这条规则作用于群聊还是私聊。',
       required: false,
       default: 'group',
@@ -155,11 +142,7 @@ const LEARNING_ITEM_FALLBACK_SCHEMA: ConfigSchema = {
     {
       name: 'use',
       type: 'boolean',
-      label: {
-        zh_CN: '使用',
-        en_US: 'Use',
-        ja_JP: '使用',
-      },
+      label: '使用',
       description: '是否在这个聊天里使用已学到的内容。',
       required: false,
       default: true,
@@ -168,11 +151,7 @@ const LEARNING_ITEM_FALLBACK_SCHEMA: ConfigSchema = {
     {
       name: 'learn',
       type: 'boolean',
-      label: {
-        zh_CN: '学习',
-        en_US: 'Learn',
-        ja_JP: '学習',
-      },
+      label: '学习',
       description: '是否从这个聊天里继续学习新内容。',
       required: false,
       default: true,
@@ -2432,10 +2411,8 @@ interface StringListHookOptions {
   removeLabel?: string
 }
 
-function createStringListHook(configuration: StringListHookOptions | ((t: TFunction) => StringListHookOptions)): FieldHookComponent {
+function createStringListHook(options: StringListHookOptions): FieldHookComponent {
   return ({ onChange, schema, value }) => {
-    const { t } = useTranslation()
-    const options = typeof configuration === 'function' ? configuration(t) : configuration
     const items = Array.isArray(value) ? value.map((item) => String(item ?? '')) : []
 
     const updateItems = (nextItems: string[]) => {
@@ -2542,15 +2519,15 @@ export const AliasNamesHook: FieldHookComponent = (props) => {
   )
 }
 
-export const DialogueExamplesHook = createStringListHook((t) => ({
-  addLabel: t('personalityExamples.add'),
-  emptyText: t('personalityExamples.empty'),
-  helperText: t('personalityExamples.description'),
-  label: t('personalityExamples.label'),
+export const DialogueExamplesHook = createStringListHook({
+  addLabel: '添加表达',
+  emptyText: '暂无场景与黑话表达。',
+  helperText: '每项填写一种场景的回应方式、对话样例或黑话用法。Planner 按当前对话选择合适的项，可多选；选中内容用于表达参考，不作为真实聊天经历。',
+  label: '场景与黑话表达',
   multiline: true,
-  placeholder: t('personalityExamples.placeholder'),
-  removeLabel: t('personalityExamples.remove'),
-}))
+  placeholder: '场景：朋友拿拖延开玩笑\n回应：被你发现了，我这就开工。\n黑话：咕咕，表示拖延或爽约，仅在朋友互相调侃时使用。',
+  removeLabel: '删除表达',
+})
 
 const GroupTalkValueRulesHook = createListItemEditorHook({
   addLabel: '添加发言频率规则',

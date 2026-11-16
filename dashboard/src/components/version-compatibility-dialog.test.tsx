@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import i18next from '@/i18n'
 import {
   getVersionCompatibility,
   type VersionCompatibilityResult,
@@ -28,16 +27,13 @@ async function renderDialog(result: VersionCompatibilityResult) {
 }
 
 describe('VersionCompatibilityDialog', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.useFakeTimers()
-    localStorage.setItem('maibot-locale', 'zh')
-    await i18next.changeLanguage('zh')
   })
 
   afterEach(() => {
     vi.useRealTimers()
     vi.clearAllMocks()
-    localStorage.removeItem('maibot-locale')
   })
 
   it('WebUI 版本过低时要求等待 3 秒才能关闭', async () => {

@@ -1,5 +1,5 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
@@ -14,8 +14,7 @@ const SELF_HEADED_PATHS = new Set(['/', '/chat', '/manage'])
 /** 在菜单里找当前路径对应的入口名称：取最长的路径前缀匹配 */
 function findMenuLabel(
   menuSections: MenuSection[],
-  pathname: string,
-  translate: (key: string) => string
+  pathname: string
 ): string | null {
   let best: { length: number; label: string } | null = null
   for (const section of menuSections) {
@@ -25,7 +24,7 @@ function findMenuLabel(
       if (matches && item.path !== '/' && (!best || item.path.length > best.length)) {
         best = {
           length: item.path.length,
-          label: item.literalLabel ? item.label : translate(item.label),
+          label: item.label,
         }
       }
     }
@@ -50,7 +49,6 @@ export function MobileRouteHeader({
   actionsRef,
   titleOverride = null,
 }: MobileRouteHeaderProps) {
-  const { t } = useTranslation()
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   if (SELF_HEADED_PATHS.has(pathname)) return null
@@ -61,8 +59,8 @@ export function MobileRouteHeader({
     // 「我的」从首页头像进入，返回首页
     return (
       <MobilePageHeader
-        title={t('sidebar.menu.settings')}
-        back={{ to: '/', label: t('mobileNav.backHome') }}
+        title={'WEBUI设置'}
+        back={{ to: '/', label: '返回首页' }}
         className="px-4 pt-3 pb-2"
       />
     )
@@ -76,16 +74,16 @@ export function MobileRouteHeader({
     : []
   const title =
     titleOverride ??
-    findMenuLabel([...menuSections, ...MOBILE_EXTRA_MANAGE_SECTIONS], pathname, t) ??
-    (fromChat ? t('sidebar.menu.maisakaMonitor') : fromExtension ? t('sidebar.menu.pluginConfig') : null)
+    findMenuLabel([...menuSections, ...MOBILE_EXTRA_MANAGE_SECTIONS], pathname) ??
+    (fromChat ? '麦麦观察' : fromExtension ? '插件扩展' : null)
   if (!title) return null
   return (
     <MobilePageHeader
       title={fromExtension ? undefined : title}
       back={
         fromChat
-          ? { to: '/chat', label: t('chat.mobile.back') }
-          : { to: '/manage', label: t('mobileNav.backManage') }
+          ? { to: '/chat', label: '返回会话列表' }
+          : { to: '/manage', label: '返回管理' }
       }
       backTrailing={
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2.5">
@@ -97,7 +95,7 @@ export function MobileRouteHeader({
               <SelectContent>
                 {extensionPages.map((item) => (
                   <SelectItem key={item.path} value={item.path}>
-                    {item.literalLabel ? item.label : t(item.label)}
+                    {item.label}
                   </SelectItem>
                 ))}
               </SelectContent>

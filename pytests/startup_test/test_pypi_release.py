@@ -99,17 +99,19 @@ def test_prepare_freezes_commit_and_notes(tmp_path: Path, monkeypatch: pytest.Mo
     pypi_files.assert_not_called()
 
 
-@pytest.mark.parametrize("missing", ["src/_resources/dashboard/package.json", "src/_resources/dashboard/dist/index.html"])
-def test_wheel_requires_dashboard_resources(missing: str) -> None:
+@pytest.mark.parametrize("missing", [
+    "src/_resources/dashboard/package.json", "src/_resources/dashboard/dist/index.html",
+    "src/_resources/prompts/zh-CN/test.prompt",
+])
+def test_wheel_requires_runtime_resources(missing: str) -> None:
     names = {
         "src/runtime.py", "src/cli/tool.py", "src/_resources/pyproject.toml", "src/_resources/EULA.md",
         "src/_resources/PRIVACY.md", "src/_resources/dashboard/package.json", "src/_resources/dashboard/dist/index.html",
         "src/A_memorix/config_schema.json", "src/plugins/built_in/plugin_management/_manifest.json",
-        "src/_resources/prompts/zh-CN/test.prompt", "src/_resources/prompts/en-US/test.prompt",
-        "src/_resources/prompts/ja-JP/test.prompt", "src/_resources/locales/zh-CN/startup.json",
+        "src/_resources/prompts/zh-CN/test.prompt",
     }
     release.audit_names(list(names))
-    with pytest.raises(ValueError, match=missing):
+    with pytest.raises(ValueError, match="缺少"):
         release.audit_names(list(names - {missing}))
 
 

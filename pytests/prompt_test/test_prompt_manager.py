@@ -12,7 +12,6 @@ PROJECT_ROOT: Path = Path(__file__).parent.parent.parent.absolute().resolve()
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src" / "config"))
 
-from src.common.i18n.loaders import DEFAULT_LOCALE  # noqa
 from src.prompt.prompt_manager import (  # noqa
     SUFFIX_PROMPT,
     Prompt,
@@ -22,9 +21,7 @@ from src.prompt.prompt_manager import (  # noqa
 
 
 def write_source_prompt(prompts_dir: Path, name: str, content: str) -> Path:
-    from src.common.i18n.loaders import DEFAULT_LOCALE
-
-    source_dir = prompts_dir / DEFAULT_LOCALE
+    source_dir = prompts_dir / "zh-CN"
     source_dir.mkdir(parents=True, exist_ok=True)
     prompt_file = source_dir / f"{name}{SUFFIX_PROMPT}"
     prompt_file.write_text(content, encoding="utf-8")
@@ -646,7 +643,7 @@ def test_prompt_manager_save_prompts_io_error_on_write(tmp_path, monkeypatch):
     original_write_text = Path.write_text
 
     def fake_write_text(self, *args, **kwargs):
-        if self == custom_dir / DEFAULT_LOCALE / f"save_error{SUFFIX_PROMPT}":
+        if self == custom_dir / "zh-CN" / f"save_error{SUFFIX_PROMPT}":
             raise OSError("disk write error")
         return original_write_text(self, *args, **kwargs)
 
@@ -662,7 +659,7 @@ def test_prompt_manager_save_prompts_io_error_on_write(tmp_path, monkeypatch):
 
 def test_prompt_manager_load_prompts_io_error_from_default_dir(tmp_path, monkeypatch):
     """
-    模拟从默认 locale 目录读取 prompt 时发生 IO 错误。
+    模拟从内置模板目录读取 prompt 时发生 IO 错误。
     """
     # Arrange
     prompts_dir = tmp_path / "prompts"
@@ -740,7 +737,7 @@ def test_prompt_manager_load_prompts_io_error_from_custom_dir(tmp_path, monkeypa
 def test_prompt_manager_load_prompts_custom_overrides_default(tmp_path, monkeypatch):
     """
     load_prompts 逻辑：
-    - 遍历 locale 目录中的 source prompt
+    - 遍历 中文模板目录中的 source prompt
     - 如果 CUSTOM_PROMPTS_DIR 下存在同名文件，则优先使用自定义目录
     """
     # Arrange
@@ -752,7 +749,7 @@ def test_prompt_manager_load_prompts_custom_overrides_default(tmp_path, monkeypa
     monkeypatch.setattr("src.prompt.prompt_manager.PROMPTS_DIR", prompts_dir, raising=False)
     monkeypatch.setattr("src.prompt.prompt_manager.CUSTOM_PROMPTS_DIR", custom_dir, raising=False)
 
-    # source locale 目录 prompt
+    # 内置模板目录 prompt
     base_file = write_source_prompt(prompts_dir, "testp", "BaseTemplate {x}")
 
     # 自定义目录同名 prompt，应当覆盖默认
@@ -773,7 +770,7 @@ def test_prompt_manager_load_prompts_custom_overrides_default(tmp_path, monkeypa
 
 def test_prompt_manager_load_prompts_default_dir_not_mark_need_save(tmp_path, monkeypatch):
     """
-    从 source locale 目录加载、且没有同名自定义 prompt 时，need_save 应为 False（不进入 _prompt_to_save）。
+    从 内置模板目录加载、且没有同名自定义 prompt 时，need_save 应为 False（不进入 _prompt_to_save）。
     """
     # Arrange
     prompts_dir = tmp_path / "prompts"
@@ -784,7 +781,7 @@ def test_prompt_manager_load_prompts_default_dir_not_mark_need_save(tmp_path, mo
     monkeypatch.setattr("src.prompt.prompt_manager.PROMPTS_DIR", prompts_dir, raising=False)
     monkeypatch.setattr("src.prompt.prompt_manager.CUSTOM_PROMPTS_DIR", custom_dir, raising=False)
 
-    # 仅 source locale 目录有 prompt，自定义目录中无同名文件
+    # 仅 内置模板目录有 prompt，自定义目录中无同名文件
     base_file = write_source_prompt(prompts_dir, "only_default", "DefaultTemplate {x}")
 
     manager = PromptManager()
@@ -820,7 +817,7 @@ def test_prompt_manager_save_prompts_use_custom_dir(tmp_path, monkeypatch):
     manager.save_prompts()
 
     # Assert: 文件应保存在 custom_dir 中
-    saved_file = custom_dir / DEFAULT_LOCALE / f"save_me{SUFFIX_PROMPT}"
+    saved_file = custom_dir / "zh-CN" / f"save_me{SUFFIX_PROMPT}"
     assert saved_file.exists()
     assert saved_file.read_text(encoding="utf-8") == "Template {x}"
 

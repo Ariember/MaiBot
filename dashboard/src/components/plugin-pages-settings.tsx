@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react'
 import { ChevronDown, RefreshCw } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -36,7 +36,6 @@ export function PluginPagesSettings({
   onPreferencesChange: (preferences: PluginPagePreferences) => void
   renderPageLink: (extension: WebUIExtension, page: WebUIExtension['pages'][number]) => ReactNode
 }) {
-  const { t } = useTranslation()
   // 兼容旧版独立保存的顶栏顺序；未提供顶栏入口的插件排在后面，仍可管理。
   const workspaces = orderedWorkspaceExtensions(
     extensions,
@@ -77,12 +76,12 @@ export function PluginPagesSettings({
     >
       <header className="plugin-pages-heading">
         <div>
-          <h2 id="webui-extensions-title">{t('pluginWebUI.settingsTitle')}</h2>
-          <p>{t('pluginWebUI.settingsHint')}</p>
+          <h2 id="webui-extensions-title">{'插件页面'}</h2>
+          <p>{'决定哪些插件页面出现在顶栏、按什么顺序。只保存在当前浏览器，不影响插件权限。'}</p>
         </div>
         <Button variant="outline" disabled={loading} onClick={onRefresh}>
           <RefreshCw className={loading ? 'animate-spin' : undefined} />
-          {t('pluginWebUI.refresh')}
+          {'刷新'}
         </Button>
       </header>
       {error && (
@@ -91,14 +90,14 @@ export function PluginPagesSettings({
         </Alert>
       )}
       <PageFrame className="p-4">
-        <h3 className="text-muted-foreground mb-3 text-sm">{t('pluginWebUI.topbarPreview')}</h3>
+        <h3 className="text-muted-foreground mb-3 text-sm">{'顶栏预览'}</h3>
         <DataPanel className="plugin-pages-preview">
-          <div className="plugin-pages-preview-tabs" aria-label={t('pluginWebUI.topbarPreview')}>
+          <div className="plugin-pages-preview-tabs" aria-label={'顶栏预览'}>
             <Button variant="outline" size="sm" aria-pressed tabIndex={-1}>
-              {t('workspace.settings')}
+              {'麦麦'}
             </Button>
             <Button variant="outline" size="sm" tabIndex={-1}>
-              {t('workspace.logs')}
+              {'日志'}
             </Button>
             {visible.map((item) => (
               <Button
@@ -113,23 +112,23 @@ export function PluginPagesSettings({
             ))}
             {overflow.length > 0 && (
               <Button variant="outline" size="sm" tabIndex={-1}>
-                {t('pluginWebUI.moreShort')}
+                {'更多'}
                 <Badge variant="secondary">{overflow.length}</Badge>
               </Button>
             )}
           </div>
           <p className="text-muted-foreground text-xs">
-            {t('pluginWebUI.topbarLimit', { count: MAX_VISIBLE_PLUGIN_TABS })}
+            {`顶栏最多放 ${MAX_VISIBLE_PLUGIN_TABS} 个，其余进入「更多」`}
           </p>
         </DataPanel>
       </PageFrame>
       <SectionPanel
-        title={t('pluginWebUI.orderAndVisibility')}
-        description={t('pluginWebUI.pluginCount', { count: ordered.length })}
+        title={'排序与显示'}
+        description={`${ordered.length} 个插件`}
       >
-        {loading && <p role="status">{t('pluginWebUI.loading')}</p>}
+        {loading && <p role="status">{'加载中…'}</p>}
         {!loading && ordered.length === 0 && (
-          <p className="text-muted-foreground py-8 text-center">{t('pluginWebUI.empty')}</p>
+          <p className="text-muted-foreground py-8 text-center">{'暂无数据'}</p>
         )}
         {ordered.length > 0 && (
           <DataPanel padding="none">
@@ -140,22 +139,18 @@ export function PluginPagesSettings({
                 const isWorkspace = workspaceIds.has(extension.plugin_id)
                 const group = isWorkspace ? workspaces : sidebar
                 const placement = !shown
-                  ? 'hiddenLabel'
+                  ? "已隐藏"
                   : visible.includes(extension)
-                    ? 'topbarLabel'
+                    ? "顶栏"
                     : isWorkspace
-                      ? 'overflowLabel'
-                      : 'sidebarLabel'
+                      ? "更多菜单"
+                      : "侧栏"
                 return (
                   <Fragment key={extension.plugin_id}>
                     {(extension === overflow[0] || extension === sidebar[0]) && (
                       <li className="plugin-pages-group-label">
                         <ChevronDown size={14} />
-                        {t(
-                          extension === sidebar[0]
-                            ? 'pluginWebUI.sidebarGroup'
-                            : 'pluginWebUI.overflowGroup'
-                        )}
+                        {(extension === sidebar[0] ? '以下插件仅提供侧栏页面' : '以下进入「更多」菜单')}
                       </li>
                     )}
                     <li className="plugin-pages-row" data-hidden={!shown}>
@@ -169,7 +164,7 @@ export function PluginPagesSettings({
                           <Badge
                             variant={shown && visible.includes(extension) ? 'default' : 'outline'}
                           >
-                            {t(`pluginWebUI.${placement}`)}
+                            {placement}
                           </Badge>
                         </div>
                         <div className="plugin-pages-links">
@@ -196,14 +191,14 @@ export function PluginPagesSettings({
                           label={title}
                           index={group.indexOf(extension)}
                           count={group.length}
-                          upLabel={t('pluginWebUI.moveUp')}
-                          downLabel={t('pluginWebUI.moveDown')}
+                          upLabel={'上移'}
+                          downLabel={'下移'}
                           onMove={(delta) => move(extension, delta)}
                         />
                         <label className="plugin-pages-visibility">
-                          <span>{t('pluginWebUI.visibleLabel')}</span>
+                          <span>{'显示'}</span>
                           <Switch
-                            aria-label={t('pluginWebUI.show', { plugin: title })}
+                            aria-label={`显示 ${title} 页面`}
                             checked={shown}
                             onCheckedChange={(checked) =>
                               onPreferencesChange({

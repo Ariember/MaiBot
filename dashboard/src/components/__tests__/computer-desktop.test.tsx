@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { getComputerStatus, inputComputer } from '@/lib/computer-api'
 import { ComputerDesktop } from '../agent/ComputerDesktop'
 
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+
 vi.mock('@/lib/computer-api', () => ({
   getComputerStatus: vi.fn(),
   getComputerFrame: async () => new Blob(['frame']),
@@ -26,8 +26,8 @@ afterEach(cleanup)
 
 async function desktop() {
   render(<ComputerDesktop />)
-  const button = await screen.findByRole('button', { name: 'chat.computer.screen' })
-  const image = screen.getByRole('img', { name: 'chat.computer.screen' })
+  const button = await screen.findByRole('button', { name: '电脑桌面' })
+  const image = screen.getByRole('img', { name: '电脑桌面' })
   Object.defineProperties(image, { naturalWidth: { value: 800 }, naturalHeight: { value: 600 } })
   vi.spyOn(image, 'getBoundingClientRect').mockReturnValue(new DOMRect(10, 20, 400, 300))
   return button

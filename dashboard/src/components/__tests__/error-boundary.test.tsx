@@ -3,13 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ErrorBoundary, RouteErrorBoundary } from '../error-boundary'
 
-// t 在 vi.mock 工厂内建一次，保持稳定引用，避免依赖 [t] 的 hook 失稳
-vi.mock('react-i18next', () => {
-  const t = (key: string) => key
-  return {
-    useTranslation: () => ({ t, i18n: { language: 'zh-CN' } }),
-  }
-})
+// t 在 vi.mock 工厂内建一次，保持稳定引用，避免依赖 [] 的 hook 失稳
+
 
 // 构造带可控堆栈的错误，保证堆栈解析断言稳定
 function makeError(message: string, stack?: string): Error {
@@ -46,7 +41,7 @@ describe('ErrorBoundary', () => {
     )
 
     expect(screen.getByText('正常内容')).toBeInTheDocument()
-    expect(screen.queryByText('errorBoundary.title')).not.toBeInTheDocument()
+    expect(screen.queryByText('页面出现了问题')).not.toBeInTheDocument()
   })
 
   it('子组件抛错时渲染默认回退 UI 并展示错误名称与消息', () => {
@@ -56,15 +51,15 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     )
 
-    expect(screen.getByText('errorBoundary.title')).toBeInTheDocument()
-    expect(screen.getByText('errorBoundary.description')).toBeInTheDocument()
-    expect(screen.getByText('errorBoundary.footer')).toBeInTheDocument()
+    expect(screen.getByText('页面出现了问题')).toBeInTheDocument()
+    expect(screen.getByText('应用程序遇到了意外错误。您可以尝试刷新页面或返回首页。')).toBeInTheDocument()
+    expect(screen.getByText('如果问题持续存在，请将错误信息复制并反馈给开发者')).toBeInTheDocument()
     // 错误名称与消息分属不同文本节点，分别断言
     expect(screen.getByText('RangeError:')).toBeInTheDocument()
     expect(screen.getByText('渲染爆炸')).toBeInTheDocument()
     // 操作按钮
-    expect(screen.getByRole('button', { name: 'errorBoundary.refreshPage' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'errorBoundary.goHome' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '刷新页面' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '返回首页' })).toBeInTheDocument()
   })
 
   it('堆栈被解析为结构化帧并默认展开', () => {
@@ -105,7 +100,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     )
 
-    expect(screen.getByText('errorBoundary.title')).toBeInTheDocument()
+    expect(screen.getByText('页面出现了问题')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Stack Trace/ })).not.toBeInTheDocument()
   })
 
@@ -134,10 +129,10 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'errorBoundary.copyError' }))
+    fireEvent.click(screen.getByRole('button', { name: '复制错误信息' }))
 
     await waitFor(() => {
-      expect(screen.getByText('errorBoundary.copiedToClipboard')).toBeInTheDocument()
+      expect(screen.getByText('已复制到剪贴板')).toBeInTheDocument()
     })
     expect(writeTextSpy).toHaveBeenCalledTimes(1)
     const copiedText = writeTextSpy.mock.calls[0][0]
@@ -154,7 +149,7 @@ describe('ErrorBoundary', () => {
     )
 
     expect(screen.getByText('自定义回退')).toBeInTheDocument()
-    expect(screen.queryByText('errorBoundary.title')).not.toBeInTheDocument()
+    expect(screen.queryByText('页面出现了问题')).not.toBeInTheDocument()
   })
 })
 
@@ -162,7 +157,7 @@ describe('RouteErrorBoundary', () => {
   it('直接渲染回退 UI，且没有组件堆栈区域', () => {
     render(<RouteErrorBoundary error={makeError('路由加载失败', SAMPLE_STACK)} />)
 
-    expect(screen.getByText('errorBoundary.title')).toBeInTheDocument()
+    expect(screen.getByText('页面出现了问题')).toBeInTheDocument()
     expect(screen.getByText('路由加载失败')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Stack Trace (3 frames)' })).toBeInTheDocument()
     // errorInfo 为 null，不应出现组件堆栈折叠区

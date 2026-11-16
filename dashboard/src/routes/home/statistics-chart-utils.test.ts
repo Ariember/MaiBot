@@ -33,16 +33,16 @@ describe('statistics-chart-utils', () => {
   })
 
   it('非法时间戳格式化为 Invalid Date，非 24 小时范围走日期轴', () => {
-    expect(formatChartTimeAxis('not-a-date', 'en-US', 24)).toMatch(/Invalid Date/i)
+    expect(formatChartTimeAxis('not-a-date', 'zh-CN', 24)).toMatch(/Invalid Date/i)
     expect(formatChartTimeAxis('2026-07-28T13:45:00+08:00', 'zh-CN', 1)).not.toContain(':')
   })
 
   it('Token 轴覆盖 0、负数以及跨过 K/M 阈值的取值', () => {
-    expect(formatTokenAxis(0, 'en-US')).toBe('0')
-    expect(formatTokenAxis(-999, 'en-US')).toBe('-999')
-    expect(formatTokenAxis(-1_550, 'en-US')).toBe('-1.6K')
-    expect(formatTokenAxis(-1_250_000, 'en-US')).toBe('-1.3M')
-    expect(formatTokenAxis(999.4, 'en-US')).toBe('999.4')
+    expect(formatTokenAxis(0, 'zh-CN')).toBe('0')
+    expect(formatTokenAxis(-999, 'zh-CN')).toBe('-999')
+    expect(formatTokenAxis(-1_550, 'zh-CN')).toBe('-1.6K')
+    expect(formatTokenAxis(-1_250_000, 'zh-CN')).toBe('-1.3M')
+    expect(formatTokenAxis(999.4, 'zh-CN')).toBe('999.4')
   })
 
   it('有数据时 24 小时取小时序列，其余取每日序列', () => {

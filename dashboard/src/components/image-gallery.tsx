@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Download, ImageOff, Loader2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -76,7 +76,6 @@ export function ImageGalleryProvider({
   images: GalleryImage[]
   children: ReactNode
 }) {
-  const { t } = useTranslation()
   const { toast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
   const [active, setActive] = useState<GalleryImage | null>(null)
@@ -112,8 +111,8 @@ export function ImageGalleryProvider({
       window.setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch {
       toast({
-        title: t('chat.media.saveFailed', { defaultValue: '保存图片失败' }),
-        description: t('chat.media.saveFailedDescription', { defaultValue: '无法下载这张图片，请稍后重试。' }),
+        title: '保存图片失败',
+        description: '无法下载这张图片，请稍后重试。',
         variant: 'destructive',
       })
     } finally {
@@ -145,15 +144,10 @@ export function ImageGalleryProvider({
           onKeyDown={handleKeyDown}
         >
           <DialogTitle className="sr-only">
-            {t('chat.media.previewTitle', {
-              type: active?.alt ?? '',
-              defaultValue: `${active?.alt ?? ''}预览`,
-            })}
+            {`${active?.alt ?? ''}预览`}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            {t('chat.media.galleryDescription', {
-              defaultValue: '滚轮缩放，拖动平移，双击还原；左右方向键切换上一张、下一张。',
-            })}
+            {'滚轮缩放，拖动平移，双击还原；左右方向键切换上一张、下一张。'}
           </DialogDescription>
           <div className="relative flex h-[calc(100vh-4rem)] w-full items-center justify-center max-sm:h-[70dvh]">
             <Button
@@ -165,7 +159,7 @@ export function ImageGalleryProvider({
               onClick={saveImage}
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {t('chat.media.saveImage', { defaultValue: '保存图片' })}
+              {'保存图片'}
             </Button>
             {source.status === 'ready' && active ? (
               <ZoomableImage
@@ -179,7 +173,7 @@ export function ImageGalleryProvider({
             ) : source.status === 'error' ? (
               <span className="flex items-center gap-2 text-sm text-white/70">
                 <ImageOff className="h-4 w-4" />
-                {t('chat.media.loadFailed', { type: active?.alt ?? '' })}
+                {`[${active?.alt ?? ''}加载失败]`}
               </span>
             ) : (
               <Loader2 className="h-6 w-6 animate-spin text-white/70" />
@@ -188,7 +182,7 @@ export function ImageGalleryProvider({
               <button
                 type="button"
                 className={cn(navButtonClass, 'left-2')}
-                aria-label={t('chat.media.previousImage', { defaultValue: '上一张' })}
+                aria-label={'上一张'}
                 onClick={() => setActive(previous)}
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -198,7 +192,7 @@ export function ImageGalleryProvider({
               <button
                 type="button"
                 className={cn(navButtonClass, 'right-2')}
-                aria-label={t('chat.media.nextImage', { defaultValue: '下一张' })}
+                aria-label={'下一张'}
                 onClick={() => setActive(next)}
               >
                 <ChevronRight className="h-6 w-6" />

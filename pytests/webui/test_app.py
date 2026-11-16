@@ -26,12 +26,12 @@ def test_ensure_static_path_ready_logs_build_hint_when_static_assets_are_missing
         result = webui_app._ensure_static_path_ready()
 
     assert result is None
-    warning_mock.assert_any_call(webui_app.t("startup.webui_static_assets_unavailable"))
+    warning_mock.assert_any_call("❌ 未找到可用的 WebUI 静态资源（dashboard/dist）")
     warning_mock.assert_any_call(
-        webui_app.t("startup.webui_static_dir_missing_with_path", static_path=static_path)
+        f"❌ WebUI 静态文件目录不存在: {static_path}"
     )
     warning_mock.assert_any_call(
-        webui_app.t("startup.webui_dashboard_build_hint", command=webui_app._DASHBOARD_BUILD_COMMAND)
+        f"💡 请在 dashboard 目录安装依赖并构建 WebUI: {webui_app._DASHBOARD_BUILD_COMMAND}"
     )
 
 
@@ -47,10 +47,10 @@ def test_ensure_static_path_ready_logs_index_error_when_static_path_is_invalid(t
 
     assert result is None
     warning_mock.assert_any_call(
-        webui_app.t("startup.webui_index_missing", index_path=static_path / "index.html")
+        f"❌ 未找到 index.html: {static_path / 'index.html'}"
     )
     warning_mock.assert_any_call(
-        webui_app.t("startup.webui_dashboard_build_hint", command=webui_app._DASHBOARD_BUILD_COMMAND)
+        f"💡 请在 dashboard 目录安装依赖并构建 WebUI: {webui_app._DASHBOARD_BUILD_COMMAND}"
     )
 
 

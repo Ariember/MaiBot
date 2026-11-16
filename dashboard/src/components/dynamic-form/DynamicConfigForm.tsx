@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { resolveLocalizedText } from '@/lib/config-label'
+
 import { fieldHooks, type FieldHookRegistry } from '@/lib/field-hooks'
 import { cn } from '@/lib/utils'
 import type { ConfigSchema, FieldSchema } from '@/types/config-schema'
@@ -43,7 +43,7 @@ function resolveSectionTitle(schema: ConfigSchema) {
 }
 
 function resolveFieldSectionTitle(field: FieldSchema) {
-  return resolveLocalizedText(field.label, undefined, field.name)
+  return (field.label || field.name)
 }
 
 function orderInlineFields(schema: ConfigSchema, fields: FieldSchema[]) {

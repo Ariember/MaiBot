@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ExternalLink, Newspaper, Package, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { removeTopLevelHeadings } from '@/components/update-notice-markdown'
 import { Button } from '@/components/ui/button'
@@ -49,7 +49,6 @@ function formatRelativeTime(value: string, locale: string): string {
 }
 
 export function RecentUpdatesCard() {
-  const { t } = useTranslation()
   const [selectedUpdate, setSelectedUpdate] = useState<UpdateHistoryEntry | null>(null)
   const { data, error, isPending, isFetching, refetch } = useQuery({
     queryKey: ['home', 'recent-updates'],
@@ -63,14 +62,14 @@ export function RecentUpdatesCard() {
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
             <Newspaper className="h-4 w-4" />
-            {t('home.updates.title')}
+            {'最近更新'}
           </CardTitle>
           <Button
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            aria-label={t('home.updates.refresh')}
-            title={t('home.updates.refresh')}
+            aria-label={'刷新更新记录'}
+            title={'刷新更新记录'}
             disabled={isFetching}
             onClick={() => void refetch()}
           >
@@ -92,7 +91,7 @@ export function RecentUpdatesCard() {
               <span className="text-destructive">{error.message}</span>
               <Button variant="outline" size="sm" onClick={() => void refetch()}>
                 <RefreshCw className="mr-2 h-4 w-4" />
-                {t('home.news.retry')}
+                {'重新加载'}
               </Button>
             </div>
           ) : data && data.entries.length > 0 ? (
@@ -110,7 +109,7 @@ export function RecentUpdatesCard() {
                     <button
                       key={entry.version}
                       type="button"
-                      title={t('home.updates.open')}
+                      title={'查看完整更新日志'}
                       className="hover:bg-accent/40 block w-full rounded-md border p-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
                       onClick={() => setSelectedUpdate(entry)}
                     >
@@ -125,7 +124,7 @@ export function RecentUpdatesCard() {
             </ScrollArea>
           ) : (
             <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center text-sm">
-              {t('home.updates.empty')}
+              {'暂无更新记录'}
             </div>
           )}
         </CardContent>
@@ -136,7 +135,7 @@ export function RecentUpdatesCard() {
             <>
               <DialogHeader>
                 <DialogTitle className="pr-6">{selectedUpdate.title.replace(/^#\s+/, '')}</DialogTitle>
-                <DialogDescription>{t('home.updates.details')}</DialogDescription>
+                <DialogDescription>{'此版本的完整更新记录'}</DialogDescription>
               </DialogHeader>
               <DialogBody>
                 <MarkdownRenderer content={removeTopLevelHeadings(selectedUpdate.content)} />
@@ -150,8 +149,7 @@ export function RecentUpdatesCard() {
 }
 
 export function NewsDialog({ selectedNews, onClose }: { selectedNews: NewsItem | null; onClose: () => void }) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.resolvedLanguage || i18n.language
+  const locale = 'zh-CN'
   const selectedPluginId = selectedNews ? getNewsPluginId(selectedNews.url) : null
 
   return (
@@ -162,7 +160,7 @@ export function NewsDialog({ selectedNews, onClose }: { selectedNews: NewsItem |
             <DialogHeader>
               <DialogTitle className="pr-6">{selectedNews.title}</DialogTitle>
               <DialogDescription>
-                {[selectedNews.pinned ? t('home.news.pinned') : '', selectedNews.source, formatRelativeTime(selectedNews.published_at, locale)]
+                {[selectedNews.pinned ? '置顶' : '', selectedNews.source, formatRelativeTime(selectedNews.published_at, locale)]
                   .filter(Boolean)
                   .join(' · ')}
               </DialogDescription>
@@ -180,12 +178,12 @@ export function NewsDialog({ selectedNews, onClose }: { selectedNews: NewsItem |
                       onClick={onClose}
                     >
                       <Package className="mr-2 h-4 w-4" />
-                      {t('home.news.openPlugin')}
+                      {'查看插件'}
                     </Link>
                   ) : (
                     <a href={selectedNews.url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="mr-2 h-4 w-4" />
-                      {t('home.news.openLink')}
+                      {'打开原文链接'}
                     </a>
                   )}
                 </Button>

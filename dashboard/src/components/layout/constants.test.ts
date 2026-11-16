@@ -11,12 +11,12 @@ const allItems: MenuItem[] = menuSections.flatMap((section) => section.items)
 describe('menuSections 菜单结构', () => {
   it('包含概览/机器人配置/麦日常/资源/扩展与集成/高级工具分组且顺序固定', () => {
     expect(menuSections.map((section) => section.title)).toEqual([
-      'sidebar.groups.overview',
-      'sidebar.groups.botConfig',
-      'sidebar.groups.mylife',
-      'sidebar.groups.botResources',
-      'sidebar.groups.extensionsMonitor',
-      'sidebar.groups.advancedTools',
+      '概览',
+      '配置管理',
+      '麦日常',
+      '资源管理',
+      '扩展集成',
+      '高级工具',
     ])
   })
 
@@ -35,15 +35,9 @@ describe('menuSections 菜单结构', () => {
     }
   })
 
-  it('菜单项使用侧栏文案，聊天入口复用工作区文案', () => {
+  it('菜单项使用中文文案', () => {
     for (const item of allItems) {
-      if (item.path === '/chat') {
-        expect(item.label).toBe('workspace.chat')
-      } else if (item.path === '/computer') {
-        expect(item.label).toBe('chat.computerDesktop')
-      } else {
-        expect(item.label).toMatch(/^sidebar\.menu\./)
-      }
+      expect(item.label).toMatch(/[\u4e00-\u9fff]/)
     }
   })
 
@@ -56,9 +50,9 @@ describe('menuSections 菜单结构', () => {
   it('首页位于概览分组且路径为 /', () => {
     const homeItem = menuSections[0].items[0]
 
-    expect(homeItem.label).toBe('sidebar.menu.home')
+    expect(homeItem.label).toBe('首页')
     expect(homeItem.path).toBe('/')
-    expect(homeItem.searchDescription).toBe('search.items.homeDesc')
+    expect(homeItem.searchDescription).toBe('查看仪表板概览')
   })
 
   it('麦麦观察合并进聊天工作区后不再占用主侧边栏入口', () => {
@@ -76,29 +70,29 @@ describe('menuSections 菜单结构', () => {
 
   it('数据管理位于高级工具分组末尾', () => {
     const advancedToolsSection = menuSections.find(
-      (section) => section.title === 'sidebar.groups.advancedTools'
+      (section) => section.title === '高级工具'
     )
     const dataTransferItem = advancedToolsSection?.items.at(-1)
 
-    expect(dataTransferItem?.label).toBe('sidebar.menu.dataTransfer')
+    expect(dataTransferItem?.label).toBe('数据管理')
     expect(dataTransferItem?.path).toBe('/data-transfer')
-    expect(dataTransferItem?.searchDescription).toBe('search.items.dataTransferDesc')
+    expect(dataTransferItem?.searchDescription).toBe('管理本地缓存，备份、导出或恢复 MaiBot 数据')
   })
 
   it('Prompt 管理位于高级工具分组首位', () => {
     const advancedToolsSection = menuSections.find(
-      (section) => section.title === 'sidebar.groups.advancedTools'
+      (section) => section.title === '高级工具'
     )
 
     expect(advancedToolsSection?.items[0]).toMatchObject({
-      label: 'sidebar.menu.promptManagement',
+      label: 'Prompt管理',
       path: '/config/prompts',
     })
   })
 
   it('适配器管理拥有独立入口并位于麦麦配置编辑分组', () => {
     const botConfigSection = menuSections.find(
-      (section) => section.title === 'sidebar.groups.botConfig'
+      (section) => section.title === '配置管理'
     )
     const adapterIndex =
       botConfigSection?.items.findIndex((item) => item.path === '/adapter-management') ?? -1
@@ -111,7 +105,7 @@ describe('menuSections 菜单结构', () => {
 
   it('详细统计数据不再占用主侧边栏入口', () => {
     const advancedToolsSection = menuSections.find(
-      (section) => section.title === 'sidebar.groups.advancedTools'
+      (section) => section.title === '高级工具'
     )
 
     expect(advancedToolsSection?.items).not.toEqual(
@@ -130,10 +124,10 @@ describe('menuSections 菜单结构', () => {
     )
   })
 
-  it('searchDescription 均为 search.items 命名空间的 i18n key', () => {
+  it('搜索说明使用中文文案', () => {
     for (const item of allItems) {
       if (item.searchDescription !== undefined) {
-        expect(item.searchDescription).toMatch(/^search\.items\./)
+        expect(item.searchDescription).toMatch(/[\u4e00-\u9fff]/)
       }
     }
   })

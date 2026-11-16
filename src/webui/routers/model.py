@@ -33,7 +33,7 @@ from src.llm_models.utils_model import LLMOrchestrator, LLMResponseResult
 from src.webui.dependencies import require_auth
 from src.common.http_client import get_shared_ssl_context_async
 from src.common.network_security import validate_public_url
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 
 logger = get_logger("webui")
 

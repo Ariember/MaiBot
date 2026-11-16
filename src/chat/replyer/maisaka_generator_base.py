@@ -24,7 +24,7 @@ from src.common.data_models.reply_generation_data_models import (
     ReplyGenerationResult,
     build_reply_monitor_detail,
 )
-from src.common.i18n import get_locale
+
 from src.common.logger import get_logger
 from src.common.utils.utils_config import ChatConfigUtils
 from src.config.config import global_config
@@ -416,29 +416,9 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         return "在该聊天中的注意事项：\n" + "\n\n".join(prompt_lines) + "\n"
 
     @staticmethod
-    def _get_prompt_locale() -> str:
-        """获取当前 prompt 语言。"""
-
-        try:
-            return get_locale().lower()
-        except Exception:
-            return "zh-cn"
-
-    @staticmethod
     def _build_replyer_output_instruction() -> str:
         """构建 replyer 的最终输出格式说明。"""
 
-        locale = BaseMaisakaReplyGenerator._get_prompt_locale()
-        if locale.startswith("en"):
-            return (
-                "Please do not output any extra content (including unnecessary prefixes or suffixes, "
-                "colons, brackets, stickers, plain at, or @). Only output the message content itself."
-            )
-        if locale.startswith("ja"):
-            return (
-                "余計な内容（不要な前置きや後置き、コロン、括弧、スタンプ、通常の at や @ など）は出力せず、"
-                "発言内容だけを出力してください。"
-            )
         return "请注意不要输出多余内容(包括不必要的前后缀，冒号，括号，表情包，@等 )，只输出发言内容就好。"
 
     @staticmethod
@@ -625,28 +605,15 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         """根据 reply 工具参数构建本次回复的篇幅要求。"""
 
         style_messages = {
-            "zh-CN": {
-                "简短表达": "用一到两句口语短句回复，像平时接话一样自然。",
-                "正常回复": "篇幅与当前话题相称，保持简洁。",
-                "长回复": "本次篇幅以说清问题为准，可以展开解释关键细节。",
-            },
-            "en-US": {
-                "简短表达": "Reply in one or two short sentences, as you would in a casual conversation.",
-                "正常回复": "Keep the reply concise and give the topic as much space as it needs.",
-                "长回复": "Use as much space as needed to make the point clear, and expand on key details.",
-            },
-            "ja-JP": {
-                "简短表达": "普段の会話のように、短い一文か二文で自然に返信してください。",
-                "正常回复": "話題に合った長さで、簡潔に返信してください。",
-                "长回复": "要点が伝わる長さを目安に、重要な点は掘り下げて説明してください。",
-            },
+            "简短表达": "用一到两句口语短句回复，像平时接话一样自然。",
+            "正常回复": "篇幅与当前话题相称，保持简洁。",
+            "长回复": "本次篇幅以说清问题为准，可以展开解释关键细节。",
         }
-        localized_messages = style_messages.get(get_locale(), style_messages["zh-CN"])
         normalized_reply_style = reply_style.strip() or "正常回复"
-        if normalized_reply_style not in localized_messages:
+        if normalized_reply_style not in style_messages:
             logger.warning(f"reply 工具返回了未知的回复风格 {normalized_reply_style!r}，按默认「正常回复」处理")
-            return localized_messages["正常回复"]
-        return localized_messages[normalized_reply_style]
+            return style_messages["正常回复"]
+        return style_messages[normalized_reply_style]
 
     def _build_history_messages(
         self,

@@ -1,6 +1,6 @@
 import * as React from "react"
 import { CircleAlert, Plus, Trash2 } from "lucide-react"
-import { useTranslation } from "react-i18next"
+
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
-import { resolveFieldLabel } from "@/lib/config-label"
+
 import type { FieldSchema } from "@/types/config-schema"
 
 import { fieldTitleClassName } from "./fieldStyle"
@@ -151,7 +151,7 @@ function TokenListEditor({
     [mode, schema.default, value],
   )
   const [draftValue, setDraftValue] = React.useState('')
-  const fieldLabel = resolveFieldLabel(schema)
+  const fieldLabel = (schema.label || schema.name)
   const placeholder = schema['x-placeholder'] ?? '输入后按回车添加'
 
   const commitItems = (nextItems: string[]) => {
@@ -243,8 +243,7 @@ export const DynamicField: React.FC<DynamicFieldProps> = ({
   onChange,
   fieldPath,
 }) => {
-  const { i18n } = useTranslation()
-  const fieldLabel = resolveFieldLabel(schema, i18n.language)
+  const fieldLabel = (schema.label || schema.name)
   // 手机上长文本改为「列表行 + 底部弹层编辑」
   const isMobileViewport = useMediaQuery("(max-width: 1023.98px)")
   const isNumericField = schema.type === 'integer' || schema.type === 'number'

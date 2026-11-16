@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 
 from src.common.logger import get_logger
 from src.webui.dependencies import require_auth
-from src.webui.services.ai_search_agent import resolve_prompt_locale, run_ai_search_agent
+from src.webui.services.ai_search_agent import run_ai_search_agent
 from src.webui.services.ai_search_models import (
     AISearchCandidate,
     AISearchOutputError,
@@ -34,11 +34,10 @@ _AI_SEARCH_CACHE: "OrderedDict[str, Tuple[float, AISearchResponse]]" = OrderedDi
 
 
 def _build_cache_key(request: AISearchRequest) -> str:
-    """缓存键同时包含问题、语言和候选目录，避免 schema 更新后复用旧结果。"""
+    """缓存键同时包含问题和候选目录，避免 schema 更新后复用旧结果。"""
 
     payload = {
         "query": request.query.strip(),
-        "language": resolve_prompt_locale(request.language),
         "candidates": [candidate.model_dump() for candidate in request.candidates],
     }
     serialized_payload = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -105,7 +104,6 @@ def _log_ai_search_record(
         "status": status,
         "duration_ms": round((time.monotonic() - started_at) * 1000),
         "query": request.query.strip(),
-        "language": resolve_prompt_locale(request.language),
         "candidate_count": len(request.candidates),
         "progress": progress,
     }

@@ -103,8 +103,6 @@ def _normalize_plugin_catalog_item(item: Dict[str, Any], include_manifest: bool 
         "categories": _string_list(manifest.get("categories")),
         "capabilities": _string_list(manifest.get("capabilities")),
         "dependencies": manifest.get("dependencies") if isinstance(manifest.get("dependencies"), list) else [],
-        "default_locale": _safe_string(manifest.get("i18n", {}).get("default_locale")) or "zh-CN",
-        "locales_path": _safe_string(manifest.get("i18n", {}).get("locales_path")),
         "source": "market",
     }
     if include_manifest:

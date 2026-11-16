@@ -1,6 +1,6 @@
 import { Loader2, Plus, SmilePlus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -29,7 +29,6 @@ interface UserEmojiManagerProps {
 }
 
 export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiManagerProps) {
-  const { t } = useTranslation()
   const { toast } = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
@@ -55,14 +54,14 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
     } catch (error) {
       console.error('加载用户表情包失败', error)
       toast({
-        title: t('chat.toast.emojiLoadFailed'),
+        title: '加载表情包失败',
         description: error instanceof Error ? error.message : undefined,
         variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
     }
-  }, [resolveDisplayItem, t, toast, userId])
+  }, [resolveDisplayItem, toast, userId])
 
   useEffect(() => {
     if (open) {
@@ -77,8 +76,8 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
       file.size > MAX_USER_EMOJI_BYTES
     ) {
       toast({
-        title: t('chat.toast.emojiUploadFailed'),
-        description: t('chat.toast.emojiUnsupportedDesc'),
+        title: '添加表情包失败',
+        description: '请选择不超过 2 MB 的 JPG、PNG、WebP 或 GIF 图片。',
         variant: 'destructive',
       })
       return
@@ -92,7 +91,7 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
     } catch (error) {
       console.error('添加用户表情包失败', error)
       toast({
-        title: t('chat.toast.emojiUploadFailed'),
+        title: '添加表情包失败',
         description: error instanceof Error ? error.message : undefined,
         variant: 'destructive',
       })
@@ -109,7 +108,7 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
     } catch (error) {
       console.error('删除用户表情包失败', error)
       toast({
-        title: t('chat.toast.emojiDeleteFailed'),
+        title: '删除表情包失败',
         description: error instanceof Error ? error.message : undefined,
         variant: 'destructive',
       })
@@ -126,7 +125,7 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
     } catch (error) {
       console.error('发送用户表情包失败', error)
       toast({
-        title: t('chat.toast.emojiSendFailed'),
+        title: '发送表情包失败',
         description: error instanceof Error ? error.message : undefined,
         variant: 'destructive',
       })
@@ -144,8 +143,8 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
           size="icon-sm"
           className="shrink-0"
           disabled={disabled}
-          aria-label={t('chat.actions.openEmojiManager')}
-          title={t('chat.actions.openEmojiManager')}
+          aria-label={'用户表情包'}
+          title={'用户表情包'}
         >
           <SmilePlus className="h-4 w-4" />
         </Button>
@@ -165,8 +164,8 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
         }} /> : <>
         <div className="mb-2 flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-medium">{t('chat.emojiManager.title')}</p>
-            <p className="text-muted-foreground text-xs">{t('chat.emojiManager.hint')}</p>
+            <p className="text-sm font-medium">{'我的表情包'}</p>
+            <p className="text-muted-foreground text-xs">{'点击表情包直接发送'}</p>
           </div>
           <Button
             type="button"
@@ -181,7 +180,7 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
             ) : (
               <Plus className="mr-1.5 h-3.5 w-3.5" />
             )}
-            {t('chat.emojiManager.add')}
+            {'添加'}
           </Button>
           <input
             ref={inputRef}
@@ -206,7 +205,7 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
           ) : items.length === 0 ? (
             <div className="text-muted-foreground flex h-52 flex-col items-center justify-center gap-2 text-center text-xs">
               <SmilePlus className="h-8 w-8 opacity-50" />
-              <span>{t('chat.emojiManager.empty')}</span>
+              <span>{'还没有用户表情包，点击添加即可使用。'}</span>
             </div>
           ) : (
             <div className="grid grid-cols-4 gap-2 pr-2">
@@ -222,12 +221,12 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
                       type="button"
                       className="hover:bg-muted flex h-full w-full items-center justify-center p-1 transition"
                       disabled={Boolean(sendingId || deletingId)}
-                      aria-label={t('chat.emojiManager.send')}
+                      aria-label={'发送表情包'}
                       onClick={() => void handleSend(item)}
                     >
                       <img
                         src={item.displayUrl}
-                        alt={t('chat.media.emoji')}
+                        alt={'表情包'}
                         className="max-h-full max-w-full object-contain"
                       />
                       {isSending && (
@@ -240,7 +239,7 @@ export function UserEmojiManager({ disabled, userId, onSendEmoji }: UserEmojiMan
                       type="button"
                       className="bg-destructive text-destructive-foreground absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full opacity-80 shadow transition sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
                       disabled={Boolean(sendingId || deletingId)}
-                      aria-label={t('chat.emojiManager.delete')}
+                      aria-label={'删除表情包'}
                       onClick={() => void handleDelete(item.id)}
                     >
                       {isDeleting ? (

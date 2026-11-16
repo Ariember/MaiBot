@@ -14,7 +14,7 @@ from src.chat.replyer.expression_vector_index import expression_vector_index
 from src.common.database.database import get_db_session
 from src.common.database.database_model import Expression, ModifiedBy
 from src.common.logger import get_logger
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.common.utils.utils_config import ChatConfigUtils, ExpressionConfigUtils
 from src.config.config import global_config, model_config
 from src.learners.expression_style_utils import (

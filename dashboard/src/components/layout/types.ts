@@ -15,7 +15,6 @@ export type MenuIcon = ComponentType<{
 export interface MenuItem {
   icon: MenuIcon
   label: string
-  literalLabel?: boolean
   path: string
   external?: boolean
   searchDescription?: string
@@ -25,6 +24,5 @@ export interface MenuItem {
 
 export interface MenuSection {
   title: string
-  literalTitle?: boolean
   items: MenuItem[]
 }

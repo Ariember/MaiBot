@@ -18,7 +18,7 @@ import traceback
 import numpy as np
 
 from src.common.logger import get_logger
-from src.common.prompt_i18n import extract_prompt_placeholders, load_prompt, load_prompt_template
+from src.common.prompt_templates import extract_prompt_placeholders, load_prompt, load_prompt_template
 from src.config.config import config_manager, global_config
 from src.config.model_configs import TaskConfig
 from src.services import llm_service as llm_api
@@ -69,7 +69,7 @@ class SummaryImportResult:
 # 默认总结提示词模版
 SUMMARY_PROMPT_NAME = "a_memorix_chat_summary"
 # 保留只读模板常量供既有扩展与测试检查结构；实际模型调用按当前语言动态加载。
-SUMMARY_PROMPT_TEMPLATE = load_prompt(SUMMARY_PROMPT_NAME, locale="zh-CN")
+SUMMARY_PROMPT_TEMPLATE = load_prompt(SUMMARY_PROMPT_NAME)
 
 
 def _normalize_entity_items(raw_entities: Any) -> List[str]:

@@ -16,16 +16,9 @@ import type {
   PersonalityConfig,
 } from '../types'
 
-// t 必须是稳定引用，返回 key（带参数时附加序列化参数）
-const i18nMocks = vi.hoisted(() => {
-  const t = (key: string, variables?: Record<string, unknown>) =>
-    variables ? `${key}:${JSON.stringify(variables)}` : key
-  return { t }
-})
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: i18nMocks.t }),
-}))
+
+
 
 afterEach(() => {
   cleanup()
@@ -35,15 +28,15 @@ describe('CustomTokenForm', () => {
   it('默认以密码形式隐藏 Token，点击按钮后切换为明文', () => {
     render(<CustomTokenForm token="secret" onChange={vi.fn()} />)
 
-    const input = screen.getByLabelText('setupPage.forms.customToken.label')
+    const input = screen.getByLabelText('自定义密码 *')
     expect(input).toHaveAttribute('type', 'password')
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.forms.customToken.show' }))
+    fireEvent.click(screen.getByRole('button', { name: '显示' }))
 
     expect(input).toHaveAttribute('type', 'text')
     // 切换后按钮标签变为“隐藏”
     expect(
-      screen.getByRole('button', { name: 'setupPage.forms.customToken.hide' })
+      screen.getByRole('button', { name: '隐藏' })
     ).toBeInTheDocument()
   })
 
@@ -51,7 +44,7 @@ describe('CustomTokenForm', () => {
     const onChange = vi.fn()
     render(<CustomTokenForm token="" onChange={onChange} />)
 
-    fireEvent.change(screen.getByLabelText('setupPage.forms.customToken.label'), {
+    fireEvent.change(screen.getByLabelText('自定义密码 *'), {
       target: { value: 'Abc!123456' },
     })
 
@@ -61,8 +54,8 @@ describe('CustomTokenForm', () => {
   it('空 Token 时四条规则均未通过', () => {
     render(<CustomTokenForm token="" onChange={vi.fn()} />)
 
-    for (const rule of ['minLength', 'hasUppercase', 'hasLowercase', 'hasSpecialChar']) {
-      expect(screen.getByText(`setupPage.forms.customToken.rules.${rule}`).closest('li')).toHaveClass('text-muted-foreground')
+    for (const rule of ['10 位以上', '大写字母', '小写字母', '特殊符号']) {
+      expect(screen.getByText(rule).closest('li')).toHaveClass('text-muted-foreground')
     }
   })
 
@@ -70,17 +63,17 @@ describe('CustomTokenForm', () => {
     // "abc" 只满足小写字母规则
     render(<CustomTokenForm token="abc" onChange={vi.fn()} />)
 
-    expect(screen.getByText('setupPage.forms.customToken.rules.hasLowercase').closest('li')).toHaveClass('text-foreground')
-    for (const rule of ['minLength', 'hasUppercase', 'hasSpecialChar']) {
-      expect(screen.getByText(`setupPage.forms.customToken.rules.${rule}`).closest('li')).toHaveClass('text-muted-foreground')
+    expect(screen.getByText('小写字母').closest('li')).toHaveClass('text-foreground')
+    for (const rule of ['10 位以上', '大写字母', '特殊符号']) {
+      expect(screen.getByText(rule).closest('li')).toHaveClass('text-muted-foreground')
     }
   })
 
   it('Token 满足全部规则时四条规则均显示通过', () => {
     render(<CustomTokenForm token="Abcdefghij!" onChange={vi.fn()} />)
 
-    for (const rule of ['minLength', 'hasUppercase', 'hasLowercase', 'hasSpecialChar']) {
-      expect(screen.getByText(`setupPage.forms.customToken.rules.${rule}`).closest('li')).toHaveClass('text-foreground')
+    for (const rule of ['10 位以上', '大写字母', '小写字母', '特殊符号']) {
+      expect(screen.getByText(rule).closest('li')).toHaveClass('text-foreground')
     }
   })
 })
@@ -98,7 +91,7 @@ describe('BotBasicForm', () => {
     const onChange = vi.fn()
     render(<BotBasicForm config={config} onChange={onChange} />)
 
-    const input = screen.getByLabelText('setupPage.forms.botBasic.nickname.label')
+    const input = screen.getByLabelText('昵称')
     expect(input).toHaveValue('麦麦')
 
     fireEvent.change(input, { target: { value: '小麦' } })
@@ -119,7 +112,7 @@ describe('PersonalityForm', () => {
     const onChange = vi.fn()
     render(<PersonalityForm config={config} onChange={onChange} />)
 
-    const textarea = screen.getByLabelText('setupPage.forms.personality.personality.label')
+    const textarea = screen.getByLabelText('人格特征')
     expect(textarea).toHaveValue('活泼开朗')
 
     fireEvent.change(textarea, { target: { value: '沉稳理性' } })
@@ -131,7 +124,7 @@ describe('PersonalityForm', () => {
     const onChange = vi.fn()
     render(<PersonalityForm config={config} onChange={onChange} />)
 
-    fireEvent.change(screen.getByLabelText('setupPage.forms.personality.replyStyle.label'), {
+    fireEvent.change(screen.getByLabelText('表达风格'), {
       target: { value: '长文详细' },
     })
 
@@ -150,17 +143,17 @@ describe('ApiProviderSetupForm', () => {
     const onChange = vi.fn()
     render(<ApiProviderSetupForm config={config} onChange={onChange} />)
 
-    fireEvent.change(screen.getByLabelText('setupPage.forms.apiProvider.providerName.label'), {
+    fireEvent.change(screen.getByLabelText('API 提供商名称 *'), {
       target: { value: 'Zhipu' },
     })
     expect(onChange).toHaveBeenLastCalledWith({ ...config, provider_name: 'Zhipu' })
 
-    fireEvent.change(screen.getByLabelText('setupPage.forms.apiProvider.baseUrl.label'), {
+    fireEvent.change(screen.getByLabelText('API Base URL *'), {
       target: { value: 'https://zhipu.example/v1' },
     })
     expect(onChange).toHaveBeenLastCalledWith({ ...config, base_url: 'https://zhipu.example/v1' })
 
-    fireEvent.change(screen.getByLabelText('setupPage.forms.apiProvider.apiKey.label'), {
+    fireEvent.change(screen.getByLabelText('API Key *'), {
       target: { value: 'sk-new' },
     })
     expect(onChange).toHaveBeenLastCalledWith({ ...config, api_key: 'sk-new' })
@@ -175,26 +168,26 @@ describe('ApiProviderSetupForm', () => {
       />
     )
 
-    expect(screen.getByLabelText('setupPage.forms.apiProvider.apiKey.label')).toHaveValue('')
+    expect(screen.getByLabelText('API Key *')).toHaveValue('')
 
     fireEvent.click(screen.getByRole('button', { name: '自定义' }))
     expect(onChange).toHaveBeenCalledWith({ provider_name: '', base_url: '', api_key: '' })
     expect(
-      await screen.findByPlaceholderText('setupPage.forms.apiProvider.providerName.placeholder')
+      await screen.findByPlaceholderText('例如 OpenAI、DeepSeek、自建服务')
     ).toHaveValue('')
   })
 
   it('API Key 默认隐藏且可切换明文显示', () => {
     render(<ApiProviderSetupForm config={config} onChange={vi.fn()} />)
 
-    const input = screen.getByLabelText('setupPage.forms.apiProvider.apiKey.label')
+    const input = screen.getByLabelText('API Key *')
     expect(input).toHaveAttribute('type', 'password')
 
-    fireEvent.click(screen.getByRole('button', { name: 'setupPage.forms.apiProvider.apiKey.show' }))
+    fireEvent.click(screen.getByRole('button', { name: '显示 API Key' }))
 
     expect(input).toHaveAttribute('type', 'text')
     expect(
-      screen.getByRole('button', { name: 'setupPage.forms.apiProvider.apiKey.hide' })
+      screen.getByRole('button', { name: '隐藏 API Key' })
     ).toBeInTheDocument()
   })
 
@@ -218,13 +211,13 @@ describe('ApiProviderSetupForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '自定义' }))
     fireEvent.change(
-      await screen.findByPlaceholderText('setupPage.forms.apiProvider.providerName.placeholder'),
+      await screen.findByPlaceholderText('例如 OpenAI、DeepSeek、自建服务'),
       { target: { value: 'Mine' } }
     )
     fireEvent.change(screen.getByPlaceholderText('https://api.example.com/v1'), {
       target: { value: 'https://mine.example/v1' },
     })
-    fireEvent.change(screen.getByLabelText('setupPage.forms.apiProvider.apiKey.label'), {
+    fireEvent.change(screen.getByLabelText('API Key *'), {
       target: { value: 'sk-new' },
     })
     expect(onChange).toHaveBeenLastCalledWith({ ...config, api_key: 'sk-new' })
@@ -247,7 +240,7 @@ describe('ApiProviderSetupForm', () => {
     )
 
     expect(
-      await screen.findByPlaceholderText('setupPage.forms.apiProvider.providerName.placeholder')
+      await screen.findByPlaceholderText('例如 OpenAI、DeepSeek、自建服务')
     ).toHaveValue('Private')
     expect(screen.getByPlaceholderText('https://api.example.com/v1')).toHaveValue(
       'https://private.example/v1'
@@ -273,7 +266,7 @@ describe('ModelSetupForm', () => {
 
     // "gpt-4.1-mini" 不含 deepseek-v4-pro，思考开关被推断为关闭
     fireEvent.change(
-      screen.getByLabelText('setupPage.forms.modelSetup.planner.identifier.label'),
+      screen.getByLabelText('用于 规划思考 的模型'),
       { target: { value: 'gpt-4.1-mini' } }
     )
 
@@ -290,7 +283,7 @@ describe('ModelSetupForm', () => {
     render(<ModelSetupForm config={config} onChange={onChange} />)
 
     fireEvent.change(
-      screen.getByLabelText('setupPage.forms.modelSetup.replyer.identifier.label'),
+      screen.getByLabelText('用于 回复发言 的模型'),
       { target: { value: ' Deepseek-V4-Pro ' } }
     )
 
@@ -308,7 +301,7 @@ describe('ModelSetupForm', () => {
 
     // planner 视觉开关：false -> true
     fireEvent.click(
-      screen.getByRole('switch', { name: 'setupPage.forms.modelSetup.planner.visual.label' })
+      screen.getByRole('switch', { name: '启用视觉' })
     )
     expect(onChange).toHaveBeenLastCalledWith({ ...config, planner_visual: true })
 
@@ -332,8 +325,8 @@ describe('ModelSetupForm', () => {
     }
     render(<ModelSetupForm config={emptyConfig} onChange={onChange} fetchStatus="error" />)
 
-    const plannerInput = screen.getByLabelText('setupPage.forms.modelSetup.planner.identifier.label', { selector: 'input' })
-    const replyerInput = screen.getByLabelText('setupPage.forms.modelSetup.replyer.identifier.label', { selector: 'input' })
+    const plannerInput = screen.getByLabelText('用于 规划思考 的模型', { selector: 'input' })
+    const replyerInput = screen.getByLabelText('用于 回复发言 的模型', { selector: 'input' })
     expect(plannerInput).toHaveValue('')
     expect(replyerInput).toHaveValue('')
 

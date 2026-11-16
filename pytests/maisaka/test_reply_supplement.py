@@ -9,7 +9,7 @@ import pytest
 from src.common.data_models.llm_service_data_models import LLMResponseResult
 from src.common.data_models.message_component_data_model import MessageSequence, TextComponent
 from src.common.data_models.reply_generation_data_models import LLMCompletionResult, ReplyGenerationResult
-from src.common.prompt_i18n import list_prompt_templates, load_prompt
+from src.common.prompt_templates import list_prompt_templates, load_prompt
 from src.config.model_configs import ModelInfo
 from src.llm_models.model_client.base_client import ResponseRequest
 from src.llm_models.payload_content.context_item import ContextItemBuilder, RoleType, get_item_text
@@ -19,11 +19,10 @@ from src.maisaka.builtin_tool.context import PostProcessedReplyMessage
 from src.maisaka.context.compaction import PlannerRequestSnapshot
 
 
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
-def test_retry_prompt_has_localized_metadata_and_error_feedback(locale):
-    metadata = list_prompt_templates(locale=locale)["reply_supplement_retry"].metadata
+def test_retry_prompt_has_metadata_and_error_feedback():
+    metadata = list_prompt_templates()["reply_supplement_retry"].metadata
     assert metadata.display_name and metadata.description
-    assert "ValidationError" in load_prompt("reply_supplement_retry", locale=locale, error="ValidationError")
+    assert "ValidationError" in load_prompt("reply_supplement_retry", error="ValidationError")
 
 
 @pytest.mark.asyncio

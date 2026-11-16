@@ -73,7 +73,7 @@ const SDK = `(() => {
     document.documentElement.classList.toggle('dark', context.theme === 'dark');
     document.documentElement.style.colorScheme = context.theme === 'dark' ? 'dark' : 'light';
     document.documentElement.dataset.dashboardStyle = context.dashboardStyle;
-    document.documentElement.lang = context.language;
+    document.documentElement.lang = 'zh-CN';
     // textContent cannot turn theme CSS into markup/scripts. The host owns this port.
     if (themeStyle.textContent !== context.styles) themeStyle.textContent = context.styles || '';
     if (!themeStyle.isConnected) (document.body || document.head).append(themeStyle);

@@ -3,7 +3,6 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import i18n from '@/i18n'
 import { KnowledgeBasePage } from '../knowledge-base'
 import * as memoryApi from '@/lib/memory-api'
 
@@ -322,7 +321,7 @@ async function closeParagraphDialog(user: ReturnType<typeof userEvent.setup>) {
 
 describe('KnowledgeBasePage import workflow', () => {
   beforeEach(async () => {
-    await i18n.changeLanguage('zh')
+
     if (!Element.prototype.hasPointerCapture) {
       Element.prototype.hasPointerCapture = vi.fn()
     }

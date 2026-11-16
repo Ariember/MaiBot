@@ -5,10 +5,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { createListItemEditorHook } from '../ListItemEditorHookFactory'
 import type { ConfigSchema, FieldSchema } from '@/types/config-schema'
 
-vi.mock('react-i18next', () => {
-  const t = (key: string) => key
-  return { useTranslation: () => ({ t, i18n: { language: 'zh-CN' } }) }
-})
+
 
 const itemSchema: ConfigSchema = {
   className: 'DemoItem',
@@ -644,7 +641,7 @@ describe('createListItemEditorHook', () => {
         schema={{
           name: 'items',
           type: 'array',
-          label: { zh_CN: '本地化列表' },
+          label: '本地化列表',
           description: '',
           required: false,
         }}

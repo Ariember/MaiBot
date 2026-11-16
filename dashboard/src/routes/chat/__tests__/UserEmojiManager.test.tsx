@@ -7,9 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { UserEmojiManager } from '../UserEmojiManager'
 
-// t 必须是稳定引用：loadItems 的依赖数组包含 t，不稳定会导致 effect 无限重跑
-const { tMock, toastMock, apiMocks } = vi.hoisted(() => ({
-  tMock: (key: string) => key,
+const { toastMock, apiMocks } = vi.hoisted(() => ({
   toastMock: vi.fn(),
   apiMocks: {
     listUserEmojis: vi.fn(),
@@ -19,9 +17,7 @@ const { tMock, toastMock, apiMocks } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: tMock }),
-}))
+
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
@@ -106,7 +102,7 @@ function renderManager(overrides: Partial<Parameters<typeof UserEmojiManager>[0]
 
 async function openPopover() {
   const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { name: 'chat.actions.openEmojiManager' }))
+  await user.click(screen.getByRole('button', { name: '用户表情包' }))
   return user
 }
 
@@ -126,7 +122,7 @@ describe('UserEmojiManager', () => {
   it('passes a gallery original to the real send callback as an image', async () => {
     const onSendEmoji = vi.fn(async () => {})
     renderManager({ onSendEmoji })
-    await userEvent.click(screen.getByRole('button', { name: 'chat.actions.openEmojiManager' }))
+    await userEvent.click(screen.getByRole('button', { name: '用户表情包' }))
     await userEvent.click(screen.getByRole('button', { name: '额外图库' }))
     await userEvent.click(screen.getByRole('button', { name: '发送图库图片' }))
     expect(onSendEmoji).toHaveBeenCalledWith(expect.objectContaining({
@@ -135,7 +131,7 @@ describe('UserEmojiManager', () => {
   })
   it('禁用时触发按钮不可点击，弹层内容默认不渲染', () => {
     renderManager({ disabled: true })
-    expect(screen.getByRole('button', { name: 'chat.actions.openEmojiManager' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '用户表情包' })).toBeDisabled()
     expect(screen.queryByTestId('popover-content')).not.toBeInTheDocument()
   })
 
@@ -155,7 +151,7 @@ describe('UserEmojiManager', () => {
     expect(apiMocks.listUserEmojis).toHaveBeenCalledWith('user-1')
 
     resolveList({ items: [makeEmoji('a'), makeEmoji('b')], limit: 20 })
-    const images = await screen.findAllByRole('img', { name: 'chat.media.emoji' })
+    const images = await screen.findAllByRole('img', { name: '表情包' })
     expect(images).toHaveLength(2)
     expect(images[0]).toHaveAttribute('src', 'resolved:/emojis/a.png')
     expect(images[1]).toHaveAttribute('src', 'resolved:/emojis/b.png')
@@ -164,7 +160,7 @@ describe('UserEmojiManager', () => {
   it('列表为空时显示空态提示', async () => {
     renderManager()
     await openPopover()
-    expect(await screen.findByText('chat.emojiManager.empty')).toBeInTheDocument()
+    expect(await screen.findByText('还没有用户表情包，点击添加即可使用。')).toBeInTheDocument()
   })
 
   it('加载失败时弹出错误提示并结束加载态', async () => {
@@ -175,27 +171,27 @@ describe('UserEmojiManager', () => {
     await waitFor(() =>
       expect(toastMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'chat.toast.emojiLoadFailed',
+          title: '加载表情包失败',
           description: '网络错误',
           variant: 'destructive',
         })
       )
     )
-    expect(await screen.findByText('chat.emojiManager.empty')).toBeInTheDocument()
+    expect(await screen.findByText('还没有用户表情包，点击添加即可使用。')).toBeInTheDocument()
   })
 
   it('添加合法图片后新表情插入到列表最前', async () => {
     apiMocks.listUserEmojis.mockResolvedValue({ items: [makeEmoji('a')], limit: 20 })
     const { container } = renderManager()
     await openPopover()
-    await screen.findAllByRole('img', { name: 'chat.media.emoji' })
+    await screen.findAllByRole('img', { name: '表情包' })
 
     const file = new File(['png-data'], 'new.png', { type: 'image/png' })
     const input = container.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [file] } })
 
     await waitFor(() => {
-      const images = screen.getAllByRole('img', { name: 'chat.media.emoji' })
+      const images = screen.getAllByRole('img', { name: '表情包' })
       expect(images).toHaveLength(2)
       expect(images[0]).toHaveAttribute('src', 'resolved:/emojis/new.png')
     })
@@ -212,15 +208,15 @@ describe('UserEmojiManager', () => {
   ])('%s 的文件被前端校验拒绝且不发起上传', async (_label, createFile) => {
     const { container } = renderManager()
     await openPopover()
-    await screen.findByText('chat.emojiManager.empty')
+    await screen.findByText('还没有用户表情包，点击添加即可使用。')
 
     const input = container.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [createFile()] } })
 
     expect(toastMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'chat.toast.emojiUploadFailed',
-        description: 'chat.toast.emojiUnsupportedDesc',
+        title: '添加表情包失败',
+        description: '请选择不超过 2 MB 的 JPG、PNG、WebP 或 GIF 图片。',
         variant: 'destructive',
       })
     )
@@ -232,9 +228,9 @@ describe('UserEmojiManager', () => {
     const onSendEmoji = vi.fn(async () => {})
     renderManager({ onSendEmoji })
     const user = await openPopover()
-    await screen.findAllByRole('img', { name: 'chat.media.emoji' })
+    await screen.findAllByRole('img', { name: '表情包' })
 
-    await user.click(screen.getByRole('button', { name: 'chat.emojiManager.send' }))
+    await user.click(screen.getByRole('button', { name: '发送表情包' }))
     expect(onSendEmoji).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'a', content_url: '/emojis/a.png' })
     )
@@ -249,13 +245,13 @@ describe('UserEmojiManager', () => {
     })
     renderManager({ onSendEmoji })
     const user = await openPopover()
-    await screen.findAllByRole('img', { name: 'chat.media.emoji' })
+    await screen.findAllByRole('img', { name: '表情包' })
 
-    await user.click(screen.getByRole('button', { name: 'chat.emojiManager.send' }))
+    await user.click(screen.getByRole('button', { name: '发送表情包' }))
     await waitFor(() =>
       expect(toastMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'chat.toast.emojiSendFailed',
+          title: '发送表情包失败',
           description: '发送失败',
           variant: 'destructive',
         })
@@ -271,12 +267,12 @@ describe('UserEmojiManager', () => {
     })
     renderManager()
     const user = await openPopover()
-    await screen.findAllByRole('img', { name: 'chat.media.emoji' })
+    await screen.findAllByRole('img', { name: '表情包' })
 
-    await user.click(screen.getAllByRole('button', { name: 'chat.emojiManager.delete' })[0])
+    await user.click(screen.getAllByRole('button', { name: '删除表情包' })[0])
     expect(apiMocks.deleteUserEmoji).toHaveBeenCalledWith('user-1', 'a')
     await waitFor(() => {
-      const images = screen.getAllByRole('img', { name: 'chat.media.emoji' })
+      const images = screen.getAllByRole('img', { name: '表情包' })
       expect(images).toHaveLength(1)
       expect(images[0]).toHaveAttribute('src', 'resolved:/emojis/b.png')
     })
@@ -291,18 +287,18 @@ describe('UserEmojiManager', () => {
     apiMocks.deleteUserEmoji.mockRejectedValue(new Error('删除失败'))
     renderManager()
     const user = await openPopover()
-    await screen.findAllByRole('img', { name: 'chat.media.emoji' })
+    await screen.findAllByRole('img', { name: '表情包' })
 
-    await user.click(screen.getAllByRole('button', { name: 'chat.emojiManager.delete' })[0])
+    await user.click(screen.getAllByRole('button', { name: '删除表情包' })[0])
     await waitFor(() =>
       expect(toastMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'chat.toast.emojiDeleteFailed',
+          title: '删除表情包失败',
           description: '删除失败',
           variant: 'destructive',
         })
       )
     )
-    expect(screen.getAllByRole('img', { name: 'chat.media.emoji' })).toHaveLength(2)
+    expect(screen.getAllByRole('img', { name: '表情包' })).toHaveLength(2)
   })
 })

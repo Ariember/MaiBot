@@ -9,7 +9,7 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ pluginId: 'test.plugin', pageId: 'overview' }),
   Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }))
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+
 vi.mock('@/lib/plugin-webui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/plugin-webui')>()),
   usePluginWebUI: () => ({
@@ -84,7 +84,7 @@ describe('plugin page lifecycle', () => {
     render(<PluginWebUIPage />)
     expect(await screen.findByText('Error: Missing term')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Search'), { target: { value: 'hello' } })
-    fireEvent.click(screen.getByRole('button', { name: 'pluginWebUI.refresh' }))
+    fireEvent.click(screen.getByRole('button', { name: '刷新' }))
     expect(await screen.findByText('3')).toBeInTheDocument()
     expect(mocks.invoke).toHaveBeenLastCalledWith(
       'test.plugin',
@@ -111,7 +111,7 @@ describe('plugin page lifecycle', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
     expect(screen.getByText('Reset all counts?')).toBeInTheDocument()
     expect(mocks.invoke.mock.calls.filter((call) => call[2] === 'actions')).toHaveLength(0)
-    fireEvent.click(screen.getByRole('button', { name: 'pluginWebUI.confirm' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认' }))
     await waitFor(() =>
       expect(mocks.invoke).toHaveBeenCalledWith(
         'test.plugin',
@@ -123,7 +123,7 @@ describe('plugin page lifecycle', () => {
         expect.any(AbortSignal)
       )
     )
-    expect(await screen.findByText('pluginWebUI.completed')).toBeInTheDocument()
+    expect(await screen.findByText('操作已完成')).toBeInTheDocument()
   })
 
   it('aborts the browser request on unmount without retrying the write', async () => {
@@ -182,7 +182,7 @@ describe('automatic query pagination', () => {
       Promise.resolve({ pagination: { page: args.page, pages: 3, total: 30 } })
     )
     render(<PluginWebUIPage />)
-    const next = await screen.findByRole('button', { name: 'pluginWebUI.next' })
+    const next = await screen.findByRole('button', { name: '下一页' })
     await waitFor(() => expect(next).not.toBeDisabled())
     expect(mocks.invoke.mock.calls.at(-1)?.[4]).toEqual({ page: 1, filter: 'all' })
     fireEvent.click(next)
@@ -247,7 +247,7 @@ describe('selected row action parameters', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove row' }))
     expect(screen.getByText('Remove this row?')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Count'), { target: { value: '2' } })
-    fireEvent.click(screen.getByRole('button', { name: 'pluginWebUI.confirm' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认' }))
     await waitFor(() =>
       expect(mocks.invoke).toHaveBeenCalledWith(
         'test.plugin',

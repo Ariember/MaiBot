@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import { useRouter, useRouterState } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 
@@ -61,7 +61,6 @@ function loadStoredBoolean(key: string, fallback: boolean): boolean {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { t } = useTranslation()
   const { checking } = useAuthGuard() // 检查认证状态
   const router = useRouter()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
@@ -123,7 +122,7 @@ export function Layout({ children }: LayoutProps) {
   const baseMenuSections = useMenuSections()
   const builtInMenuSections = useMemo(() => {
     const mylife = extensions.find((extension) => extension.plugin_id === MYLIFE_PLUGIN_ID)
-    return baseMenuSections.map((section) => section.title === 'sidebar.groups.mylife'
+    return baseMenuSections.map((section) => section.title === "麦日常"
       ? {
           ...section,
           items: [
@@ -131,7 +130,6 @@ export function Layout({ children }: LayoutProps) {
             ...(mylife?.pages ?? []).map((page) => ({
               icon: extensionIcons[page.icon],
               label: page.title,
-              literalLabel: true,
               path: extensionPath(MYLIFE_PLUGIN_ID, page.id),
             })),
           ],
@@ -152,11 +150,9 @@ export function Layout({ children }: LayoutProps) {
         ? [
             {
               title: extension.workspace_title ?? extension.plugin_id,
-              literalTitle: true,
               items: pages.map((page) => ({
                 icon: extensionIcons[page.icon],
                 label: page.title,
-                literalLabel: true,
                 path: extensionPath(extension.plugin_id, page.id),
               })),
             },
@@ -169,7 +165,7 @@ export function Layout({ children }: LayoutProps) {
           ...(pluginMenuSections.length
             ? [
                 {
-                  title: 'pluginWebUI.extensions',
+                  title: "插件扩展",
                   items: pluginMenuSections.flatMap((section) => section.items),
                 },
               ]
@@ -238,17 +234,17 @@ export function Layout({ children }: LayoutProps) {
 
   // 路由变更：焦点管理 + 屏幕阅读器播报 + document.title 更新
   useEffect(() => {
-    // 构建 路径 -> 页面标题 的映射表（以当前语言 t() 翻译）
+    // 构建路径到页面标题的映射表。
     const pathToLabel: Record<string, string> = {}
     for (const section of menuSections) {
       for (const item of section.items) {
-        pathToLabel[item.path] = item.literalLabel ? item.label : t(item.label)
+        pathToLabel[item.path] = item.label
       }
     }
-    pathToLabel['/chat'] = t('workspace.chat')
-    pathToLabel['/planner-monitor'] = t('sidebar.menu.maisakaMonitor')
-    pathToLabel['/logs'] = t('workspace.logs')
-    pathToLabel['/reasoning-process'] = t('sidebar.menu.reasoningProcess')
+    pathToLabel['/chat'] = '麦麦聊天'
+    pathToLabel['/planner-monitor'] = '麦麦观察'
+    pathToLabel['/logs'] = '日志'
+    pathToLabel['/reasoning-process'] = '推理过程'
 
     return router.subscribe('onResolved', () => {
       const pageTitle = pathToLabel[router.state.location.pathname] ?? 'MaiBot Dashboard'
@@ -259,7 +255,7 @@ export function Layout({ children }: LayoutProps) {
       document.title = fullTitle
 
       // 屏幕阅读器朗读导航结果
-      announce(t('a11y.navigatedTo', { page: pageTitle }), 'polite')
+      announce(`已导航至 ${pageTitle}`, 'polite')
 
       // 将焦点移到主内容区（仅当焦点不在其内部时）
       const mainEl = document.getElementById('main-content')
@@ -270,7 +266,7 @@ export function Layout({ children }: LayoutProps) {
         })
       }
     })
-  }, [router, announce, t, menuSections])
+  }, [router, announce, menuSections])
 
   // 获取实际应用的主题（处理 system 情况）
   const getActualTheme = () => {
@@ -373,11 +369,9 @@ export function Layout({ children }: LayoutProps) {
     ...builtInMenuSections,
     ...extensions.filter((extension) => extension.plugin_id !== MYLIFE_PLUGIN_ID && extension.pages.length > 0).map((extension) => ({
       title: extension.workspace_title ?? extension.plugin_id,
-      literalTitle: true,
       items: extension.pages.map((page) => ({
         icon: extensionIcons[page.icon],
         label: page.title,
-        literalLabel: true,
         path: extensionPath(extension.plugin_id, page.id),
       })),
     })),
@@ -406,7 +400,7 @@ export function Layout({ children }: LayoutProps) {
   if (checking) {
     return (
       <div className="bg-background flex h-screen items-center justify-center">
-        <div className="text-muted-foreground">{t('layout.verifyingLogin')}</div>
+        <div className="text-muted-foreground">{'麦麦正在啃食服务器...'}</div>
       </div>
     )
   }

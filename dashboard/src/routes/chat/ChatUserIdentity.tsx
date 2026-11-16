@@ -1,6 +1,6 @@
 import { Camera, Loader2, Pencil, UserCircle2 } from 'lucide-react'
 import { useRef } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -26,7 +26,6 @@ export function ChatUserIdentity({
   onUpdateUserAvatar,
   onUpdateUserName,
 }: ChatUserIdentityProps) {
-  const { t } = useTranslation()
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const userAvatarUrl = useResolvedAvatarUrl(
     userAvatarVersion ? 'internal' : undefined,
@@ -42,7 +41,7 @@ export function ChatUserIdentity({
           {userAvatarUrl && (
             <AvatarImage
               src={userAvatarUrl}
-              alt={t('chat.sidebar.userAvatarAlt', { name: userName })}
+              alt={`${userName} 的头像`}
               className="object-cover"
             />
           )}
@@ -54,7 +53,7 @@ export function ChatUserIdentity({
           <TooltipTrigger asChild>
             <button
               type="button"
-              aria-label={t('chat.sidebar.editAvatar')}
+              aria-label={'修改头像'}
               className="bg-primary text-primary-foreground hover:bg-primary/90 border-card absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full border-2 shadow-sm transition disabled:cursor-wait"
               disabled={isUploadingUserAvatar}
               onClick={() => avatarInputRef.current?.click()}
@@ -67,7 +66,7 @@ export function ChatUserIdentity({
             </button>
           </TooltipTrigger>
           <TooltipContent side="top">
-            {isUploadingUserAvatar ? t('chat.sidebar.savingAvatar') : t('chat.sidebar.editAvatar')}
+            {isUploadingUserAvatar ? '正在保存头像' : '修改头像'}
           </TooltipContent>
         </Tooltip>
         <input
@@ -88,8 +87,8 @@ export function ChatUserIdentity({
         trigger={
           <button
             type="button"
-            aria-label={t('chat.sidebar.editName')}
-            title={t('chat.sidebar.editName')}
+            aria-label={'编辑昵称'}
+            title={'编辑昵称'}
             className="hover:bg-muted focus-visible:ring-primary flex min-w-0 flex-1 items-center gap-1 rounded-md px-1 py-1 text-left text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
           >
             <span className="min-w-0 flex-1 truncate">{userName}</span>

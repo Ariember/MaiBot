@@ -11,7 +11,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { useNavigate } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
@@ -42,7 +42,6 @@ import {
 } from '@/components/ui/alert-dialog'
 
 export function SecurityTab() {
-  const { t } = useTranslation()
   const navigate = useNavigate()
   const [newToken, setNewToken] = useState('')
   const [showNewToken, setShowNewToken] = useState(false)
@@ -60,8 +59,8 @@ export function SecurityTab() {
   const handleUpdateToken = async () => {
     if (!newToken.trim()) {
       toast({
-        title: t('settings.security.inputError'),
-        description: t('settings.security.inputErrorDesc'),
+        title: '输入错误',
+        description: '请输入新的 Token',
         variant: 'destructive',
       })
       return
@@ -75,8 +74,8 @@ export function SecurityTab() {
         .join(', ')
       
       toast({
-        title: t('settings.security.formatError'),
-        description: t('settings.security.formatErrorDesc', { failedRules }),
+        title: '格式错误',
+        description: `Token 不符合要求: ${failedRules}`,
         variant: 'destructive',
       })
       return
@@ -101,8 +100,8 @@ export function SecurityTab() {
         setNewToken('')
         
         toast({
-          title: t('settings.security.updateSuccess'),
-          description: t('settings.security.updateSuccessDesc'),
+          title: '更新成功',
+          description: 'Access Token 已更新，即将跳转到登录页',
         })
 
         // 延迟跳转到登录页
@@ -111,16 +110,16 @@ export function SecurityTab() {
         }, 1500)
       } else {
         toast({
-          title: t('settings.security.updateFailed'),
-          description: data.message || t('settings.security.updateFailedDesc'),
+          title: '更新失败',
+          description: data.message || '无法更新 Token',
           variant: 'destructive',
         })
       }
     } catch (err) {
       console.error('更新 Token 错误:', err)
       toast({
-        title: t('settings.security.updateFailed'),
-        description: t('settings.security.updateFailedConn'),
+        title: '更新失败',
+        description: '连接服务器失败',
         variant: 'destructive',
       })
     } finally {
@@ -150,21 +149,21 @@ export function SecurityTab() {
         setTokenCopied(false)
         
         toast({
-          title: t('settings.security.generateSuccess'),
-          description: t('settings.security.generateSuccessDesc'),
+          title: '生成成功',
+          description: '新的 Access Token 已生成，请及时保存',
         })
       } else {
         toast({
-          title: t('settings.security.generateFailed'),
-          description: data.message || t('settings.security.generateFailedDesc'),
+          title: '生成失败',
+          description: data.message || '无法生成新 Token',
           variant: 'destructive',
         })
       }
     } catch (err) {
       console.error('生成 Token 错误:', err)
       toast({
-        title: t('settings.security.generateFailed'),
-        description: t('settings.security.generateFailedConn'),
+        title: '生成失败',
+        description: '连接服务器失败',
         variant: 'destructive',
       })
     } finally {
@@ -178,13 +177,13 @@ export function SecurityTab() {
       await navigator.clipboard.writeText(generatedToken)
       setTokenCopied(true)
       toast({
-        title: t('settings.security.copySuccess'),
-        description: t('settings.security.copySuccessDesc'),
+        title: '复制成功',
+        description: 'Token 已复制到剪贴板',
       })
     } catch {
       toast({
-        title: t('settings.security.copyFailed'),
-        description: t('settings.security.copyFailedDesc'),
+        title: '复制失败',
+        description: '请手动复制 Token',
         variant: 'destructive',
       })
     }
@@ -218,7 +217,7 @@ export function SecurityTab() {
       <div className="flex justify-end">
         <Button variant="destructive" onClick={() => void logout()} className="gap-2">
           <LogOut className="h-4 w-4" />
-          {t('header.logoutLabel')}
+          {'登出'}
         </Button>
       </div>
       {/* Token 生成成功弹窗 */}
@@ -227,10 +226,10 @@ export function SecurityTab() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              {t('settings.security.dialogTitle')}
+              {'新的 Access Token'}
             </DialogTitle>
             <DialogDescription>
-              {t('settings.security.dialogDesc')}
+              {'这是您的新 Token，请立即保存。关闭此窗口后将跳转到登录页面。'}
             </DialogDescription>
           </DialogHeader>
 
@@ -238,7 +237,7 @@ export function SecurityTab() {
             {/* Token 显示区域 */}
             <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4">
               <Label className="text-xs text-muted-foreground mb-2 block">
-                {t('settings.security.dialogTokenLabel')}
+                {'您的新 Token (64位安全令牌)'}
               </Label>
               <div className="font-mono text-sm break-all select-all bg-background p-3 rounded border">
                 {generatedToken}
@@ -250,12 +249,12 @@ export function SecurityTab() {
               <div className="flex gap-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-yellow-800 dark:text-yellow-300 space-y-1">
-                  <p className="font-semibold">{t('settings.security.important')}</p>
+                  <p className="font-semibold">{'重要提示'}</p>
                   <ul className="list-disc list-inside space-y-0.5 text-xs">
-                    <li>{t('settings.security.tip1')}</li>
-                    <li>{t('settings.security.tip2')}</li>
-                    <li>{t('settings.security.tip3')}</li>
-                    <li>{t('settings.security.tip4')}</li>
+                    <li>{'此 Token 仅显示一次，关闭后无法再查看'}</li>
+                    <li>{'请立即复制并保存到安全的位置'}</li>
+                    <li>{'关闭窗口后将自动跳转到登录页面'}</li>
+                    <li>{'请使用新 Token 重新登录系统'}</li>
                   </ul>
                 </div>
               </div>
@@ -271,17 +270,17 @@ export function SecurityTab() {
               {tokenCopied ? (
                 <>
                   <Check className="h-4 w-4 text-green-500" />
-                  {t('settings.security.copied')}
+                  {'已复制'}
                 </>
               ) : (
                 <>
                   <Copy className="h-4 w-4" />
-                  {t('settings.security.copyToken')}
+                  {'复制 Token'}
                 </>
               )}
             </Button>
             <Button onClick={handleCloseDialog}>
-              {t('settings.security.savedClose')}
+              {'我已保存，关闭'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -290,7 +289,7 @@ export function SecurityTab() {
       {/* Token 管理：随机生成与自定义更新共用一个区域 */}
       <Card className="p-4 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4">
-          <h3 className="text-base sm:text-lg font-semibold">{t('settings.security.tokenManagement')}</h3>
+          <h3 className="text-base sm:text-lg font-semibold">{'Access Token 管理'}</h3>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -299,21 +298,21 @@ export function SecurityTab() {
                 className="gap-2 w-full sm:w-auto"
               >
                 <RefreshCw className={cn('h-4 w-4', isRegenerating && 'animate-spin')} />
-                <span className="hidden sm:inline">{t('settings.security.regenerate')}</span>
-                <span className="sm:hidden">{t('settings.security.regenerateShort')}</span>
+                <span className="hidden sm:inline">{'重新生成'}</span>
+                <span className="sm:hidden">{'生成'}</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>{t('settings.security.confirmRegenerate')}</AlertDialogTitle>
+                <AlertDialogTitle>{'确认重新生成 Token'}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {t('settings.security.confirmRegenerateFullDesc')}
+                  {'这将生成一个新的 64 位安全令牌，并使当前 Token 立即失效。您需要使用新 Token 重新登录系统。此操作不可撤销，确定要继续吗？'}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>{t('settings.security.cancel')}</AlertDialogCancel>
+                <AlertDialogCancel>{'取消'}</AlertDialogCancel>
                 <AlertDialogAction onClick={executeRegenerateToken}>
-                  {t('settings.security.confirmGenerate')}
+                  {'确认生成'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -322,7 +321,7 @@ export function SecurityTab() {
         {/* 更新 Token */}
         <div className="space-y-3 sm:space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="new-token" className="text-sm">{t('settings.security.newTokenLabel')}</Label>
+            <Label htmlFor="new-token" className="text-sm">{'新的访问令牌'}</Label>
             <div className="relative">
               <Input
                 id="new-token"
@@ -330,12 +329,12 @@ export function SecurityTab() {
                 value={newToken}
                 onChange={(e) => setNewToken(e.target.value)}
                 className="pr-10 font-mono text-sm"
-                placeholder={t('settings.security.customTokenPlaceholder')}
+                placeholder={'输入自定义 Token'}
               />
               <button
                 onClick={() => setShowNewToken(!showNewToken)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-accent rounded"
-                title={showNewToken ? t('settings.security.hide') : t('settings.security.show')}
+                title={showNewToken ? '隐藏' : '显示'}
               >
                 {showNewToken ? (
                   <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -348,7 +347,7 @@ export function SecurityTab() {
             {/* Token 验证规则显示 */}
             {newToken && (
               <div className="mt-3 space-y-2 p-3 rounded-lg bg-muted/50">
-                <p className="text-sm font-medium text-foreground">{t('settings.security.tokenReqTitle')}</p>
+                <p className="text-sm font-medium text-foreground">{'Token 安全要求:'}</p>
                 <div className="space-y-1.5">
                   {tokenValidation.rules.map((rule) => (
                     <div key={rule.id} className="flex items-center gap-2 text-sm">
@@ -369,7 +368,7 @@ export function SecurityTab() {
                   <div className="mt-2 pt-2 border-t border-border">
                     <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                       <Check className="h-4 w-4" />
-                      <span className="font-medium">{t('settings.security.tokenValid')}</span>
+                      <span className="font-medium">{'Token 格式正确，可以使用'}</span>
                     </div>
                   </div>
                 )}
@@ -381,21 +380,21 @@ export function SecurityTab() {
             disabled={isUpdating || isRegenerating || !tokenValidation.isValid || !newToken}
             className="w-full sm:w-auto"
           >
-            {isUpdating ? t('settings.security.updating') : t('settings.security.updateBtn')}
+            {isUpdating ? '更新中...' : '更新自定义 Token'}
           </Button>
         </div>
       </Card>
 
       {/* 安全提示 */}
       <div className="rounded-lg border border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950/30 p-3 sm:p-4">
-        <h4 className="text-sm sm:text-base font-semibold text-yellow-900 dark:text-yellow-200 mb-2">{t('settings.security.securityTip')}</h4>
+        <h4 className="text-sm sm:text-base font-semibold text-yellow-900 dark:text-yellow-200 mb-2">{'安全提示'}</h4>
         <ul className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-300 space-y-1 list-disc list-inside">
-          <li>{t('settings.security.securityTip1')}</li>
-          <li>{t('settings.security.securityTip2')}</li>
-          <li>{t('settings.security.securityTip3')}</li>
-          <li>{t('settings.security.securityTip4')}</li>
-          <li>{t('settings.security.securityTip5')}</li>
-          <li>{t('settings.security.securityTip6')}</li>
+          <li>{'重新生成 Token 会创建系统随机生成的 64 位安全令牌'}</li>
+          <li>{'自定义 Token 必须满足所有安全要求才能使用'}</li>
+          <li>{'更新 Token 后，旧的 Token 将立即失效'}</li>
+          <li>{'请在安全的环境下查看和复制 Token'}</li>
+          <li>{'如果怀疑 Token 泄露，请立即重新生成或更新'}</li>
+          <li>{'建议使用系统生成的 Token 以获得最高安全性'}</li>
         </ul>
       </div>
     </div>

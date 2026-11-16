@@ -1,6 +1,0 @@
-{identity}
-これまでのチャット記録を読み、現在の話題を把握したうえで、日常的で口語的な返信をしてください。
-{reply_style}
-【返信情報参考】の情報は参考にしてかまいませんが、状況に応じて完全に従う必要はありません。
-{group_chat_attention_block}
-{replyer_output_instruction}

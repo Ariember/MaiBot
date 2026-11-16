@@ -29,50 +29,19 @@ LOGGER = logging.getLogger("snowluma_adapter.config")
 CLIENT_TYPE_VALUES = Literal["auto", "onebot_v11", "napcat", "snowluma"]
 
 
-
-
-def _schema_i18n(
-    *,
-    label_en: str,
-    label_ja: str,
-    hint_en: Optional[str] = None,
-    hint_ja: Optional[str] = None,
-    placeholder_en: Optional[str] = None,
-    placeholder_ja: Optional[str] = None,
-) -> Dict[str, Dict[str, str]]:
-    """构造 WebUI 配置项多语言说明，保留外层中文字段兼容旧格式。"""
-
-    i18n: Dict[str, Dict[str, str]] = {
-        "en_US": {"label": label_en},
-        "ja_JP": {"label": label_ja},
-    }
-    if hint_en is not None:
-        i18n["en_US"]["hint"] = hint_en
-    if hint_ja is not None:
-        i18n["ja_JP"]["hint"] = hint_ja
-    if placeholder_en is not None:
-        i18n["en_US"]["placeholder"] = placeholder_en
-    if placeholder_ja is not None:
-        i18n["ja_JP"]["placeholder"] = placeholder_ja
-    return i18n
-
-
 def _notice_field(
     *,
     label: str,
     description: str,
     order: int,
-    label_en: str,
-    label_ja: str,
 ) -> Any:
-    """构造通知事件开关字段，统一默认放行与 WebUI 多语言标签。"""
+    """构造通知事件开关字段，统一默认放行与 WebUI 标签。"""
 
     return Field(
         default=True,
         description=description,
         json_schema_extra={
             "hint": description,
-            "i18n": _schema_i18n(label_en=label_en, label_ja=label_ja),
             "label": label,
             "order": order,
         },
@@ -90,18 +59,6 @@ class QQChatAbilitiesConfig(PluginConfigBase):
         description="是否启用主动开启私聊工具。",
         json_schema_extra={
             "hint": "开启后，模型可向指定 QQ 用户发送首条私聊消息；请在宿主适配器策略中放行该私聊。",
-            "i18n": _schema_i18n(
-                label_en="Enable private chat tool",
-                label_ja="個人チャット開始ツールを有効化",
-                hint_en=(
-                    "When enabled, the model can send the first private message to a user; "
-                    "grant the chat in the host adapter policy."
-                ),
-                hint_ja=(
-                    "有効にすると、モデルは指定ユーザーへ最初の個人メッセージを送信できます；"
-                    "ホスト側のアダプターポリシーでその個人チャットを許可してください。"
-                ),
-            ),
             "label": "启用主动私聊工具",
             "order": 0,
         },
@@ -111,18 +68,6 @@ class QQChatAbilitiesConfig(PluginConfigBase):
         description="是否启用戳一戳工具。",
         json_schema_extra={
             "hint": "开启后，模型可向指定 QQ 用户发送戳一戳；群聊中戳当前群成员，私聊中发送好友戳一戳。",
-            "i18n": _schema_i18n(
-                label_en="Enable poke tool",
-                label_ja="poke ツールを有効化",
-                hint_en=(
-                    "When enabled, the model can poke a QQ user; in group chats the current group is used, "
-                    "in private chats a friend poke is sent."
-                ),
-                hint_ja=(
-                    "有効にすると、モデルは指定ユーザーに poke を送信できます；"
-                    "グループチャットでは現在のグループ、個人チャットでは友達への poke を送信します。"
-                ),
-            ),
             "label": "启用戳一戳工具",
             "order": 1,
         },
@@ -132,18 +77,6 @@ class QQChatAbilitiesConfig(PluginConfigBase):
         description="是否启用消息撤回工具。",
         json_schema_extra={
             "hint": "开启后，模型可撤回消息；撤回自己的消息限 2 分钟内，撤回他人消息需要机器人是群管理员。",
-            "i18n": _schema_i18n(
-                label_en="Enable recall tool",
-                label_ja="メッセージ撤回ツールを有効化",
-                hint_en=(
-                    "When enabled, the model can recall messages; own messages within 2 minutes, "
-                    "others' messages require the bot to be a group admin."
-                ),
-                hint_ja=(
-                    "有効にすると、モデルはメッセージを撤回できます；"
-                    "自身のメッセージは 2 分以内、他人のメッセージは Bot がグループ管理者である必要があります。"
-                ),
-            ),
             "label": "启用消息撤回工具",
             "order": 2,
         },
@@ -154,20 +87,6 @@ class QQChatAbilitiesConfig(PluginConfigBase):
         json_schema_extra={
             "hint": "开启后，模型可根据消息 ID 禁言发送者；群主、管理员及保护名单中的用户不会被禁言，"
             "可通过 [mute] 节限制生效群与时长范围。",
-            "i18n": _schema_i18n(
-                label_en="Enable mute tool",
-                label_ja="ミュートツールを有効化",
-                hint_en=(
-                    "When enabled, the model can mute the sender of a message by its ID; "
-                    "group owners, admins and protected users are never muted. "
-                    "Scope groups and duration limits in the [mute] section."
-                ),
-                hint_ja=(
-                    "有効にすると、モデルはメッセージ ID で送信者をミュートできます；"
-                    "グループのオーナー・管理者・保護リストのユーザーはミュートされません。"
-                    "対象グループと時間の範囲は [mute] セクションで制限できます。"
-                ),
-            ),
             "label": "启用智能禁言工具",
             "order": 3,
         },
@@ -177,12 +96,6 @@ class QQChatAbilitiesConfig(PluginConfigBase):
         description="是否启用表情表态工具。",
         json_schema_extra={
             "hint": "开启后，模型可给消息贴表情回应（如赞、爱心）。",
-            "i18n": _schema_i18n(
-                label_en="Enable emoji reaction tool",
-                label_ja="絵文字リアクションツールを有効化",
-                hint_en="When enabled, the model can react to a message with a QQ emoji (e.g. thumbs up, heart).",
-                hint_ja="有効にすると、モデルはメッセージに QQ 絵文字（いいね・ハートなど）でリアクションできます。",
-            ),
             "label": "启用表情表态工具",
             "order": 4,
         },
@@ -192,18 +105,6 @@ class QQChatAbilitiesConfig(PluginConfigBase):
         description="是否启用消息转发工具。",
         json_schema_extra={
             "hint": "开启后，模型可把一批消息打包成合并转发，发送到指定群或私聊。",
-            "i18n": _schema_i18n(
-                label_en="Enable forward tool",
-                label_ja="転送ツールを有効化",
-                hint_en=(
-                    "When enabled, the model can bundle messages into a merged forward "
-                    "and send it to a specific group or private chat."
-                ),
-                hint_ja=(
-                    "有効にすると、モデルはメッセージをまとめて転送し、"
-                    "指定したグループまたは個人チャットへ送信できます。"
-                ),
-            ),
             "label": "启用消息转发工具",
             "order": 5,
         },
@@ -221,12 +122,6 @@ class QQPluginOptions(PluginConfigBase):
         description="是否启用适配器。",
         json_schema_extra={
             "hint": "关闭后插件会保持空闲，不会主动建立 WebSocket 连接。",
-            "i18n": _schema_i18n(
-                label_en="Enable adapter",
-                label_ja="アダプターを有効化",
-                hint_en="When disabled, the plugin stays idle and will not open a WebSocket connection.",
-                hint_ja="無効にすると、プラグインは待機状態のままになり、WebSocket 接続を開始しません。",
-            ),
             "label": "启用适配器",
             "order": 0,
         },
@@ -237,18 +132,6 @@ class QQPluginOptions(PluginConfigBase):
         json_schema_extra={
             "label": "QQ表情解析模式",
             "hint": "[description]模式会把表情转成[流泪]这种形式[emoji]会转成近似emoji表情。",
-            "i18n": _schema_i18n(
-                label_en="QQ face parsing",
-                label_ja="QQ 標準顔文字の解析",
-                hint_en=(
-                    "description converts face segments to [流泪]-style text; "
-                    "emoji prefers an approximate Unicode emoji."
-                ),
-                hint_ja=(
-                    "description は顔文字を [流泪] 形式のテキストに変換し、"
-                    "emoji は近い Unicode 絵文字を優先します。"
-                ),
-            ),
             "order": 1,
         },
     )
@@ -258,12 +141,6 @@ class QQPluginOptions(PluginConfigBase):
         json_schema_extra={
             "label": "启用文本转QQ表情",
             "hint": "开启后，/捂脸 /微笑 等已知名称会转换为 QQ 表情；找不到的名称不转换。",
-            "i18n": _schema_i18n(
-                label_en="Convert text to QQ faces",
-                label_ja="テキストを QQ 絵文字に変換",
-                hint_en="Convert known /face-name text to native QQ faces when sending; unknown names stay unchanged.",
-                hint_ja="送信時に既知の /表情名 を QQ 絵文字に変換します。不明な名前はそのまま送信します。",
-            ),
             "order": 2,
         },
     )
@@ -273,14 +150,6 @@ class QQPluginOptions(PluginConfigBase):
         json_schema_extra={
             "label": "启用文本转@",
             "hint": "仅转换能唯一匹配当前群成员的完整名称；未知或重名保留原文，相邻同目标 @ 合并。",
-            "i18n": _schema_i18n(
-                label_en="Convert text mentions",
-                label_ja="テキストのメンションを変換",
-                hint_en="Resolve full QQ IDs, group cards or nicknames within the current group; "
-                "keep unknown or ambiguous names and merge adjacent mentions of the same user.",
-                hint_ja="現在のグループ内で QQ 番号・グループ名・ニックネームを完全一致で検索します。"
-                "不明・同名はそのままにし、隣接する同じユーザーへのメンションを統合します。",
-            ),
             "order": 3,
         },
     )
@@ -290,7 +159,6 @@ class QQPluginOptions(PluginConfigBase):
         json_schema_extra={
             "disabled": True,
             "hidden": True,
-            "i18n": _schema_i18n(label_en="Config version", label_ja="設定バージョン"),
             "label": "配置版本",
             "order": 99,
         },
@@ -333,12 +201,6 @@ class QQDebugConfig(PluginConfigBase):
         json_schema_extra={
             "label": "显示原始消息段",
             "hint": "仅排查消息段结构问题时开启；开启后会记录每条入站消息的原始 message 字段。",
-            "i18n": _schema_i18n(
-                label_en="Raw inbound debug",
-                label_ja="生メッセージデバッグ",
-                hint_en="Enable only while debugging segment structure; logs each inbound raw message field at info level.",
-                hint_ja="セグメント構造を調査するときだけ有効にしてください。入站 message フィールドを info レベルで記録します。",
-            ),
             "order": 0,
         },
     )
@@ -348,18 +210,6 @@ class QQDebugConfig(PluginConfigBase):
         json_schema_extra={
             "label": "显示原始发送段",
             "hint": "仅排查发送消息段结构问题时开启；开启后会记录每条出站消息实际调用的 action 和 params。",
-            "i18n": _schema_i18n(
-                label_en="Raw outbound debug",
-                label_ja="生送信デバッグ",
-                hint_en=(
-                    "Enable only while debugging outbound segment structure; logs the action and params "
-                    "actually sent for each outbound message."
-                ),
-                hint_ja=(
-                    "送信セグメント構造を調査するときだけ有効にしてください。"
-                    "各送信メッセージで実際に渡す action と params を記録します。"
-                ),
-            ),
             "order": 1,
         },
     )
@@ -369,12 +219,6 @@ class QQDebugConfig(PluginConfigBase):
         description="是否忽略机器人自身发送的消息。",
         json_schema_extra={
             "hint": "开启后会忽略机器人自身发送的消息。",
-            "i18n": _schema_i18n(
-                label_en="Ignore self messages",
-                label_ja="自身のメッセージを無視",
-                hint_en="When enabled, messages sent by the bot itself are ignored.",
-                hint_ja="有効にすると、Bot 自身が送信したメッセージを無視します。",
-            ),
             "label": "忽略自身消息",
             "order": 2,
         },
@@ -392,18 +236,6 @@ class QQServerConfig(PluginConfigBase):
         description="对端客户端类型：auto 自动识别 SnowLuma / NapCat，其他实现使用 OneBot v11 标准模式；也可固定为 onebot_v11、napcat 或 snowluma。",
         json_schema_extra={
             "hint": "auto 自动识别厂商扩展；onebot_v11 仅使用标准能力",
-            "i18n": _schema_i18n(
-                label_en="Client type",
-                label_ja="クライアント種別",
-                hint_en=(
-                    "auto detects SnowLuma / NapCat extensions; other peers use OneBot v11 standard mode; "
-                    "a fixed value is cross-checked against the detected implementation."
-                ),
-                hint_ja=(
-                    "auto は SnowLuma / NapCat の拡張を識別し、それ以外は OneBot v11 標準モードを使用します；"
-                    "固定値の場合は判定結果と一致するか検証します。"
-                ),
-            ),
             "label": "客户端类型",
             "order": 0,
         },
@@ -413,14 +245,6 @@ class QQServerConfig(PluginConfigBase):
         description="OneBot WebSocket 服务主机地址。",
         json_schema_extra={
             "hint": "通常为运行 SnowLuma / 对端的宿主机地址，默认使用本机回环地址。",
-            "i18n": _schema_i18n(
-                label_en="Server address",
-                label_ja="サーバーアドレス",
-                hint_en="Usually the host running SnowLuma or NapCat. Defaults to the local loopback address.",
-                hint_ja="通常は SnowLuma / NapCat を実行しているホストです。既定ではローカルのループバックアドレスを使用します。",
-                placeholder_en="127.0.0.1",
-                placeholder_ja="127.0.0.1",
-            ),
             "label": "服务地址",
             "order": 1,
             "placeholder": "127.0.0.1",
@@ -431,12 +255,6 @@ class QQServerConfig(PluginConfigBase):
         description="OneBot WebSocket 服务端口。",
         json_schema_extra={
             "hint": "与对端正向 WebSocket 服务监听端口保持一致。",
-            "i18n": _schema_i18n(
-                label_en="Port",
-                label_ja="ポート",
-                hint_en="Keep this consistent with the forward WebSocket listening port.",
-                hint_ja="対向の正方向 WebSocket 待受ポートと一致させてください。",
-            ),
             "label": "端口",
             "order": 2,
         },
@@ -446,14 +264,6 @@ class QQServerConfig(PluginConfigBase):
         description="访问令牌，未启用鉴权时可留空。",
         json_schema_extra={
             "hint": "若对端开启了访问令牌校验，请在这里填写相同的 token。",
-            "i18n": _schema_i18n(
-                label_en="Access token",
-                label_ja="アクセストークン",
-                hint_en="If access token verification is enabled, enter the same token here.",
-                hint_ja="アクセストークン検証を有効にしている場合は、同じ token をここに入力してください。",
-                placeholder_en="Optional",
-                placeholder_ja="空欄可",
-            ),
             "input_type": "password",
             "label": "访问令牌",
             "order": 3,
@@ -465,12 +275,6 @@ class QQServerConfig(PluginConfigBase):
         description="协议层心跳保活间隔，单位为秒。",
         json_schema_extra={
             "hint": "用于 WebSocket 协议级 ping 保活，必须大于 0。",
-            "i18n": _schema_i18n(
-                label_en="Heartbeat interval (sec)",
-                label_ja="ハートビート間隔（秒）",
-                hint_en="Protocol-level WebSocket ping keepalive interval. Must be greater than 0.",
-                hint_ja="WebSocket プロトコルレベルの ping 保活間隔です。0 より大きい値にしてください。",
-            ),
             "label": "心跳间隔（秒）",
             "order": 4,
             "step": 1,
@@ -481,12 +285,6 @@ class QQServerConfig(PluginConfigBase):
         description="连接断开后的重连等待时间，单位为秒。",
         json_schema_extra={
             "hint": "连接断开后会等待该时长再尝试重新连接。",
-            "i18n": _schema_i18n(
-                label_en="Reconnect delay (sec)",
-                label_ja="再接続待機（秒）",
-                hint_en="After a disconnect, wait this long before trying to reconnect.",
-                hint_ja="接続が切断された後、再接続を試すまでこの時間待機します。",
-            ),
             "label": "重连等待（秒）",
             "order": 5,
             "step": 1,
@@ -497,12 +295,6 @@ class QQServerConfig(PluginConfigBase):
         description="调用 OneBot 动作接口的超时时间，单位为秒。",
         json_schema_extra={
             "hint": "发送消息、查询信息等动作会在超时后报错。",
-            "i18n": _schema_i18n(
-                label_en="Action timeout (sec)",
-                label_ja="アクションタイムアウト（秒）",
-                hint_en="Actions such as sending messages or querying info fail after this timeout.",
-                hint_ja="メッセージ送信や情報取得などのアクションは、この時間を超えるとエラーになります。",
-            ),
             "label": "动作超时（秒）",
             "order": 6,
             "step": 1,
@@ -513,14 +305,6 @@ class QQServerConfig(PluginConfigBase):
         description="可选连接标识，用于区分多条适配器链路。",
         json_schema_extra={
             "hint": "当存在多条连接时，可用它作为路由作用域标识。",
-            "i18n": _schema_i18n(
-                label_en="Connection ID",
-                label_ja="接続識別子",
-                hint_en="When multiple connections exist, use this as the routing scope identifier.",
-                hint_ja="複数の接続がある場合、ルーティングスコープの識別子として使用できます。",
-                placeholder_en="For example: primary",
-                placeholder_ja="例：primary",
-            ),
             "label": "连接标识",
             "order": 7,
             "placeholder": "例如：primary",
@@ -637,12 +421,6 @@ class QQFilterConfig(PluginConfigBase):
             "label": "用户黑名单",
             "hint": "每项填写一个 QQ 号；消息在解析前丢弃，不传入麦麦。空列表表示不屏蔽。",
             "order": 6,
-            "i18n": _schema_i18n(
-                label_en="User blacklist",
-                label_ja="ユーザーブラックリスト",
-                hint_en="One QQ ID per entry. Group and private messages are dropped before parsing. Empty means no blocking.",
-                hint_ja="各項目に QQ 番号を入力します。対象ユーザーのグループ・個人メッセージを解析前に破棄します。空の場合はブロックしません。",
-            ),
         },
     )
     ban_qq_bot: bool = Field(
@@ -650,12 +428,6 @@ class QQFilterConfig(PluginConfigBase):
         description="是否屏蔽 QQ 官方机器人消息。",
         json_schema_extra={
             "hint": "开启后会忽略来自 QQ 官方机器人或频道机器人的消息。",
-            "i18n": _schema_i18n(
-                label_en="Block official bots",
-                label_ja="公式 Bot をブロック",
-                hint_en="When enabled, messages from QQ official bots or channel bots are ignored.",
-                hint_ja="有効にすると、QQ 公式 Bot またはチャンネル Bot からのメッセージを無視します。",
-            ),
             "label": "屏蔽官方机器人",
             "order": 5,
         },
@@ -747,12 +519,6 @@ class QQNoticeConfig(PluginConfigBase):
         description="是否将适配器推送的通知事件转发给 Host。",
         json_schema_extra={
             "hint": "关闭后，戳一戳、禁言、撤回、入群退群等所有通知事件都不会传入 Host。",
-            "i18n": _schema_i18n(
-                label_en="Enable notice events",
-                label_ja="通知イベントを有効化",
-                hint_en="When disabled, poke, ban, recall, member change and all other notice events are not routed to the Host.",
-                hint_ja="無効にすると、poke、禁言、撤回、メンバー変更などすべての通知イベントは Host に転送されません。",
-            ),
             "label": "启用通知事件",
             "order": 0,
         },
@@ -761,78 +527,56 @@ class QQNoticeConfig(PluginConfigBase):
         label="传递戳一戳",
         description="是否传递戳一戳通知。",
         order=1,
-        label_en="Route poke",
-        label_ja="poke を転送",
     )
     enable_friend_recall: bool = _notice_field(
         label="传递好友撤回",
         description="是否传递好友消息撤回通知。",
         order=2,
-        label_en="Route friend recall",
-        label_ja="友達の撤回を転送",
     )
     enable_group_recall: bool = _notice_field(
         label="传递群消息撤回",
         description="是否传递群消息撤回通知。",
         order=3,
-        label_en="Route group recall",
-        label_ja="グループ撤回を転送",
     )
     enable_group_ban: bool = _notice_field(
         label="传递禁言",
         description="是否传递群禁言和解除禁言通知。",
         order=4,
-        label_en="Route group ban",
-        label_ja="グループ禁言を転送",
     )
     enable_group_msg_emoji_like: bool = _notice_field(
         label="传递消息表情回应",
         description="是否传递群消息表情回应通知。",
         order=5,
-        label_en="Route emoji reactions",
-        label_ja="絵文字リアクションを転送",
     )
     enable_group_upload: bool = _notice_field(
         label="传递群文件上传",
         description="是否传递群文件上传通知。",
         order=6,
-        label_en="Route group uploads",
-        label_ja="グループファイルを転送",
     )
     enable_group_increase: bool = _notice_field(
         label="传递入群",
         description="是否传递群成员增加通知。",
         order=7,
-        label_en="Route member joins",
-        label_ja="参加通知を転送",
     )
     enable_group_decrease: bool = _notice_field(
         label="传递退群",
         description="是否传递群成员减少通知。",
         order=8,
-        label_en="Route member leaves",
-        label_ja="退出通知を転送",
     )
     enable_group_admin: bool = _notice_field(
         label="传递管理员变动",
         description="是否传递群管理员变动通知。",
         order=9,
-        label_en="Route admin changes",
-        label_ja="管理者変更を転送",
     )
     enable_essence: bool = _notice_field(
         label="传递精华消息",
         description="是否传递精华消息变动通知。",
         order=10,
-        label_en="Route essence changes",
-        label_ja="精華メッセージを転送",
     )
     enable_group_name: bool = _notice_field(
         label="传递群名变更",
         description="是否传递群名称变更通知。",
         order=11,
-        label_en="Route group name changes",
-        label_ja="グループ名変更を転送",
     )
 
 

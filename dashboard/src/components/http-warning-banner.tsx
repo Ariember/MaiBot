@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import { AlertTriangle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
  * 当用户通过 HTTP 访问时显示安全警告
  */
 export function HttpWarningBanner() {
-  const { t } = useTranslation()
   // 直接计算初始状态，避免 effect 中调用 setState
   const isHttp = window.location.protocol === 'http:'
   const hostname = window.location.hostname.toLowerCase()
@@ -37,11 +36,11 @@ export function HttpWarningBanner() {
             <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                <span className="font-semibold">{t('httpWarning.title')}</span>
-                {t('httpWarning.message')}
+                <span className="font-semibold">{'安全提示：'}</span>
+                {'当前正在通过 HTTP 访问 WebUI。'}
               </p>
               <p className="text-xs text-amber-800 dark:text-amber-200 mt-1">
-                {t('httpWarning.description')}
+                {'非本地 HTTP 连接可能暴露访问令牌和配置内容，建议改用 HTTPS 或受信任的内网连接。'}
               </p>
             </div>
           </div>
@@ -50,7 +49,7 @@ export function HttpWarningBanner() {
             size="icon"
             onClick={handleDismiss}
             className="h-8 w-8 text-amber-700 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 flex-shrink-0"
-            aria-label={t('httpWarning.dismiss')}
+            aria-label={'关闭 HTTP 安全提示'}
           >
             <X className="h-4 w-4" />
           </Button>

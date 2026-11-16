@@ -22,7 +22,7 @@ import tomlkit
 
 from src.common.http_client import get_shared_ssl_context_async
 from src.common.logger import get_logger
-from src.common.prompt_i18n import clear_prompt_cache, extract_prompt_placeholders, list_prompt_templates
+from src.common.prompt_templates import clear_prompt_cache, extract_prompt_placeholders, list_prompt_templates
 from src.common.paths import resource_path
 from src.config.config import CONFIG_DIR, MODEL_CONFIG_VERSION, Config, ModelConfig, PROJECT_ROOT, config_manager
 from src.config.config_base import AttributeData, ConfigBase
@@ -127,15 +127,13 @@ class PromptCatalogResponse(BaseModel):
     """Prompt 目录响应。"""
 
     success: bool = True
-    languages: List[str]
-    files: Dict[str, List[PromptFileInfo]]
+    files: List[PromptFileInfo]
 
 
 class PromptFileResponse(BaseModel):
     """Prompt 文件内容响应。"""
 
     success: bool = True
-    language: str
     filename: str
     content: str
     customized: bool = False
@@ -154,7 +152,6 @@ class PromptVersionListResponse(BaseModel):
     """Prompt 自定义版本列表响应。"""
 
     success: bool = True
-    language: str
     filename: str
     active_version_id: str | None = None
     versions: List[PromptVersionInfo] = Field(default_factory=list)
@@ -226,18 +223,15 @@ def _get_cached_schema(cache_key: str, config_class: type[ConfigBase], include_n
     return copy.deepcopy(schema)
 
 
-def _safe_prompt_path(language: str, filename: str) -> Path:
+def _safe_prompt_path(filename: str) -> Path:
     """校验并解析 prompts 下的文件路径。"""
 
-    normalized_language = language.strip()
     normalized_filename = filename.strip()
 
-    if not normalized_language or any(part in normalized_language for part in ("..", "/", "\\")):
-        raise HTTPException(status_code=400, detail="无效的 Prompt 语言目录")
     if not normalized_filename.endswith(".prompt") or any(part in normalized_filename for part in ("..", "/", "\\")):
         raise HTTPException(status_code=400, detail="无效的 Prompt 文件名")
 
-    prompt_path = (PROMPTS_DIR / normalized_language / normalized_filename).resolve()
+    prompt_path = (PROMPTS_DIR / "zh-CN" / normalized_filename).resolve()
     prompts_root = PROMPTS_DIR.resolve()
     try:
         prompt_path.relative_to(prompts_root)
@@ -246,18 +240,15 @@ def _safe_prompt_path(language: str, filename: str) -> Path:
     return prompt_path
 
 
-def _safe_custom_prompt_path(language: str, filename: str) -> Path:
+def _safe_custom_prompt_path(filename: str) -> Path:
     """校验并解析 data/custom_prompts 下的用户覆盖文件路径。"""
 
-    normalized_language = language.strip()
     normalized_filename = filename.strip()
 
-    if not normalized_language or any(part in normalized_language for part in ("..", "/", "\\")):
-        raise HTTPException(status_code=400, detail="无效的 Prompt 语言目录")
     if not normalized_filename.endswith(".prompt") or any(part in normalized_filename for part in ("..", "/", "\\")):
         raise HTTPException(status_code=400, detail="无效的 Prompt 文件名")
 
-    prompt_path = (CUSTOM_PROMPTS_DIR / normalized_language / normalized_filename).resolve()
+    prompt_path = (CUSTOM_PROMPTS_DIR / "zh-CN" / normalized_filename).resolve()
     custom_prompts_root = CUSTOM_PROMPTS_DIR.resolve()
     try:
         prompt_path.relative_to(custom_prompts_root)
@@ -279,10 +270,10 @@ def _safe_prompt_version_id(version_id: str) -> str:
     return normalized_version_id
 
 
-def _safe_custom_prompt_versions_dir(language: str, filename: str) -> Path:
+def _safe_custom_prompt_versions_dir(filename: str) -> Path:
     """解析指定 Prompt 的自定义版本目录。"""
 
-    custom_prompt_path = _safe_custom_prompt_path(language, filename)
+    custom_prompt_path = _safe_custom_prompt_path(filename)
     versions_dir = custom_prompt_path.parent / ".versions" / custom_prompt_path.stem
     custom_prompts_root = CUSTOM_PROMPTS_DIR.resolve()
     resolved_versions_dir = versions_dir.resolve()
@@ -293,14 +284,14 @@ def _safe_custom_prompt_versions_dir(language: str, filename: str) -> Path:
     return resolved_versions_dir
 
 
-def _prompt_version_manifest_path(language: str, filename: str) -> Path:
-    return _safe_custom_prompt_versions_dir(language, filename) / "manifest.json"
+def _prompt_version_manifest_path(filename: str) -> Path:
+    return _safe_custom_prompt_versions_dir(filename) / "manifest.json"
 
 
-def _prompt_version_file_path(language: str, filename: str, version_id: str) -> Path:
+def _prompt_version_file_path(filename: str, version_id: str) -> Path:
     normalized_version_id = _safe_prompt_version_id(version_id)
-    version_path = _safe_custom_prompt_versions_dir(language, filename) / f"{normalized_version_id}.prompt"
-    versions_dir = _safe_custom_prompt_versions_dir(language, filename).resolve()
+    version_path = _safe_custom_prompt_versions_dir(filename) / f"{normalized_version_id}.prompt"
+    versions_dir = _safe_custom_prompt_versions_dir(filename).resolve()
     resolved_version_path = version_path.resolve()
     try:
         resolved_version_path.relative_to(versions_dir)
@@ -309,8 +300,8 @@ def _prompt_version_file_path(language: str, filename: str, version_id: str) -> 
     return resolved_version_path
 
 
-def _read_prompt_version_manifest(language: str, filename: str) -> Dict[str, Any]:
-    manifest_path = _prompt_version_manifest_path(language, filename)
+def _read_prompt_version_manifest(filename: str) -> Dict[str, Any]:
+    manifest_path = _prompt_version_manifest_path(filename)
     if not manifest_path.exists():
         return {"active_version_id": None, "versions": []}
 
@@ -334,8 +325,8 @@ def _read_prompt_version_manifest(language: str, filename: str) -> Dict[str, Any
     }
 
 
-def _write_prompt_version_manifest(language: str, filename: str, manifest: Dict[str, Any]) -> None:
-    manifest_path = _prompt_version_manifest_path(language, filename)
+def _write_prompt_version_manifest(filename: str, manifest: Dict[str, Any]) -> None:
+    manifest_path = _prompt_version_manifest_path(filename)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
 
@@ -591,11 +582,11 @@ def _copy_model_config_to_version(source_path: Path, label: str) -> ModelConfigV
     )
 
 
-def _create_prompt_version_id(language: str, filename: str) -> str:
+def _create_prompt_version_id(filename: str) -> str:
     base_version_id = time.strftime("v%Y%m%d%H%M%S")
     version_id = base_version_id
     suffix = 2
-    while _prompt_version_file_path(language, filename, version_id).exists():
+    while _prompt_version_file_path(filename, version_id).exists():
         version_id = f"{base_version_id}-{suffix}"
         suffix += 1
     return version_id
@@ -645,15 +636,15 @@ def _ensure_prompt_parameters_match(prompt_path: Path, custom_content: str) -> P
     return validation
 
 
-def _list_prompt_versions(language: str, filename: str) -> List[PromptVersionInfo]:
-    manifest = _read_prompt_version_manifest(language, filename)
+def _list_prompt_versions(filename: str) -> List[PromptVersionInfo]:
+    manifest = _read_prompt_version_manifest(filename)
     active_version_id = manifest.get("active_version_id")
     versions: List[PromptVersionInfo] = []
     for raw_version in manifest["versions"]:
         version_id = raw_version.get("id")
         if not isinstance(version_id, str):
             continue
-        version_path = _prompt_version_file_path(language, filename, version_id)
+        version_path = _prompt_version_file_path(filename, version_id)
         if not version_path.exists():
             continue
         stat = version_path.stat()
@@ -668,7 +659,7 @@ def _list_prompt_versions(language: str, filename: str) -> List[PromptVersionInf
             )
         )
 
-    custom_prompt_path = _safe_custom_prompt_path(language, filename)
+    custom_prompt_path = _safe_custom_prompt_path(filename)
     if custom_prompt_path.exists() and not active_version_id and not versions:
         stat = custom_prompt_path.stat()
         versions.append(
@@ -684,25 +675,24 @@ def _list_prompt_versions(language: str, filename: str) -> List[PromptVersionInf
     return sorted(versions, key=lambda version: version.modified_at, reverse=True)
 
 
-def _get_active_prompt_version_id(language: str, filename: str) -> str | None:
-    manifest = _read_prompt_version_manifest(language, filename)
+def _get_active_prompt_version_id(filename: str) -> str | None:
+    manifest = _read_prompt_version_manifest(filename)
     active_version_id = manifest.get("active_version_id")
     if isinstance(active_version_id, str):
         return active_version_id
-    if _safe_custom_prompt_path(language, filename).exists():
+    if _safe_custom_prompt_path(filename).exists():
         return _LEGACY_CUSTOM_PROMPT_VERSION_ID
     return None
 
 
 def _save_prompt_version(
-    language: str,
     filename: str,
     content: str,
     version_id: str | None,
     label: str,
     create_version: bool,
 ) -> str:
-    manifest = _read_prompt_version_manifest(language, filename)
+    manifest = _read_prompt_version_manifest(filename)
     versions = manifest["versions"]
     existing_version_ids = {
         raw_version["id"] for raw_version in versions if isinstance(raw_version.get("id"), str)
@@ -725,7 +715,7 @@ def _save_prompt_version(
         or normalized_version_id == _LEGACY_CUSTOM_PROMPT_VERSION_ID
     )
     if should_create_version:
-        normalized_version_id = _create_prompt_version_id(language, filename)
+        normalized_version_id = _create_prompt_version_id(filename)
         now = time.time()
         versions.append(
             {
@@ -734,7 +724,7 @@ def _save_prompt_version(
                 "created_at": now,
             }
         )
-    version_path = _prompt_version_file_path(language, filename, normalized_version_id)
+    version_path = _prompt_version_file_path(filename, normalized_version_id)
     version_path.parent.mkdir(parents=True, exist_ok=True)
     version_path.write_text(content, encoding="utf-8", newline="\n")
 
@@ -750,14 +740,14 @@ def _save_prompt_version(
 
     manifest["active_version_id"] = normalized_version_id
     manifest["versions"] = versions
-    _write_prompt_version_manifest(language, filename, manifest)
+    _write_prompt_version_manifest(filename, manifest)
     return normalized_version_id
 
 
-def _set_active_prompt_version(language: str, filename: str, version_id: str | None) -> None:
-    manifest = _read_prompt_version_manifest(language, filename)
+def _set_active_prompt_version(filename: str, version_id: str | None) -> None:
+    manifest = _read_prompt_version_manifest(filename)
     manifest["active_version_id"] = version_id
-    _write_prompt_version_manifest(language, filename, manifest)
+    _write_prompt_version_manifest(filename, manifest)
 
 
 def _safe_maisaka_prompt_preview_path(relative_path: str) -> Path:
@@ -901,52 +891,34 @@ def _validate_api_provider_section(section_data: Any) -> None:
 
 @router.get("/prompts", response_model=PromptCatalogResponse)
 def list_prompt_files():
-    """列出 prompts 目录下的语言和 Prompt 文件。"""
+    """列出 Prompt 文件。"""
 
     try:
-        if not PROMPTS_DIR.exists():
-            return PromptCatalogResponse(languages=[], files={})
-
-        languages: List[str] = []
-        files: Dict[str, List[PromptFileInfo]] = {}
-        for language_dir in sorted(PROMPTS_DIR.iterdir(), key=lambda item: item.name):
-            if not language_dir.is_dir():
-                continue
-
-            language = language_dir.name
-            prompt_template_infos = list_prompt_templates(locale=language, prompts_root=PROMPTS_DIR)
-            prompt_files: List[PromptFileInfo] = []
-            for prompt_file in sorted(language_dir.glob("*.prompt"), key=lambda item: item.name):
-                custom_prompt_file = _safe_custom_prompt_path(language, prompt_file.name)
-                effective_prompt_file = custom_prompt_file if custom_prompt_file.exists() else prompt_file
-                stat = effective_prompt_file.stat()
-                template_info = prompt_template_infos.get(prompt_file.stem)
-                metadata = template_info.metadata if template_info and template_info.path == prompt_file else None
-                versions = _list_prompt_versions(language, prompt_file.name)
-                default_content = prompt_file.read_text(encoding="utf-8")
-                effective_content = (
-                    custom_prompt_file.read_text(encoding="utf-8")
-                    if custom_prompt_file.exists()
-                    else default_content
+        prompt_template_infos = list_prompt_templates(prompts_root=PROMPTS_DIR)
+        prompt_files: List[PromptFileInfo] = []
+        for prompt_file in sorted((PROMPTS_DIR / "zh-CN").glob("*.prompt")):
+            template_info = prompt_template_infos[prompt_file.stem]
+            custom_prompt_file = _safe_custom_prompt_path(prompt_file.name)
+            effective_prompt_file = custom_prompt_file if custom_prompt_file.exists() else prompt_file
+            stat = effective_prompt_file.stat()
+            metadata = template_info.metadata
+            versions = _list_prompt_versions(prompt_file.name)
+            default_content = prompt_file.read_text(encoding="utf-8")
+            effective_content = effective_prompt_file.read_text(encoding="utf-8")
+            prompt_files.append(
+                PromptFileInfo(
+                    name=prompt_file.name,
+                    size=stat.st_size,
+                    modified_at=stat.st_mtime,
+                    display_name=metadata.display_name,
+                    advanced=metadata.advanced,
+                    description=metadata.description,
+                    customized=custom_prompt_file.exists(),
+                    custom_version_count=len(versions),
+                    validation=_build_prompt_validation(default_content, effective_content),
                 )
-                prompt_files.append(
-                    PromptFileInfo(
-                        name=prompt_file.name,
-                        size=stat.st_size,
-                        modified_at=stat.st_mtime,
-                        display_name=metadata.display_name if metadata else "",
-                        advanced=metadata.advanced if metadata else False,
-                        description=metadata.description if metadata else "",
-                        customized=custom_prompt_file.exists(),
-                        custom_version_count=len(versions),
-                        validation=_build_prompt_validation(default_content, effective_content),
-                    )
-                )
-
-            languages.append(language)
-            files[language] = prompt_files
-
-        return PromptCatalogResponse(languages=languages, files=files)
+            )
+        return PromptCatalogResponse(files=prompt_files)
     except HTTPException:
         raise
     except Exception as e:
@@ -954,12 +926,12 @@ def list_prompt_files():
         raise HTTPException(status_code=500, detail=f"列出 Prompt 文件失败: {str(e)}") from e
 
 
-@router.get("/prompts/{language}/{filename}", response_model=PromptFileResponse)
-def get_prompt_file(language: str, filename: str):
-    """读取指定语言下的 Prompt 文件内容。"""
+@router.get("/prompts/{filename}", response_model=PromptFileResponse)
+def get_prompt_file(filename: str):
+    """读取 Prompt 文件内容。"""
 
-    prompt_path = _safe_prompt_path(language, filename)
-    custom_prompt_path = _safe_custom_prompt_path(language, filename)
+    prompt_path = _safe_prompt_path(filename)
+    custom_prompt_path = _safe_custom_prompt_path(filename)
     if not prompt_path.exists() or not prompt_path.is_file():
         raise HTTPException(status_code=404, detail="Prompt 文件不存在")
 
@@ -969,12 +941,11 @@ def get_prompt_file(language: str, filename: str):
         default_content = prompt_path.read_text(encoding="utf-8")
         validation = _build_prompt_validation(default_content, content)
         return PromptFileResponse(
-            language=language,
             filename=filename,
             content=content,
             customized=custom_prompt_path.exists(),
-            active_version_id=_get_active_prompt_version_id(language, filename),
-            versions=_list_prompt_versions(language, filename),
+            active_version_id=_get_active_prompt_version_id(filename),
+            versions=_list_prompt_versions(filename),
             validation=validation,
         )
     except HTTPException:
@@ -984,24 +955,23 @@ def get_prompt_file(language: str, filename: str):
         raise HTTPException(status_code=500, detail=f"读取 Prompt 文件失败: {str(e)}") from e
 
 
-@router.get("/prompts/{language}/{filename}/default", response_model=PromptFileResponse)
-def get_default_prompt_file(language: str, filename: str):
+@router.get("/prompts/{filename}/default", response_model=PromptFileResponse)
+def get_default_prompt_file(filename: str):
     """只读获取内置 Prompt 模板内容，不读取或修改用户自定义覆盖。"""
 
-    prompt_path = _safe_prompt_path(language, filename)
+    prompt_path = _safe_prompt_path(filename)
     if not prompt_path.exists() or not prompt_path.is_file():
         raise HTTPException(status_code=404, detail="Prompt 文件不存在")
 
     try:
         content = prompt_path.read_text(encoding="utf-8")
         return PromptFileResponse(
-            language=language,
             filename=filename,
             content=content,
             customized=False,
             validation=_build_prompt_validation(content, content),
-            active_version_id=_get_active_prompt_version_id(language, filename),
-            versions=_list_prompt_versions(language, filename),
+            active_version_id=_get_active_prompt_version_id(filename),
+            versions=_list_prompt_versions(filename),
         )
     except HTTPException:
         raise
@@ -1010,28 +980,27 @@ def get_default_prompt_file(language: str, filename: str):
         raise HTTPException(status_code=500, detail=f"读取默认 Prompt 文件失败: {str(e)}") from e
 
 
-@router.get("/prompts/{language}/{filename}/versions", response_model=PromptVersionListResponse)
-def list_prompt_versions(language: str, filename: str):
+@router.get("/prompts/{filename}/versions", response_model=PromptVersionListResponse)
+def list_prompt_versions(filename: str):
     """列出指定 Prompt 的自定义版本。"""
 
-    prompt_path = _safe_prompt_path(language, filename)
+    prompt_path = _safe_prompt_path(filename)
     if not prompt_path.exists() or not prompt_path.is_file():
         raise HTTPException(status_code=404, detail="Prompt 文件不存在")
 
     return PromptVersionListResponse(
-        language=language,
         filename=filename,
-        active_version_id=_get_active_prompt_version_id(language, filename),
-        versions=_list_prompt_versions(language, filename),
+        active_version_id=_get_active_prompt_version_id(filename),
+        versions=_list_prompt_versions(filename),
     )
 
 
-@router.get("/prompts/{language}/{filename}/versions/{version_id}", response_model=PromptVersionFileResponse)
-def get_prompt_version_file(language: str, filename: str, version_id: str):
+@router.get("/prompts/{filename}/versions/{version_id}", response_model=PromptVersionFileResponse)
+def get_prompt_version_file(filename: str, version_id: str):
     """读取指定 Prompt 自定义版本内容。"""
 
-    prompt_path = _safe_prompt_path(language, filename)
-    custom_prompt_path = _safe_custom_prompt_path(language, filename)
+    prompt_path = _safe_prompt_path(filename)
+    custom_prompt_path = _safe_custom_prompt_path(filename)
     if not prompt_path.exists() or not prompt_path.is_file():
         raise HTTPException(status_code=404, detail="Prompt 文件不存在")
 
@@ -1041,74 +1010,72 @@ def get_prompt_version_file(language: str, filename: str, version_id: str):
             raise HTTPException(status_code=404, detail="Prompt 自定义版本不存在")
         content = custom_prompt_path.read_text(encoding="utf-8")
     else:
-        version_path = _prompt_version_file_path(language, filename, normalized_version_id)
+        version_path = _prompt_version_file_path(filename, normalized_version_id)
         if not version_path.exists() or not version_path.is_file():
             raise HTTPException(status_code=404, detail="Prompt 自定义版本不存在")
         content = version_path.read_text(encoding="utf-8")
 
     validation = _build_prompt_validation(prompt_path.read_text(encoding="utf-8"), content)
     return PromptVersionFileResponse(
-        language=language,
         filename=filename,
         version_id=normalized_version_id,
         content=content,
         customized=True,
-        active_version_id=_get_active_prompt_version_id(language, filename),
-        versions=_list_prompt_versions(language, filename),
+        active_version_id=_get_active_prompt_version_id(filename),
+        versions=_list_prompt_versions(filename),
         validation=validation,
     )
 
 
-@router.post("/prompts/{language}/{filename}/versions/{version_id}/activate", response_model=PromptFileResponse)
-def activate_prompt_version(language: str, filename: str, version_id: str):
+@router.post("/prompts/{filename}/versions/{version_id}/activate", response_model=PromptFileResponse)
+def activate_prompt_version(filename: str, version_id: str):
     """启用指定 Prompt 自定义版本。"""
 
-    prompt_path = _safe_prompt_path(language, filename)
+    prompt_path = _safe_prompt_path(filename)
     if not prompt_path.exists() or not prompt_path.is_file():
         raise HTTPException(status_code=404, detail="Prompt 文件不存在")
 
     normalized_version_id = _safe_prompt_version_id(version_id)
     if normalized_version_id == _LEGACY_CUSTOM_PROMPT_VERSION_ID:
-        custom_prompt_path = _safe_custom_prompt_path(language, filename)
+        custom_prompt_path = _safe_custom_prompt_path(filename)
         if not custom_prompt_path.exists():
             raise HTTPException(status_code=404, detail="Prompt 自定义版本不存在")
         content = custom_prompt_path.read_text(encoding="utf-8")
     else:
-        version_path = _prompt_version_file_path(language, filename, normalized_version_id)
+        version_path = _prompt_version_file_path(filename, normalized_version_id)
         if not version_path.exists() or not version_path.is_file():
             raise HTTPException(status_code=404, detail="Prompt 自定义版本不存在")
         content = version_path.read_text(encoding="utf-8")
 
     validation = _ensure_prompt_parameters_match(prompt_path, content)
-    custom_prompt_path = _safe_custom_prompt_path(language, filename)
+    custom_prompt_path = _safe_custom_prompt_path(filename)
     custom_prompt_path.parent.mkdir(parents=True, exist_ok=True)
     custom_prompt_path.write_text(content, encoding="utf-8", newline="\n")
     if normalized_version_id != _LEGACY_CUSTOM_PROMPT_VERSION_ID:
-        _set_active_prompt_version(language, filename, normalized_version_id)
+        _set_active_prompt_version(filename, normalized_version_id)
     clear_prompt_cache()
     return PromptFileResponse(
-        language=language,
         filename=filename,
         content=content,
         customized=True,
-        active_version_id=_get_active_prompt_version_id(language, filename),
-        versions=_list_prompt_versions(language, filename),
+        active_version_id=_get_active_prompt_version_id(filename),
+        versions=_list_prompt_versions(filename),
         validation=validation,
     )
 
 
-@router.delete("/prompts/{language}/{filename}/versions/{version_id}", response_model=PromptFileResponse)
-def delete_prompt_version(language: str, filename: str, version_id: str):
+@router.delete("/prompts/{filename}/versions/{version_id}", response_model=PromptFileResponse)
+def delete_prompt_version(filename: str, version_id: str):
     """删除指定 Prompt 自定义版本；删除当前启用版本时恢复默认 Prompt。"""
 
-    prompt_path = _safe_prompt_path(language, filename)
-    custom_prompt_path = _safe_custom_prompt_path(language, filename)
+    prompt_path = _safe_prompt_path(filename)
+    custom_prompt_path = _safe_custom_prompt_path(filename)
     if not prompt_path.exists() or not prompt_path.is_file():
         raise HTTPException(status_code=404, detail="Prompt 文件不存在")
 
     normalized_version_id = _safe_prompt_version_id(version_id)
-    manifest = _read_prompt_version_manifest(language, filename)
-    active_version_id = _get_active_prompt_version_id(language, filename)
+    manifest = _read_prompt_version_manifest(filename)
+    active_version_id = _get_active_prompt_version_id(filename)
 
     if normalized_version_id == _LEGACY_CUSTOM_PROMPT_VERSION_ID:
         if not custom_prompt_path.exists():
@@ -1116,10 +1083,10 @@ def delete_prompt_version(language: str, filename: str, version_id: str):
         custom_prompt_path.unlink()
         if active_version_id == normalized_version_id:
             manifest["active_version_id"] = None
-            _write_prompt_version_manifest(language, filename, manifest)
+            _write_prompt_version_manifest(filename, manifest)
             clear_prompt_cache()
     else:
-        version_path = _prompt_version_file_path(language, filename, normalized_version_id)
+        version_path = _prompt_version_file_path(filename, normalized_version_id)
         version_exists = any(
             raw_version.get("id") == normalized_version_id for raw_version in manifest["versions"]
         )
@@ -1137,7 +1104,7 @@ def delete_prompt_version(language: str, filename: str, version_id: str):
             if custom_prompt_path.exists():
                 custom_prompt_path.unlink()
             clear_prompt_cache()
-        _write_prompt_version_manifest(language, filename, manifest)
+        _write_prompt_version_manifest(filename, manifest)
 
     if custom_prompt_path.exists():
         content = custom_prompt_path.read_text(encoding="utf-8")
@@ -1147,24 +1114,23 @@ def delete_prompt_version(language: str, filename: str, version_id: str):
         customized = False
     validation = _build_prompt_validation(prompt_path.read_text(encoding="utf-8"), content)
     return PromptFileResponse(
-        language=language,
         filename=filename,
         content=content,
         customized=customized,
-        active_version_id=_get_active_prompt_version_id(language, filename),
-        versions=_list_prompt_versions(language, filename),
+        active_version_id=_get_active_prompt_version_id(filename),
+        versions=_list_prompt_versions(filename),
         validation=validation,
     )
 
 
-@router.put("/prompts/{language}/{filename}", response_model=PromptFileResponse)
-def update_prompt_file(language: str, filename: str, request: PromptUpdateRequest):
-    """更新指定语言下的 Prompt 文件内容。"""
+@router.put("/prompts/{filename}", response_model=PromptFileResponse)
+def update_prompt_file(filename: str, request: PromptUpdateRequest):
+    """更新 Prompt 文件内容。"""
 
-    prompt_path = _safe_prompt_path(language, filename)
-    custom_prompt_path = _safe_custom_prompt_path(language, filename)
+    prompt_path = _safe_prompt_path(filename)
+    custom_prompt_path = _safe_custom_prompt_path(filename)
     if not prompt_path.parent.exists() or not prompt_path.parent.is_dir():
-        raise HTTPException(status_code=404, detail="Prompt 语言目录不存在")
+        raise HTTPException(status_code=404, detail="Prompt 目录不存在")
     if not prompt_path.exists() or not prompt_path.is_file():
         raise HTTPException(status_code=404, detail="Prompt 文件不存在")
 
@@ -1172,7 +1138,6 @@ def update_prompt_file(language: str, filename: str, request: PromptUpdateReques
         validation = _ensure_prompt_parameters_match(prompt_path, request.content)
         custom_prompt_path.parent.mkdir(parents=True, exist_ok=True)
         active_version_id = _save_prompt_version(
-            language=language,
             filename=filename,
             content=request.content,
             version_id=request.version_id,
@@ -1182,12 +1147,11 @@ def update_prompt_file(language: str, filename: str, request: PromptUpdateReques
         custom_prompt_path.write_text(request.content, encoding="utf-8", newline="\n")
         clear_prompt_cache()
         return PromptFileResponse(
-            language=language,
             filename=filename,
             content=request.content,
             customized=True,
             active_version_id=active_version_id,
-            versions=_list_prompt_versions(language, filename),
+            versions=_list_prompt_versions(filename),
             validation=validation,
         )
     except HTTPException:
@@ -1197,28 +1161,27 @@ def update_prompt_file(language: str, filename: str, request: PromptUpdateReques
         raise HTTPException(status_code=500, detail=f"保存 Prompt 文件失败: {str(e)}") from e
 
 
-@router.delete("/prompts/{language}/{filename}", response_model=PromptFileResponse)
-def reset_prompt_file(language: str, filename: str):
+@router.delete("/prompts/{filename}", response_model=PromptFileResponse)
+def reset_prompt_file(filename: str):
     """删除用户自定义覆盖，恢复使用内置 Prompt 模板。"""
 
-    prompt_path = _safe_prompt_path(language, filename)
-    custom_prompt_path = _safe_custom_prompt_path(language, filename)
+    prompt_path = _safe_prompt_path(filename)
+    custom_prompt_path = _safe_custom_prompt_path(filename)
     if not prompt_path.exists() or not prompt_path.is_file():
         raise HTTPException(status_code=404, detail="Prompt 文件不存在")
 
     try:
         if custom_prompt_path.exists():
             custom_prompt_path.unlink()
-            _set_active_prompt_version(language, filename, None)
+            _set_active_prompt_version(filename, None)
             clear_prompt_cache()
         content = prompt_path.read_text(encoding="utf-8")
         return PromptFileResponse(
-            language=language,
             filename=filename,
             content=content,
             customized=False,
             active_version_id=None,
-            versions=_list_prompt_versions(language, filename),
+            versions=_list_prompt_versions(filename),
         )
     except HTTPException:
         raise

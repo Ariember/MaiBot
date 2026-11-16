@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import type { TFunction } from 'i18next'
 import {
   BookOpen,
   CircleAlert,
@@ -13,7 +12,7 @@ import {
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -30,7 +29,7 @@ import { registeredRoutePaths } from '@/router'
 import { searchWithAIStream } from '@/lib/ai-search-api'
 import type { AISearchProgressEvent } from '@/lib/ai-search-api'
 import { getBotConfigSchema, getModelConfigSchema } from '@/lib/config-api'
-import { getAllLocalizedText, resolveFieldLabel } from '@/lib/config-label'
+
 import { buildSearchNavigationPath } from '@/lib/config-search-navigation'
 import { cn } from '@/lib/utils'
 import type { ConfigSchema, FieldSchema } from '@/types/config-schema'
@@ -68,41 +67,41 @@ interface AISearchItem {
   reason: string
 }
 
-function getProgressTitle(event: AISearchProgressEvent, t: TFunction): string {
+function getProgressTitle(event: AISearchProgressEvent): string {
   if (event.stage === 'start') {
-    return t('search.progressStart')
+    return '开始分析问题'
   }
   if (event.stage === 'planning') {
-    return t('search.progressPlanning', { round: event.round ?? 1 })
+    return `第 ${event.round ?? 1} 轮：规划检索`
   }
   if (event.stage === 'finalizing') {
-    return t('search.progressFinalizing')
+    return '根据已读取资料整理回答'
   }
   if (event.stage === 'correcting') {
-    return t('search.progressCorrecting')
+    return '检测到证据不足，正在重新整理回答'
   }
   if (event.stage === 'cache_hit') {
-    return t('search.progressCacheHit')
+    return '已使用相同问题的缓存结果'
   }
   if (event.stage === 'completed') {
-    return t('search.progressAnswerCompleted')
+    return '回答生成完成'
   }
   if (event.stage === 'failed') {
-    return t('search.progressAnswerFailed')
+    return '回答生成失败'
   }
 
   const actionKeyByTool: Record<string, string> = {
-    search_webui_index: 'search.progressSearchWebui',
-    search_official_docs: 'search.progressSearchDocs',
-    read_official_docs: 'search.progressReadDocs',
-    read_local_config: 'search.progressReadConfig',
+    search_webui_index: "搜索页面和配置",
+    search_official_docs: "搜索官方文档",
+    read_official_docs: "读取官方文档",
+    read_local_config: "读取本地配置",
   }
-  const action = t(actionKeyByTool[event.tool ?? ''] ?? 'search.progressTool')
+  const action = actionKeyByTool[event.tool ?? ''] ?? "执行搜索操作"
   if (event.status === 'completed') {
-    return t('search.progressCompleted', { action, count: event.count ?? 0 })
+    return `${action}完成（${event.count ?? 0} 项）`
   }
   if (event.status === 'failed') {
-    return t('search.progressFailed', { action })
+    return `${action}失败`
   }
   return action
 }
@@ -197,8 +196,7 @@ function getModelConfigPath() {
 function buildFieldSearchText(
   field: FieldSchema,
   fieldPath: string,
-  sectionTitle: string,
-  language?: string
+  sectionTitle: string
 ) {
   const options = field.options?.join(' ') ?? ''
   const optionDescriptions = field['x-option-descriptions']
@@ -208,8 +206,7 @@ function buildFieldSearchText(
     : ''
 
   return [
-    resolveFieldLabel(field, language),
-    ...getAllLocalizedText(field.label),
+    (field.label || field.name),
     field.name,
     fieldPath,
     field.description,
@@ -224,8 +221,7 @@ function collectConfigFields(
   schema: ConfigSchema,
   sourceLabel: string,
   basePath: string,
-  routePath: (fieldPath: string) => string,
-  language?: string
+  routePath: (fieldPath: string) => string
 ): SearchItem[] {
   const items: SearchItem[] = []
 
@@ -236,7 +232,7 @@ function collectConfigFields(
     for (const field of currentSchema.fields) {
       const fieldPath = pathPrefix ? `${pathPrefix}.${field.name}` : field.name
       const nestedSchema = currentSchema.nested?.[field.name]
-      const fieldTitle = resolveFieldLabel(field, language)
+      const fieldTitle = (field.label || field.name)
       const description = field.description || nextTrail.join(' / ') || fieldPath
       const fullPath = basePath ? `${basePath}.${fieldPath}` : fieldPath
       const route = routePath(fullPath)
@@ -248,7 +244,7 @@ function collectConfigFields(
         description: `${sourceLabel} / ${nextTrail.join(' / ')} / ${fullPath} · ${description}`,
         path: route,
         category: '配置项',
-        keywords: buildFieldSearchText(field, fullPath, nextTrail.join(' / '), language),
+        keywords: buildFieldSearchText(field, fullPath, nextTrail.join(' / ')),
         fieldPath: fullPath,
       })
 
@@ -290,7 +286,6 @@ export function SearchDialog({
   const inputRef = useRef<HTMLInputElement>(null)
   const aiSearchAbortRef = useRef<AbortController | null>(null)
   const navigate = useNavigate()
-  const { i18n, t } = useTranslation()
   const menuSections = useMenuSections()
 
   // 顶栏和对话框共享查询，任一入口修改后都清除上一轮 AI 结果。
@@ -310,15 +305,6 @@ export function SearchDialog({
     })
     return () => window.cancelAnimationFrame(frameId)
   }, [searchQuery])
-
-  useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      setConfigSearchItems([])
-      setConfigIndexReady(false)
-    })
-
-    return () => window.cancelAnimationFrame(frameId)
-  }, [i18n.language])
 
   useEffect(() => {
     return () => aiSearchAbortRef.current?.abort()
@@ -360,7 +346,7 @@ export function SearchDialog({
         const botSchema = unwrapConfigSchema(botSchemaResult.value)
         if (botSchema) {
           nextItems.push(
-            ...collectConfigFields(botSchema, 'Bot 配置', '', () => '/config/bot', i18n.language)
+            ...collectConfigFields(botSchema, 'Bot 配置', '', () => '/config/bot')
           )
         }
       }
@@ -368,7 +354,7 @@ export function SearchDialog({
         const modelSchema = unwrapConfigSchema(modelSchemaResult.value)
         if (modelSchema) {
           nextItems.push(
-            ...collectConfigFields(modelSchema, '模型配置', '', getModelConfigPath, i18n.language)
+            ...collectConfigFields(modelSchema, '模型配置', '', getModelConfigPath)
           )
         }
       }
@@ -389,7 +375,7 @@ export function SearchDialog({
     return () => {
       cancelled = true
     }
-  }, [configSearchItems.length, i18n.language, open])
+  }, [configSearchItems.length, open])
 
   const searchItems: SearchItem[] = useMemo(
     () =>
@@ -399,19 +385,19 @@ export function SearchDialog({
           .map((item) => ({
             id: `route:${item.path}`,
             icon: item.icon,
-            title: t(item.label),
-            description: item.searchDescription ? t(item.searchDescription) : item.path,
+            title: item.label,
+            description: item.searchDescription ? item.searchDescription : item.path,
             path: item.path,
-            category: t(section.title),
+            category: section.title,
             keywords: [
-              t(item.label),
+              item.label,
               item.path,
-              item.searchDescription ? t(item.searchDescription) : '',
-              t(section.title),
+              item.searchDescription ? item.searchDescription : '',
+              section.title,
             ].join(' '),
           }))
       ),
-    [menuSections, t]
+    [menuSections]
   )
 
   const searchItemMap = useMemo(
@@ -432,11 +418,11 @@ export function SearchDialog({
             ...item,
             id: `recent:${item.path}`,
             icon: RecentIcon,
-            category: t('search.recent'),
+            category: '最近访问',
           }
         })
         .filter((item): item is SearchItem => item !== null),
-    [recentSearchRoutes, searchItemMap, t]
+    [recentSearchRoutes, searchItemMap]
   )
 
   // 过滤搜索结果
@@ -463,7 +449,7 @@ export function SearchDialog({
     ...aiSearchItems.map(({ item, reason }) => ({
       ...item,
       description: reason || item.description,
-      category: t('search.aiRecommendation'),
+      category: 'AI 推荐',
     })),
     ...filteredItems.filter((item) => !aiMatchedIds.has(item.id)),
   ].slice(0, 80)
@@ -499,7 +485,6 @@ export function SearchDialog({
       const response = await searchWithAIStream(
         {
           query,
-          language: i18n.language,
           candidates: aiCandidates.map(({ id, item }) => ({
             id,
             title: item.title.slice(0, 120),
@@ -543,12 +528,12 @@ export function SearchDialog({
       if (response.grounding_error) {
         setAISearchError(response.grounding_error)
       } else if (nextItems.length === 0 && !response.answer) {
-        setAISearchError(t('search.aiNoResults'))
+        setAISearchError('AI 没有找到足够相关的页面或配置项')
       }
       setSelectedIndex(0)
     } catch (error) {
       if (!abortController.signal.aborted) {
-        const errorMessage = error instanceof Error ? error.message : t('search.aiFailed')
+        const errorMessage = error instanceof Error ? error.message : 'AI 搜索失败'
         setAISearchProgress((current) => {
           if (current.at(-1)?.stage === 'failed') {
             return current
@@ -570,7 +555,7 @@ export function SearchDialog({
         setAISearchLoading(false)
       }
     }
-  }, [configIndexLoading, configSearchItems, i18n.language, searchItems, searchQuery, t])
+  }, [configIndexLoading, configSearchItems, searchItems, searchQuery])
 
   // 等配置索引加载完成再消费顶栏提交，避免首次打开时漏搜配置项。
   useEffect(() => {
@@ -641,9 +626,9 @@ export function SearchDialog({
   return (
     <FloatingPanel
       open={open}
-      title={t('search.title')}
+      title={'搜索'}
       onClose={() => onOpenChange(false)}
-      closeLabel={t('search.close')}
+      closeLabel={'关闭'}
       className="flex h-[min(calc(100vh-2rem),42rem)] w-[min(calc(100vw-2rem),42rem)] flex-col"
       initialWidth={672}
       initialHeight={680}
@@ -675,7 +660,7 @@ export function SearchDialog({
                 setSearchQuery(e.target.value)
               }}
               onKeyDown={handleKeyDown}
-              placeholder={t('search.aiHint')}
+              placeholder={'可以描述你想调整的效果，例如“麦麦说话太频繁”'}
               className="h-12 border-0 pl-11 text-base shadow-none focus-visible:ring-0"
             />
           </div>
@@ -687,21 +672,21 @@ export function SearchDialog({
             disabled={!normalizedQuery || aiSearchLoading || configIndexLoading}
             onClick={() => void runAISearch()}
           >
-            {aiSearchLoading ? t('search.aiSearching') : t('search.aiSearch')}
+            {aiSearchLoading ? 'AI 理解中' : '提问'}
           </Button>
         </div>
         {normalizedQuery && (
           <div className="flex min-h-10 flex-wrap items-center gap-2 border-t px-2 py-2">
             <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
               {configIndexLoading
-                ? t('search.indexLoading')
+                ? '正在加载配置搜索索引…'
                 : aiSearchError ||
                   (aiExpandedTerms.length > 0
-                    ? t('search.aiUnderstood', { terms: aiExpandedTerms.join('、') })
-                    : t('search.aiHint'))}
+                    ? `AI 理解为：${aiExpandedTerms.join('、')}`
+                    : '可以描述你想调整的效果，例如“麦麦说话太频繁”')}
             </span>
             <span className="text-muted-foreground hidden text-xs sm:inline">
-              {t('search.aiShortcut')}
+              {'Ctrl + Enter'}
             </span>
           </div>
         )}
@@ -728,7 +713,7 @@ export function SearchDialog({
                         : 'border-border/70'
                     )}
                     aria-live="polite"
-                    aria-label={t('search.progressTitle')}
+                    aria-label={'搜索过程'}
                   >
                     <CollapsibleTrigger asChild>
                       <button
@@ -736,8 +721,8 @@ export function SearchDialog({
                         className="flex w-full items-center gap-2 text-sm font-medium"
                         aria-label={
                           aiSearchProgressOpen
-                            ? t('search.progressCollapse')
-                            : t('search.progressExpand')
+                            ? '收起搜索过程'
+                            : '展开搜索过程'
                         }
                       >
                         {aiSearchLoading ? (
@@ -747,7 +732,7 @@ export function SearchDialog({
                         ) : (
                           <Sparkles className="text-primary h-4 w-4" />
                         )}
-                        <span>{t('search.progressTitle')}</span>
+                        <span>{'搜索过程'}</span>
                         <ChevronDown
                           className={cn(
                             'text-muted-foreground ml-auto h-4 w-4 transition-transform',
@@ -785,7 +770,7 @@ export function SearchDialog({
                                     isFailed ? 'text-destructive font-medium' : 'text-foreground'
                                   }
                                 >
-                                  {getProgressTitle(event, t)}
+                                  {getProgressTitle(event)}
                                 </div>
                                 {detail && (
                                   <div
@@ -813,7 +798,7 @@ export function SearchDialog({
                 >
                   <div className="mb-2 flex items-center gap-2 text-sm font-medium">
                     <Sparkles className="text-primary h-4 w-4" />
-                    {t('search.aiAnswer')}
+                    {'AI 答复'}
                   </div>
                   <MarkdownRenderer
                     content={aiAnswer}
@@ -825,7 +810,7 @@ export function SearchDialog({
                 <section className="border-border/70 rounded-lg border p-3">
                   <div className="mb-2 flex items-center gap-2 text-sm font-medium">
                     <Lightbulb className="h-4 w-4" />
-                    {t('search.aiSuggestions')}
+                    {'建议'}
                   </div>
                   <ul className="text-muted-foreground space-y-1.5 text-sm">
                     {aiSuggestions.map((suggestion) => (
@@ -844,7 +829,7 @@ export function SearchDialog({
                 <section className="flex flex-wrap items-center gap-2 px-1">
                   <span className="text-muted-foreground flex items-center gap-1 text-xs">
                     <BookOpen className="h-3.5 w-3.5" />
-                    {t('search.aiSources')}
+                    {'官方文档来源'}
                   </span>
                   {aiSources.map((source) => (
                     <a
@@ -896,7 +881,7 @@ export function SearchDialog({
                 className="text-muted-foreground/50 mb-4 h-12 w-12"
               />
               <p className="text-muted-foreground text-sm">
-                {searchQuery ? t('search.noResults') : t('search.startSearch')}
+                {searchQuery ? '未找到匹配的页面或配置项' : '输入关键词开始搜索'}
               </p>
             </div>
           )}

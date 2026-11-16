@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { ChevronRight, Search } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+
 import type { HTMLAttributes, ReactNode } from 'react'
 
 import { Card } from '@/components/ui/card'
@@ -37,7 +37,6 @@ function ManageItemLink({ item, children, ...rest }: ManageItemLinkProps) {
  * 移动端「管理」页：把侧栏的全部入口按分组铺开。
  */
 export function ManagePage() {
-  const { t } = useTranslation()
   const { menuSections, openSearch } = useMobileNav()
 
   const sections = [...menuSections, ...MOBILE_EXTRA_MANAGE_SECTIONS]
@@ -48,13 +47,13 @@ export function ManagePage() {
     .filter((section) => section.items.length > 0)
 
   const sectionTitle = (section: MenuSection) =>
-    section.literalTitle ? section.title : t(section.title)
-  const itemLabel = (item: MenuItem) => (item.literalLabel ? item.label : t(item.label))
+    section.title
+  const itemLabel = (item: MenuItem) => (item.label)
 
   return (
     <div data-manage-page="true" className="mx-auto w-full max-w-2xl space-y-6 p-4 sm:p-6">
       <h1 data-mobile-large-title="true" className="px-1 text-3xl font-bold tracking-tight">
-        {t('mobileNav.manage')}
+        {'管理'}
       </h1>
 
       <button
@@ -64,7 +63,7 @@ export function ManagePage() {
         className="bg-muted text-muted-foreground flex h-10 w-full items-center gap-2 rounded-xl px-3 text-left text-base"
       >
         <Search className="h-[17px] w-[17px] shrink-0" aria-hidden="true" />
-        <span className="truncate">{t('manage.searchPlaceholder')}</span>
+        <span className="truncate">{'搜索页面或设置项'}</span>
       </button>
 
       {sections.map((section) => (

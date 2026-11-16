@@ -1,6 +1,6 @@
 import { ArrowRight, ChevronRight, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import type { NewsItem } from '@/lib/news-api'
 
@@ -14,7 +14,6 @@ export function NewsStrip({ news, readState, onOpen }: {
   readState: ReturnType<typeof useNewsReadState>
   onOpen: (item: NewsItem) => void
 }) {
-  const { t } = useTranslation()
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
 
@@ -50,7 +49,7 @@ export function NewsStrip({ news, readState, onOpen }: {
         title={current.title}
         onClick={() => onOpen(current)}
       >
-        <span data-home-news-label="true" className="shrink-0">{t('home.news.title')}</span>
+        <span data-home-news-label="true" className="shrink-0">{'资讯'}</span>
         <span className="min-w-0 flex-1 overflow-hidden" aria-live={rolling ? 'polite' : undefined}>
           <span key={`${position}-${current.id || current.title}`} data-home-news-title="true" className="block truncate">
             {current.title}
@@ -63,8 +62,8 @@ export function NewsStrip({ news, readState, onOpen }: {
           type="button"
           data-home-news-next="true"
           className="hover:text-foreground flex shrink-0 items-center gap-1 tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-          title={t('home.news.next')}
-          aria-label={t('home.news.next')}
+          title={'下一条资讯'}
+          aria-label={'下一条资讯'}
           onClick={() => setIndex(position + 1)}
         >
           {position + 1}/{items.length}
@@ -75,8 +74,8 @@ export function NewsStrip({ news, readState, onOpen }: {
           type="button"
           data-home-news-close="true"
           className="hover:text-foreground shrink-0 rounded-sm p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-          title={t('home.news.dismiss')}
-          aria-label={t('home.news.dismiss')}
+          title={'关闭资讯条'}
+          aria-label={'关闭资讯条'}
           onClick={() => readState.dismissStrip(news)}
         >
           <X className="h-3 w-3" aria-hidden="true" />

@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import type { ErrorInfo, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home, ChevronDown, ChevronUp, Copy, Check, Bug } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -67,7 +67,6 @@ function ErrorDetails({ error, errorInfo }: { error: Error; errorInfo: ErrorInfo
   const [isStackOpen, setIsStackOpen] = useState(true)
   const [isComponentStackOpen, setIsComponentStackOpen] = useState(false)
   const [copied, setCopied] = useState(false)
-  const { t } = useTranslation()
 
   const stackFrames = error.stack ? parseStackTrace(error.stack) : []
 
@@ -186,12 +185,12 @@ Time: ${new Date().toISOString()}
         {copied ? (
           <>
             <Check className="mr-2 h-4 w-4 text-green-500" />
-            {t('errorBoundary.copiedToClipboard')}
+            {'已复制到剪贴板'}
           </>
         ) : (
           <>
             <Copy className="mr-2 h-4 w-4" />
-            {t('errorBoundary.copyError')}
+            {'复制错误信息'}
           </>
         )}
       </Button>
@@ -207,7 +206,6 @@ function ErrorFallback({
   error: Error
   errorInfo: ErrorInfo | null
 }) {
-  const { t } = useTranslation()
   const handleGoHome = () => {
     window.location.href = '/'
   }
@@ -223,9 +221,9 @@ function ErrorFallback({
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
             <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
           </div>
-          <CardTitle className="text-2xl font-bold">{t('errorBoundary.title')}</CardTitle>
+          <CardTitle className="text-2xl font-bold">{'页面出现了问题'}</CardTitle>
           <CardDescription className="text-base mt-2">
-            {t('errorBoundary.description')}
+            {'应用程序遇到了意外错误。您可以尝试刷新页面或返回首页。'}
           </CardDescription>
         </CardHeader>
 
@@ -236,17 +234,17 @@ function ErrorFallback({
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
             <Button onClick={handleRefresh} className="flex-1">
               <RefreshCw className="mr-2 h-4 w-4" />
-              {t('errorBoundary.refreshPage')}
+              {'刷新页面'}
             </Button>
             <Button onClick={handleGoHome} variant="outline" className="flex-1">
               <Home className="mr-2 h-4 w-4" />
-              {t('errorBoundary.goHome')}
+              {'返回首页'}
             </Button>
           </div>
 
           {/* 提示信息 */}
           <p className="text-xs text-center text-muted-foreground pt-2">
-            {t('errorBoundary.footer')}
+            {'如果问题持续存在，请将错误信息复制并反馈给开发者'}
           </p>
         </CardContent>
       </Card>

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useId, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,13 +16,12 @@ export function ChatNicknameSettings({
   onUpdateUserName: (name: string) => void
   trigger: ReactNode
 }) {
-  const { t } = useTranslation()
   const inputId = useId()
   const [open, setOpen] = useState(false)
   const [draftName, setDraftName] = useState(userName)
 
   const save = () => {
-    onUpdateUserName(draftName.trim() || t('chat.userNameFallback'))
+    onUpdateUserName(draftName.trim() || '人类')
     setOpen(false)
   }
 
@@ -38,12 +37,12 @@ export function ChatNicknameSettings({
         {trigger}
       </PopoverTrigger>
       <PopoverContent side="top" align="start" className="w-64 space-y-3">
-        <Label htmlFor={inputId}>{t('chat.identity.editName')}</Label>
+        <Label htmlFor={inputId}>{'修改昵称'}</Label>
         <Input
           id={inputId}
           value={draftName}
           maxLength={64}
-          placeholder={t('chat.identity.namePlaceholder')}
+          placeholder={'输入昵称'}
           onChange={(event) => setDraftName(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
@@ -54,10 +53,10 @@ export function ChatNicknameSettings({
         />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-            {t('chat.actions.cancel')}
+            {'取消'}
           </Button>
           <Button type="button" size="sm" onClick={save}>
-            {t('chat.sidebar.saveName')}
+            {'保存'}
           </Button>
         </div>
       </PopoverContent>

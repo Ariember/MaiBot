@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from src.common.data_models.llm_service_data_models import LLMGenerationOptions, LLMResponseResult
 from src.common.llm_json import validate_llm_json
 from src.common.logger import get_logger
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.llm_models.payload_content.context_item import (
     ContextItem,
     ContextItemBuilder,
@@ -65,29 +65,17 @@ def _get_ai_search_model() -> LLMServiceClient:
     return _ai_search_model
 
 
-def resolve_prompt_locale(language: str) -> str:
-    """把 WebUI 语言代码映射到现有 Prompt 语言目录。"""
-
-    normalized_language = language.strip().lower().replace("_", "-")
-    if normalized_language.startswith("en"):
-        return "en-US"
-    if normalized_language.startswith("ja"):
-        return "ja-JP"
-    return "zh-CN"
-
-
 def _build_text_item(text: str) -> ContextItem:
     """把纯文本包装成一条上下文消息。"""
 
     return ContextItemBuilder().add_text_content(text).build()
 
 
-def _build_ai_search_prompt(request: AISearchRequest, locale: str) -> str:
-    """按界面语言构造带只读检索工具说明的 Agent Prompt。"""
+def _build_ai_search_prompt(request: AISearchRequest) -> str:
+    """构造带只读检索工具说明的 Agent Prompt。"""
 
     return load_prompt(
         "webui_ai_search",
-        locale=locale,
         query_json=json.dumps(request.query.strip(), ensure_ascii=False),
         candidate_count=len(request.candidates),
     )
@@ -286,7 +274,7 @@ def _build_tool_result_item(
     )
 
 
-def _build_evidence_messages(messages: List[ContextItem], locale: str) -> List[ContextItem]:
+def _build_evidence_messages(messages: List[ContextItem]) -> List[ContextItem]:
     """把已读取的工具结果转换为普通证据消息，供无工具的请求继续使用。"""
 
     evidence_messages: List[ContextItem] = []
@@ -299,7 +287,6 @@ def _build_evidence_messages(messages: List[ContextItem], locale: str) -> List[C
         if isinstance(message, FunctionCallOutputItem):
             evidence = load_prompt(
                 "webui_ai_search_evidence",
-                locale=locale,
                 tool_name=message.tool_name or "unknown",
                 tool_output=message.output,
             )
@@ -332,8 +319,7 @@ async def run_ai_search_agent(
     """运行有限轮次的文档检索 Agent，并生成经过校验的搜索响应。"""
 
     model = _get_ai_search_model()
-    locale = resolve_prompt_locale(request.language)
-    messages: List[ContextItem] = [_build_text_item(_build_ai_search_prompt(request, locale))]
+    messages: List[ContextItem] = [_build_text_item(_build_ai_search_prompt(request))]
     tools = _build_agent_tools()
     total_tokens = 0
     read_source_ids: set[str] = set()
@@ -397,7 +383,7 @@ async def run_ai_search_agent(
             )
 
     # 后续的定稿与纠错请求都不带工具，统一改用证据消息承载已读资料
-    answer_messages = _build_evidence_messages(messages, locale)
+    answer_messages = _build_evidence_messages(messages)
     parsed_output: AISearchModelOutput | None = None
     if answer_result is not None:
         try:
@@ -408,7 +394,7 @@ async def run_ai_search_agent(
     if answer_result is None or parsed_output is None:
         # 仅在工具轮次用尽或模型没有按格式作答时，才需要额外的定稿请求
         await _emit_progress(progress_callback, AISearchProgressEvent(stage="finalizing"))
-        answer_messages.append(_build_text_item(load_prompt("webui_ai_search_final", locale=locale)))
+        answer_messages.append(_build_text_item(load_prompt("webui_ai_search_final")))
         answer_result = await _generate_json_answer(model, answer_messages)
         total_tokens += answer_result.total_tokens
         answer_messages.extend(answer_result.output_items)
@@ -426,7 +412,7 @@ async def run_ai_search_agent(
             AISearchProgressEvent(stage="correcting", status="started", error=str(exc)),
         )
         answer_messages.append(
-            _build_text_item(load_prompt("webui_ai_search_correction", locale=locale, error=str(exc)))
+            _build_text_item(load_prompt("webui_ai_search_correction", error=str(exc)))
         )
         answer_result = await _generate_json_answer(model, answer_messages)
         total_tokens += answer_result.total_tokens

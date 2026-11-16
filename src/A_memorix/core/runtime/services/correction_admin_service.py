@@ -6,7 +6,7 @@ import json
 import time
 
 from src.common.logger import get_logger
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.services.llm_service import LLMServiceClient
 
 from ...utils.feedback_policy import (

@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+
 
 /**
  * Skip-to-content 无障碍导航链接
@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next'
  * 使用 focus-visible 而非 focus，鼠标点击不触发显示。
  */
 export function SkipNav() {
-  const { t } = useTranslation()
 
   return (
     <a
@@ -34,7 +33,7 @@ export function SkipNav() {
         'focus-visible:ring-ring',
       ].join(' ')}
     >
-      {t('a11y.skipToContent')}
+      {'跳过导航，直达主内容'}
     </a>
   )
 }

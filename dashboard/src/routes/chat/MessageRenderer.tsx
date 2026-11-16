@@ -1,6 +1,6 @@
 import { Reply as ReplyIcon } from 'lucide-react'
 import { useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { EnsureImageGallery, useImageGallery, type GalleryImage } from '@/components/image-gallery'
 import { useToast } from '@/hooks/use-toast'
@@ -52,7 +52,6 @@ function MediaSegmentBody({
   mediaLabel,
   galleryImage,
 }: MediaSegmentProps & { galleryImage: GalleryImage }) {
-  const { t } = useTranslation()
   const gallery = useImageGallery()
   const source = galleryImage.src
 
@@ -60,10 +59,7 @@ function MediaSegmentBody({
       <button
         type="button"
         className="focus:ring-ring inline-flex max-w-full cursor-zoom-in rounded-lg border-0 bg-transparent p-0 text-left align-bottom focus:ring-2 focus:ring-offset-2 focus:outline-none"
-        aria-label={t('chat.media.openPreview', {
-          type: mediaLabel,
-          defaultValue: `放大查看${mediaLabel}`,
-        })}
+        aria-label={`放大查看${mediaLabel}`}
         onClick={() => gallery?.open(galleryImage)}
       >
         <img
@@ -80,7 +76,7 @@ function MediaSegmentBody({
             target.style.display = 'none'
             const fallback = document.createElement('span')
             fallback.className = 'text-muted-foreground text-xs'
-            fallback.textContent = t('chat.media.loadFailed', { type: mediaLabel })
+            fallback.textContent = `[${mediaLabel}加载失败]`
             target.parentElement?.appendChild(fallback)
           }}
         />
@@ -90,7 +86,6 @@ function MediaSegmentBody({
 
 // 渲染单个消息段
 export function RenderMessageSegment({ segment }: { segment: MessageSegment }) {
-  const { t } = useTranslation()
 
   switch (segment.type) {
     case 'text':
@@ -98,7 +93,7 @@ export function RenderMessageSegment({ segment }: { segment: MessageSegment }) {
 
     case 'image':
     case 'emoji': {
-      const mediaLabel = segment.type === 'emoji' ? t('chat.media.emoji') : t('chat.media.image')
+      const mediaLabel = segment.type === 'emoji' ? '表情包' : '图片'
 
       return <MediaSegment segment={segment} mediaLabel={mediaLabel} />
     }
@@ -107,8 +102,8 @@ export function RenderMessageSegment({ segment }: { segment: MessageSegment }) {
       return (
         <div className="flex items-center gap-2">
           <audio controls src={String(segment.data)} className="h-8 max-w-[200px]">
-            <track kind="captions" src="" label={t('chat.media.noCaptions')} default />
-            {t('chat.media.audioUnsupported')}
+            <track kind="captions" src="" label={'无字幕'} default />
+            {'您的浏览器不支持音频播放'}
           </audio>
         </div>
       )
@@ -116,8 +111,8 @@ export function RenderMessageSegment({ segment }: { segment: MessageSegment }) {
     case 'video':
       return (
         <video controls src={String(segment.data)} className="max-h-64 max-w-full rounded-lg">
-          <track kind="captions" src="" label={t('chat.media.noCaptions')} default />
-          {t('chat.media.videoUnsupported')}
+          <track kind="captions" src="" label={'无字幕'} default />
+          {'您的浏览器不支持视频播放'}
         </video>
       )
 
@@ -125,12 +120,12 @@ export function RenderMessageSegment({ segment }: { segment: MessageSegment }) {
       // QQ 原生表情，显示为文本
       return (
         <span className="text-muted-foreground">
-          {t('chat.media.face', { data: String(segment.data) })}
+          {`[表情:${String(segment.data)}]`}
         </span>
       )
 
     case 'music':
-      return <span className="text-muted-foreground">{t('chat.media.music')}</span>
+      return <span className="text-muted-foreground">{'[音乐分享]'}</span>
 
     case 'file':
       return <FileAttachment data={segment.data} />
@@ -152,21 +147,19 @@ export function RenderMessageSegment({ segment }: { segment: MessageSegment }) {
           className="text-primary bg-primary/10 mx-0.5 inline-flex items-center rounded px-1 text-[0.95em] font-medium"
           title={atData.target_user_id ? `@${atData.target_user_id}` : '@'}
         >
-          @{atLabel || t('chat.media.unknownMessage')}
+          @{atLabel || '未知消息'}
         </span>
       )
     }
 
     case 'forward':
-      return <span className="text-muted-foreground">{t('chat.media.forward')}</span>
+      return <span className="text-muted-foreground">{'[转发消息]'}</span>
 
     case 'unknown':
     default:
       return (
         <span className="text-muted-foreground">
-          {t('chat.media.unknown', {
-            type: segment.original_type || t('chat.media.unknownMessage'),
-          })}
+          {`[${segment.original_type || '未知消息'}]`}
         </span>
       )
   }
@@ -209,7 +202,6 @@ export function RenderMessageContent({ message }: { message: ChatMessage }) {
 
 // 回复消息块：点击可跳转到原始消息；如原消息不可见则提示错误。
 function ReplySegmentBlock({ data }: { data: ReplySegmentData }) {
-  const { t } = useTranslation()
   const { toast } = useToast()
   const chatScroll = useChatScroll()
 
@@ -217,10 +209,10 @@ function ReplySegmentBlock({ data }: { data: ReplySegmentData }) {
     data.target_message_sender_cardname ||
     data.target_message_sender_nickname ||
     data.target_message_sender_id ||
-    t('chat.message.replyUnknownSender', { defaultValue: '未知发送者' })
+    '未知发送者'
   const previewText =
     data.target_message_content?.trim() ||
-    t('chat.media.replyMissing', { defaultValue: '原消息内容不可用' })
+    '原消息内容不可用'
   const targetMessageId = data.target_message_id ? String(data.target_message_id) : ''
   const isClickable = Boolean(targetMessageId && chatScroll)
 
@@ -231,10 +223,8 @@ function ReplySegmentBlock({ data }: { data: ReplySegmentData }) {
     const found = chatScroll.scrollToMessage(targetMessageId)
     if (!found) {
       toast({
-        title: t('chat.toast.replyNotFoundTitle', { defaultValue: '原始消息不在当前视图' }),
-        description: t('chat.toast.replyNotFoundDescription', {
-          defaultValue: '该消息可能已被清除、不在本会话中，或者尚未加载。',
-        }),
+        title: '原始消息不在当前视图',
+        description: '该消息可能已被清除、不在本会话中，或者尚未加载。',
         variant: 'destructive',
       })
     }

@@ -1,18 +1,9 @@
 import { useState } from 'react'
-import { createInstance } from 'i18next'
-import { I18nextProvider } from 'react-i18next'
 
 import { PluginPagesSettings, type PluginPagePreferences } from '@/components/plugin-pages-settings'
 import { Button } from '@/components/ui/button'
 import type { WebUIExtension } from '@/lib/plugin-webui'
-import zh from '@/i18n/locales/zh.json'
 
-const i18n = createInstance()
-void i18n.init({
-  lng: 'zh',
-  resources: { zh: { translation: zh } },
-  interpolation: { escapeValue: false },
-})
 const samples: WebUIExtension[] = [
   {
     id: 'maibot.mai-recog-self',
@@ -47,7 +38,7 @@ export function PluginPagesReview() {
   const [preferences, setPreferences] = useState(initialPreferences)
   const [notice, setNotice] = useState('示例数据：可以调整顺序、切换显示，刷新恢复设计稿顺序。')
   return (
-    <I18nextProvider i18n={i18n}>
+    <>
       <main className="p-8">
         <PluginPagesSettings
           extensions={samples}
@@ -71,6 +62,6 @@ export function PluginPagesReview() {
           {notice}
         </p>
       </main>
-    </I18nextProvider>
+    </>
   )
 }

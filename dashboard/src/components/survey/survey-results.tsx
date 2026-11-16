@@ -236,7 +236,7 @@ export function SurveyResults({
                       <div key={submission.id} className="p-4 rounded-lg border">
                         <div className="flex items-center justify-between mb-3">
                           <Badge variant="outline">
-                            {new Date(submission.submittedAt).toLocaleString()}
+                            {new Date(submission.submittedAt).toLocaleString('zh-CN')}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
                             ID: {submission.id}

@@ -12,9 +12,7 @@ const mocks = vi.hoisted(() => ({
   inheritedFrom: 'sidebar',
 }))
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { resolvedLanguage: 'zh', language: 'zh' } }),
-}))
+
 
 vi.mock('@/hooks/use-background', () => ({
   useBackground: () => ({
@@ -65,11 +63,11 @@ vi.mock('./NavItem', () => ({
 vi.mock('./use-menu-sections', () => ({
   useMenuSections: () => [
     {
-      title: 'sidebar.groups.overview',
+      title: '概览',
       items: [{ path: '/', label: '首页' }],
     },
     {
-      title: 'sidebar.groups.resources',
+      title: '资源管理',
       items: [
         { path: '/memory', label: '记忆' },
         { path: '/emoji', label: '表情包' },
@@ -119,9 +117,9 @@ describe('LogoArea 与 Sidebar', () => {
     const aside = container.querySelector('[data-dashboard-sidebar="true"]')
     expect(aside).toHaveClass('bg-card', 'translate-x-0')
     expect(screen.getByTestId('background-sidebar')).toBeInTheDocument()
-    expect(screen.getByRole('navigation')).toHaveAttribute('aria-label', 'a11y.sidebarNav')
-    expect(screen.getByText('sidebar.groups.overview').parentElement).toHaveClass('hidden')
-    expect(screen.getByText('sidebar.groups.resources')).toBeInTheDocument()
+    expect(screen.getByRole('navigation')).toHaveAttribute('aria-label', '主导航')
+    expect(screen.getByText('概览').parentElement).toHaveClass('hidden')
+    expect(screen.getByText('资源管理')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '首页' })).toHaveAttribute(
       'data-sidebar-open',
       'true'
@@ -179,7 +177,7 @@ describe('LogoArea 与 Sidebar', () => {
       container.querySelector('[data-dashboard-sidebar-collapsed-divider="true"]')
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: 'header.switchSidebarToFixed' })
+      screen.queryByRole('button', { name: '切换为固定模式' })
     ).not.toBeInTheDocument()
 
     fireEvent.pointerEnter(aside as HTMLElement, { pointerType: 'mouse' })
@@ -196,7 +194,7 @@ describe('LogoArea 与 Sidebar', () => {
       'px-(--layout-sidebar-nav-padding-collapsed)',
       'py-(--layout-sidebar-nav-padding)'
     )
-    expect(screen.getByText('sidebar.groups.resources').parentElement).not.toHaveClass(
+    expect(screen.getByText('资源管理').parentElement).not.toHaveClass(
       'lg:mb-(--layout-sidebar-section-title-margin-bottom-collapsed)'
     )
     expect(container.querySelector('.border-t')).toHaveClass('lg:opacity-0')
@@ -205,7 +203,7 @@ describe('LogoArea 与 Sidebar', () => {
       'true'
     )
 
-    const fixButton = screen.getByRole('button', { name: 'header.switchSidebarToFixed' })
+    const fixButton = screen.getByRole('button', { name: '切换为固定模式' })
     expect(fixButton).toHaveClass(
       'right-4',
       'bottom-3',
@@ -235,7 +233,7 @@ describe('LogoArea 与 Sidebar', () => {
     expect(aside).not.toHaveAttribute('data-dashboard-sidebar-fix-transition')
     expect(screen.getByRole('navigation').className).toBe(hoverNavigationClassName)
     expect(
-      screen.queryByRole('button', { name: 'header.switchSidebarToFixed' })
+      screen.queryByRole('button', { name: '切换为固定模式' })
     ).not.toBeInTheDocument()
   })
 

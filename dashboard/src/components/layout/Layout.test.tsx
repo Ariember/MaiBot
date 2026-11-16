@@ -15,11 +15,7 @@ const routerMocks = vi.hoisted(() => ({
 }))
 
 const layoutMocks = vi.hoisted(() => {
-  const t = (key: string, options?: { page?: string }) =>
-    options?.page ? `${key}:${options.page}` : key
-
   return {
-    t,
     announce: vi.fn(),
     checking: false,
     electron: false,
@@ -82,9 +78,7 @@ vi.mock('motion/react', () => {
     motion: { div: MotionDiv },
   }
 })
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: layoutMocks.t }),
-}))
+
 
 vi.mock('@/components/background-layer', () => ({
   BackgroundLayer: () => null,
@@ -275,7 +269,7 @@ describe('Layout 工作区切换', () => {
   })
 
   it('麦日常运行页面归入独立组且不重复出现在插件扩展中', async () => {
-    layoutMocks.menuSections = [{ title: 'sidebar.groups.mylife', items: [{ path: '/mylife', label: '日常配置' }] }]
+    layoutMocks.menuSections = [{ title: '麦日常', items: [{ path: '/mylife', label: '日常配置' }] }]
     layoutMocks.extensions = [{
       schema_version: 2,
       plugin_id: MYLIFE_PLUGIN_ID,
@@ -288,7 +282,7 @@ describe('Layout 工作区切换', () => {
     render(<Layout><div>麦日常</div></Layout>)
     await flushMicrotasks()
     const sidebar = screen.getByTestId('sidebar')
-    expect(sidebar).toHaveAttribute('data-section-titles', 'sidebar.groups.mylife')
+    expect(sidebar).toHaveAttribute('data-section-titles', '麦日常')
     expect(sidebar).toHaveAttribute('data-menu-paths', `/mylife,/extensions/${MYLIFE_PLUGIN_ID}/overview`)
   })
 
@@ -521,7 +515,7 @@ describe('Layout 壳层、快捷键与公告入口', () => {
       </Layout>
     )
 
-    expect(screen.getByText('layout.verifyingLogin')).toBeInTheDocument()
+    expect(screen.getByText('麦麦正在啃食服务器...')).toBeInTheDocument()
     expect(document.querySelector('[data-dashboard-shell="true"]')).not.toBeInTheDocument()
     expect(screen.queryByTestId('update-notice-dialog')).not.toBeInTheDocument()
   })
@@ -661,8 +655,8 @@ describe('Layout 壳层、快捷键与公告入口', () => {
     routerMocks.pathname = pathname
     layoutMocks.menuSections = [
       {
-        title: 'sidebar.groups.botConfig',
-        items: [{ path: '/config/bot', label: 'sidebar.menu.botMainConfig' }],
+        title: '配置管理',
+        items: [{ path: '/config/bot', label: '麦麦设置' }],
       },
     ]
     render(
@@ -734,8 +728,8 @@ describe('Layout 壳层、快捷键与公告入口', () => {
     const unsubscribe = vi.fn()
     layoutMocks.menuSections = [
       {
-        title: 'sidebar.groups.botConfig',
-        items: [{ path: '/config/bot', label: 'sidebar.menu.botMainConfig' }],
+        title: '配置管理',
+        items: [{ path: '/config/bot', label: '麦麦设置' }],
       },
     ]
     routerMocks.subscribe.mockImplementation((_event?: string, callback?: () => void) => {
@@ -763,9 +757,9 @@ describe('Layout 壳层、快捷键与公告入口', () => {
     act(() => {
       vi.advanceTimersByTime(0)
     })
-    expect(document.title).toBe('sidebar.menu.botMainConfig — MaiBot Dashboard')
+    expect(document.title).toBe('麦麦设置 — MaiBot Dashboard')
     expect(layoutMocks.announce).toHaveBeenCalledWith(
-      'a11y.navigatedTo:sidebar.menu.botMainConfig',
+      '已导航至 麦麦设置',
       'polite'
     )
     expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
@@ -779,7 +773,7 @@ describe('Layout 壳层、快捷键与公告入口', () => {
     act(() => {
       vi.advanceTimersByTime(0)
     })
-    expect(document.title).toBe('workspace.chat — MaiBot Dashboard')
+    expect(document.title).toBe('麦麦聊天 — MaiBot Dashboard')
     expect(focusSpy).not.toHaveBeenCalled()
 
     routerMocks.pathname = '/unknown-page'
@@ -788,7 +782,7 @@ describe('Layout 壳层、快捷键与公告入口', () => {
     })
     expect(document.title).toBe('MaiBot Dashboard')
     expect(layoutMocks.announce).toHaveBeenCalledWith(
-      'a11y.navigatedTo:MaiBot Dashboard',
+      '已导航至 MaiBot Dashboard',
       'polite'
     )
 

@@ -7,7 +7,7 @@ import asyncio
 import json
 
 from src.common.async_work import run_sync_work
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 from src.common.json_storage import read_json, write_json
 from src.common.logger import get_logger
 from src.common.paths import get_instance_root

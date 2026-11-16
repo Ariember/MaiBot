@@ -16,10 +16,7 @@ const dndState = vi.hoisted(() => ({
     | undefined,
 }))
 
-vi.mock('react-i18next', () => {
-  const t = (key: string) => key
-  return { useTranslation: () => ({ t }) }
-})
+
 
 vi.mock('@dnd-kit/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@dnd-kit/core')>()
@@ -195,8 +192,8 @@ describe('HomeCardManager 布局持久化', () => {
     )
 
     expect(screen.queryByRole('button', { name: '编辑测试内容' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'home.cards.edit' }))
-    await user.click(screen.getByRole('button', { name: 'home.cards.editCard' }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片' }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片：测试' }))
     await user.click(screen.getByRole('button', { name: '编辑测试内容' }))
     expect(onEdit).toHaveBeenCalledOnce()
   })
@@ -217,9 +214,9 @@ describe('HomeCardManager 布局持久化', () => {
       />
     )
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.edit' }))
-    await user.click(screen.getByRole('button', { name: 'home.cards.editCard' }))
-    await user.click(screen.getByRole('button', { name: /home.cards.styles.orange.title/ }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片' }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片：测试' }))
+    await user.click(screen.getByRole('button', { name: /橙色底背景色字/ }))
 
     expect(screen.getByText('测试卡片').closest('[data-home-card-id]')).toHaveAttribute(
       'data-home-card-style',
@@ -258,7 +255,7 @@ describe('HomeCardManager 布局持久化', () => {
     expect(separator).toHaveAttribute('data-home-card-variant', 'separator')
     expect(separator?.parentElement?.getAttribute('style')).toContain('34px')
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.edit' }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片' }))
     expect(screen.getByRole('button', { name: '拖拽排序：一言' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '从首页隐藏：一言' }))
     expect(screen.queryByText('一言内容')).not.toBeInTheDocument()
@@ -341,11 +338,11 @@ describe('HomeCardManager 添加/隐藏/重置', () => {
       />
     )
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.add' }))
-    expect(screen.getByText('home.cards.dialog.noHiddenCards')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'home.cards.dialog.cancel' }))
+    await user.click(screen.getByRole('button', { name: '新增卡片' }))
+    expect(screen.getByText('暂无可添加卡片')).toBeInTheDocument()
+    await user.click(screen.getByText('关闭', { selector: 'button' }))
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.edit' }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片' }))
     await user.click(screen.getByRole('button', { name: '从首页隐藏：卡片甲' }))
     expect(screen.queryByText('卡片甲内容')).not.toBeInTheDocument()
     expect(visibleCardIds()).toEqual(['builtin:b'])
@@ -354,17 +351,17 @@ describe('HomeCardManager 添加/隐藏/重置', () => {
       expect(storedLayout().hidden).toEqual(['builtin:a'])
     })
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.add' }))
-    expect(screen.getByText('home.cards.categories.status')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '新增卡片' }))
+    expect(screen.getByText('运行状态')).toBeInTheDocument()
     expect(screen.getByText('甲的说明')).toBeInTheDocument()
     const hiddenRow = screen.getByText('卡片甲').closest('div.flex')
     expect(hiddenRow).not.toBeNull()
     await user.click(
-      within(hiddenRow as HTMLElement).getByRole('button', { name: 'home.cards.dialog.restore' })
+      within(hiddenRow as HTMLElement).getByRole('button', { name: '添加' })
     )
 
     expect(screen.getByText('卡片甲内容')).toBeInTheDocument()
-    expect(screen.getByText('home.cards.dialog.noHiddenCards')).toBeInTheDocument()
+    expect(screen.getByText('暂无可添加卡片')).toBeInTheDocument()
     await waitFor(() => {
       expect(storedLayout().hidden).toEqual([])
     })
@@ -394,12 +391,12 @@ describe('HomeCardManager 添加/隐藏/重置', () => {
     })
     expect(screen.queryByText('默认隐藏内容')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.add' }))
-    expect(screen.getByText('home.cards.categories.statistics')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'home.cards.dialog.restore' }))
+    await user.click(screen.getByRole('button', { name: '新增卡片' }))
+    expect(screen.getByText('统计图表')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '添加' }))
     expect(screen.getByText('默认隐藏内容')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.dialog.reset' }))
+    await user.click(screen.getByRole('button', { name: '恢复默认布局' }))
     expect(screen.queryByText('默认隐藏内容')).not.toBeInTheDocument()
     await waitFor(() => {
       expect(storedLayout()).toMatchObject({
@@ -440,7 +437,7 @@ describe('HomeCardManager 添加/隐藏/重置', () => {
     )
     expect(visibleCardIds()).toEqual(['builtin:b', 'builtin:a', 'plugin:x'])
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.reset' }))
+    await user.click(screen.getByRole('button', { name: '恢复默认' }))
 
     expect(screen.getByText('丙内容')).toBeInTheDocument()
     expect(screen.getByText('甲内容').closest('[data-home-card-id]')).toHaveAttribute(
@@ -474,7 +471,7 @@ describe('HomeCardManager 拖拽排序', () => {
       />
     )
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.edit' }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片' }))
     await user.click(screen.getByRole('button', { name: '从首页隐藏：丙' }))
     await waitFor(() => {
       expect(storedLayout().order).toEqual(['builtin:a', 'builtin:b', 'builtin:c'])
@@ -696,10 +693,10 @@ describe('HomeCardManager 插件卡片合并与内容', () => {
     expect(screen.queryByRole('link', { name: '坏链' })).not.toBeInTheDocument()
     expect(screen.getByText('坏链')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.edit' }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片' }))
     await user.click(screen.getByRole('button', { name: '从首页隐藏：链接卡片' }))
-    await user.click(screen.getByRole('button', { name: 'home.cards.add' }))
-    expect(screen.getByText('home.cards.categories.plugin')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '新增卡片' }))
+    expect(screen.getByText('插件卡片')).toBeInTheDocument()
     expect(screen.getByText('链接卡片')).toBeInTheDocument()
   })
 })
@@ -790,12 +787,12 @@ describe('HomeCardManager 自适应宽度与行高', () => {
       '360px'
     )
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.edit' }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片' }))
     expect(screen.queryByRole('button', { name: '调整尺寸：普通' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'home.cards.row.high' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '高行' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'home.cards.row.high' }))
-    expect(screen.getByRole('button', { name: 'home.cards.row.low' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '高行' }))
+    expect(screen.getByRole('button', { name: '低行' })).toBeInTheDocument()
     await waitFor(() => {
       expect(storedLayout().rowModes).toEqual({ 0: 'low' })
     })
@@ -827,8 +824,8 @@ describe('HomeCardManager 自适应宽度与行高', () => {
       />
     )
 
-    expect(within(portal).getByRole('button', { name: 'home.cards.add' })).toBeInTheDocument()
-    expect(within(portal).getByRole('button', { name: 'home.cards.reset' })).toBeInTheDocument()
-    expect(within(portal).getByRole('button', { name: 'home.cards.edit' })).toBeInTheDocument()
+    expect(within(portal).getByRole('button', { name: '新增卡片' })).toBeInTheDocument()
+    expect(within(portal).getByRole('button', { name: '恢复默认' })).toBeInTheDocument()
+    expect(within(portal).getByRole('button', { name: '编辑卡片' })).toBeInTheDocument()
   })
 })

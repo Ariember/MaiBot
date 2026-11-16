@@ -9,7 +9,7 @@ import time
 
 from src.chat.message_receive.chat_manager import BotChatSession, chat_manager
 from src.common.data_models.message_component_data_model import ImageComponent
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 
 if TYPE_CHECKING:
     from .service import AgentService

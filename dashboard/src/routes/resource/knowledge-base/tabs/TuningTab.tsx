@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { ChevronRight, FileText, ListTree, MoreHorizontal, Sparkles } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+
 
 import { CodeEditor } from '@/components/CodeEditor'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +23,47 @@ import { TabsContent } from '@/components/ui/tabs'
 
 import type { UseMemoryTuningResult } from '../hooks/useMemoryTuning'
 import { formatImportTime, getImportStatusVariant } from '../utils'
+
+const MEMORY_TUNING_PARAMETERS_LABELS: Record<string, string> = {
+  "retrieval_top_k": "初步查找数量",
+  "retrieval_top_k_paragraphs": "段落查找数量",
+  "retrieval_top_k_relations": "关系查找数量",
+  "retrieval_top_k_final": "最终展示数量",
+  "retrieval_alpha": "段落和关系侧重",
+  "retrieval_enable_ppr": "关系图辅助排序",
+  "retrieval_ppr_alpha": "关系图扩展强度",
+  "retrieval_ppr_timeout_seconds": "关系图处理上限",
+  "retrieval_search_smart_fallback_enabled": "找不到时自动补查",
+  "retrieval_sparse_enabled": "关键词查找",
+  "retrieval_sparse_mode": "关键词查找方式",
+  "retrieval_sparse_candidate_k": "关键词段落查找数量",
+  "retrieval_sparse_relation_candidate_k": "关键词关系查找数量",
+  "retrieval_fusion_method": "结果合并方式",
+  "retrieval_fusion_rrf_k": "结果合并稳定度",
+  "retrieval_fusion_vector_weight": "语义查找侧重",
+  "retrieval_fusion_bm25_weight": "关键词查找侧重",
+  "retrieval_vector_pools_mode": "语义搜索方式",
+  "retrieval_vector_pools_paragraph_top_k": "段落语义查找数量",
+  "retrieval_vector_pools_graph_top_k": "关系图语义查找数量",
+  "retrieval_vector_pools_graph_expand_paragraph_k": "关系图补充段落数",
+  "retrieval_vector_pools_relation_expand_per_hit": "每次命中补充关系数",
+  "retrieval_vector_pools_entity_expand_per_hit": "每次命中补充实体数",
+  "retrieval_vector_pools_relation_evidence_weight": "关系证据侧重",
+  "retrieval_vector_pools_entity_evidence_weight": "实体证据侧重",
+  "threshold_percentile": "自动筛选强度",
+  "threshold_min_results": "最少展示数量",
+  "threshold_min_threshold": "最低筛选线",
+  "threshold_max_threshold": "最高筛选线",
+}
+
+const MEMORY_TUNING_STATUS_LABELS: Record<string, string> = {
+  "completed": "已完成",
+  "running": "运行中",
+  "queued": "排队中",
+  "failed": "失败",
+  "cancelled": "已取消",
+}
+
 
 export interface TuningTabProps {
   tuning: UseMemoryTuningResult
@@ -94,41 +135,40 @@ const PARAMETER_ORDER = [
 ]
 
 const RESULT_METRICS = [
-  { key: 'precision_at_1', labelKey: 'memory.tuning.result.metrics.precisionAt1', format: 'percent' },
-  { key: 'hit_at_k', labelKey: 'memory.tuning.result.metrics.hitAtK', format: 'percent' },
-  { key: 'empty_rate', labelKey: 'memory.tuning.result.metrics.emptyRate', format: 'percent' },
-  { key: 'avg_elapsed_ms', labelKey: 'memory.tuning.result.metrics.avgElapsedMs', format: 'ms' },
+  { key: 'precision_at_1', label: "首条命中率", format: 'percent' },
+  { key: 'hit_at_k', label: "前 K 条命中率", format: 'percent' },
+  { key: 'empty_rate', label: "无结果比例", format: 'percent' },
+  { key: 'avg_elapsed_ms', label: "平均响应时间", format: 'ms' },
 ] as const
 
 const PARAMETER_KEYS = Object.fromEntries(
   PARAMETER_ORDER.map((path) => [path, path.replaceAll('.', '_')]),
 ) as Record<string, string>
 
-const VALUE_LABEL_KEYS: Record<string, Record<string, string>> = {
+const VALUE_LABELS: Record<string, Record<string, string>> = {
   'retrieval.sparse.mode': {
-    auto: 'memory.tuning.values.auto',
-    always: 'memory.tuning.values.always',
-    off: 'memory.tuning.values.off',
+    auto: "自动",
+    always: "始终启用",
+    off: "关闭",
   },
   'retrieval.fusion.method': {
-    weighted_rrf: 'memory.tuning.values.weightedRrf',
-    rrf: 'memory.tuning.values.rrf',
-    alpha_legacy: 'memory.tuning.values.alphaLegacy',
+    weighted_rrf: "综合排序",
+    rrf: "排序整合",
+    alpha_legacy: "旧版综合排序",
   },
   'retrieval.vector_pools.mode': {
-    single: 'memory.tuning.values.singlePool',
-    dual: 'memory.tuning.values.dualPool',
+    single: "单路语义搜索",
+    dual: "双路语义搜索",
   },
 }
 
-const TUNING_REASON_KEYS: Record<string, string> = {
-  holdout_empty: 'memory.tuning.result.reasons.holdoutEmpty',
-  holdout_online_like_validation_failed: 'memory.tuning.result.reasons.holdoutOnlineLikeValidationFailed',
+const TUNING_REASON_LABELS: Record<string, string> = {
+  holdout_empty: "独立样本不足，无法验证调优结果。",
+  holdout_online_like_validation_failed: "独立样本和实际搜索效果验证未通过。",
 }
 
 function formatSnapshotValue(
   value: unknown,
-  t: (key: string, options?: Record<string, unknown>) => string,
   path?: string,
 ): string {
   if (value === null) {
@@ -138,15 +178,15 @@ function formatSnapshotValue(
     return '-'
   }
   if (typeof value === 'boolean') {
-    return value ? t('memory.tuning.values.enabled') : t('memory.tuning.values.disabled')
+    return value ? '启用' : '关闭'
   }
   if (typeof value === 'number') {
     return Number.isFinite(value) ? String(value) : '-'
   }
   if (typeof value === 'string') {
-    const valueLabelKey = path ? VALUE_LABEL_KEYS[path]?.[value] : undefined
-    if (valueLabelKey) {
-      return t(valueLabelKey)
+    const valueLabel = path ? VALUE_LABELS[path]?.[value] : undefined
+    if (valueLabel) {
+      return valueLabel
     }
     return value || '""'
   }
@@ -177,18 +217,17 @@ function formatResultValue(value: number | undefined, format: 'number' | 'percen
 
 function formatTuningReason(
   reason: string,
-  t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
   const normalized = reason.trim()
   if (!normalized) {
     return ''
   }
 
-  const reasonKey = TUNING_REASON_KEYS[normalized]
-  if (reasonKey) {
-    return t(reasonKey)
+  const reasonLabel = TUNING_REASON_LABELS[normalized]
+  if (reasonLabel) {
+    return reasonLabel
   }
-  return t('memory.tuning.result.reasons.unknown', { reason: normalized })
+  return `${normalized}`
 }
 
 function formatResultDelta(value: number | undefined, format: 'number' | 'percent' | 'ms'): string {
@@ -268,15 +307,14 @@ function collectSnapshotEntries(value: unknown, prefix = ''): SnapshotEntry[] {
 
 function buildReadableSnapshotEntries(
   entries: SnapshotEntry[],
-  t: (key: string, options?: Record<string, unknown>) => string,
 ): { readableEntries: ReadableSnapshotEntry[], technicalCount: number } {
   const entryMap = new Map(entries.map((entry) => [entry.path, entry.rawValue]))
   const readableEntries = PARAMETER_ORDER
     .filter((path) => entryMap.has(path))
     .map((path) => ({
       path,
-      label: t(`memory.tuning.parameters.${PARAMETER_KEYS[path]}`),
-      value: formatSnapshotValue(entryMap.get(path), t, path),
+      label: MEMORY_TUNING_PARAMETERS_LABELS[PARAMETER_KEYS[path]],
+      value: formatSnapshotValue(entryMap.get(path), path),
     }))
   const technicalCount = entries.filter((entry) => !PARAMETER_KEYS[entry.path]).length
 
@@ -286,23 +324,22 @@ function buildReadableSnapshotEntries(
 function buildSnapshotDiff(
   runtimeEntries: SnapshotEntry[],
   persistableEntries: SnapshotEntry[],
-  t: (key: string, options?: Record<string, unknown>) => string,
 ): { readableDiffs: SnapshotDiffEntry[], technicalDiffCount: number } {
   const runtimeMap = new Map(runtimeEntries.map((entry) => [entry.path, entry.rawValue]))
   const persistableMap = new Map(persistableEntries.map((entry) => [entry.path, entry.rawValue]))
   const allPaths = Array.from(new Set([...runtimeMap.keys(), ...persistableMap.keys()])).sort()
   const diffPaths = allPaths.filter((path) => {
-    const runtimeValue = formatSnapshotValue(runtimeMap.get(path), t, path)
-    const persistableValue = formatSnapshotValue(persistableMap.get(path), t, path)
+    const runtimeValue = formatSnapshotValue(runtimeMap.get(path), path)
+    const persistableValue = formatSnapshotValue(persistableMap.get(path), path)
     return runtimeValue !== persistableValue
   })
   const readableDiffs = diffPaths
     .filter((path) => PARAMETER_KEYS[path])
     .map((path) => ({
       path,
-      label: t(`memory.tuning.parameters.${PARAMETER_KEYS[path]}`),
-      runtime: formatSnapshotValue(runtimeMap.get(path), t, path),
-      persistable: formatSnapshotValue(persistableMap.get(path), t, path),
+      label: MEMORY_TUNING_PARAMETERS_LABELS[PARAMETER_KEYS[path]],
+      runtime: formatSnapshotValue(runtimeMap.get(path), path),
+      persistable: formatSnapshotValue(persistableMap.get(path), path),
     }))
   const technicalDiffCount = diffPaths.length - readableDiffs.length
 
@@ -396,22 +433,20 @@ function TuningResultMetricRow({
 
 function TuningResultOverview({
   task,
-  t,
 }: {
   task?: Record<string, unknown>
-  t: (key: string, options?: Record<string, unknown>) => string
 }) {
   if (!task) {
     return (
       <section className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-        {t('memory.tuning.result.noTask')}
+        {'暂无调优结果。创建并完成任务后，这里会显示评估结果。'}
       </section>
     )
   }
 
   const status = String(task.status ?? '-')
-  const statusLabel = t(`memory.tuning.status.${status}`, { defaultValue: status })
-  const reasonText = formatTuningReason(String(task.error ?? ''), t)
+  const statusLabel = (MEMORY_TUNING_STATUS_LABELS[status] ?? status)
+  const reasonText = formatTuningReason(String(task.error ?? ''))
   const evaluation = getTuningEvaluationSummary(task)
   const isCompleted = status === 'completed'
   const progress = numberFrom(task.progress)
@@ -423,21 +458,21 @@ function TuningResultOverview({
       <section className="space-y-3">
         <div className="grid gap-3 md:grid-cols-3">
           <SnapshotResultCard
-            title={t('memory.tuning.result.statusTitle')}
+            title={'任务状态'}
             description={statusLabel}
           />
           <SnapshotResultCard
-            title={t('memory.tuning.result.progressTitle')}
+            title={'任务进度'}
             description={progress !== undefined ? `${Math.round(progress)}%` : '-'}
           />
           <SnapshotResultCard
-            title={t('memory.tuning.result.roundsTitle')}
+            title={'已尝试次数'}
             description={roundsDone !== undefined && roundsTotal !== undefined ? `${roundsDone}/${roundsTotal}` : '-'}
           />
         </div>
         {reasonText ? (
           <div className="rounded-md border border-dashed bg-background/60 p-3 text-xs text-muted-foreground">
-            {t('memory.tuning.result.errorReason', { reason: reasonText })}
+            {`失败原因：${reasonText}`}
           </div>
         ) : null}
       </section>
@@ -448,11 +483,8 @@ function TuningResultOverview({
     ? `${formatResultValue(evaluation.baselineScore, 'number')} → ${formatResultValue(evaluation.bestScore, 'number')}${evaluation.scoreDelta !== undefined ? ` · Δ ${formatResultDelta(evaluation.scoreDelta, 'number')}` : ''}`
     : '-'
   const validationText = evaluation.holdoutCaseCount !== undefined
-    ? t('memory.tuning.result.holdoutWithCount', {
-      count: evaluation.holdoutCaseCount,
-      result: evaluation.recommended ? t('memory.tuning.result.validationPassed') : t('memory.tuning.result.validationFailed'),
-    })
-    : evaluation.recommended ? t('memory.tuning.result.validationPassed') : t('memory.tuning.result.validationFailed')
+    ? `${evaluation.recommended ? '通过' : '未通过'}，${evaluation.holdoutCaseCount} 个样本`
+    : evaluation.recommended ? '通过' : '未通过'
   const metricRows = RESULT_METRICS.map((metric) => {
     const baseline = numberFrom(evaluation.baselineMetrics[metric.key])
     const best = numberFrom(evaluation.bestMetrics[metric.key])
@@ -466,29 +498,29 @@ function TuningResultOverview({
     <section className="space-y-4">
       <div className="grid gap-3 md:grid-cols-3">
         <SnapshotResultCard
-          title={t('memory.tuning.result.recommendationTitle')}
-          description={evaluation.recommended ? t('memory.tuning.result.recommended') : t('memory.tuning.result.notRecommended')}
+          title={'应用建议'}
+          description={evaluation.recommended ? '验证通过，建议应用。' : '验证未通过，不建议应用。'}
         />
         <SnapshotResultCard
-          title={t('memory.tuning.result.scoreTitle')}
+          title={'综合评分'}
           description={scoreText}
         />
         <SnapshotResultCard
-          title={t('memory.tuning.result.validationTitle')}
+          title={'独立样本验证'}
           description={validationText}
         />
       </div>
       {metricRows.length > 0 ? (
         <div className="space-y-2 rounded-md border bg-muted/15 p-4">
           <div>
-            <div className="text-sm font-medium">{t('memory.tuning.result.metricsTitle')}</div>
-            <div className="text-xs text-muted-foreground">{t('memory.tuning.result.metricsDescription')}</div>
+            <div className="text-sm font-medium">{'关键结果'}</div>
+            <div className="text-xs text-muted-foreground">{'展示调优前后的效果变化。'}</div>
           </div>
           <div className="grid gap-2 xl:grid-cols-2">
             {metricRows.map((metric) => (
               <TuningResultMetricRow
                 key={metric.key}
-                label={t(metric.labelKey)}
+                label={metric.label}
                 baseline={metric.baseline}
                 best={metric.best}
                 delta={metric.delta}
@@ -500,7 +532,7 @@ function TuningResultOverview({
       ) : null}
       {!evaluation.recommended && evaluation.reason ? (
         <div className="rounded-md border border-dashed bg-background/60 p-3 text-xs text-muted-foreground">
-          {t('memory.tuning.result.reason', { reason: formatTuningReason(evaluation.reason, t) })}
+          {`原因：${formatTuningReason(evaluation.reason)}`}
         </div>
       ) : null}
     </section>
@@ -510,17 +542,15 @@ function TuningResultOverview({
 function TuningTaskListCard({
   tasks,
   applyBestTask,
-  t,
 }: {
   tasks: UseMemoryTuningResult['tuningTasks']
   applyBestTask: UseMemoryTuningResult['applyBestTask']
-  t: (key: string, options?: Record<string, unknown>) => string
 }) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle>{t('memory.tuning.tasks.title')}</CardTitle>
-        <CardDescription>{t('memory.tuning.tasks.description')}</CardDescription>
+        <CardTitle>{'最近调优记录'}</CardTitle>
+        <CardDescription>{'每次调优的执行结果'}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {tasks.length > 0 ? (
@@ -530,7 +560,7 @@ function TuningTaskListCard({
               const status = String(task.status ?? '-')
               const recommended = isTuningTaskRecommended(task)
               const canApply = Boolean(task.task_id) && status === 'completed' && recommended
-              const statusLabel = t(`memory.tuning.status.${status}`, { defaultValue: status })
+              const statusLabel = (MEMORY_TUNING_STATUS_LABELS[status] ?? status)
               return (
                 <div
                   key={taskId || `tuning-task-${index}`}
@@ -548,7 +578,7 @@ function TuningTaskListCard({
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <Badge variant={recommended ? 'secondary' : 'outline'}>
-                      {recommended ? t('memory.tuning.tasks.recommended') : t('memory.tuning.tasks.notRecommended')}
+                      {recommended ? '推荐' : '不建议应用'}
                     </Badge>
                     <Button
                       size="sm"
@@ -556,7 +586,7 @@ function TuningTaskListCard({
                       onClick={() => void applyBestTask(taskId)}
                       disabled={!canApply}
                     >
-                      {t('memory.tuning.actions.applyBest')}
+                      {'应用推荐结果'}
                     </Button>
                   </div>
                 </div>
@@ -565,7 +595,7 @@ function TuningTaskListCard({
           </div>
         ) : (
           <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-            {t('memory.tuning.tasks.empty')}
+            {'暂无调优记录'}
           </div>
         )}
       </CardContent>
@@ -574,7 +604,6 @@ function TuningTaskListCard({
 }
 
 export function TuningTab({ tuning }: TuningTabProps) {
-  const { t } = useTranslation()
   const {
     tuningObjective,
     setTuningObjective,
@@ -597,31 +626,31 @@ export function TuningTab({ tuning }: TuningTabProps) {
   const runtimeEntries = useMemo(() => collectSnapshotEntries(tuningProfile.runtime), [tuningProfile.runtime])
   const persistableEntries = useMemo(() => collectSnapshotEntries(tuningProfile.persistable), [tuningProfile.persistable])
   const { readableEntries: readableRuntimeEntries, technicalCount: runtimeTechnicalCount } = useMemo(
-    () => buildReadableSnapshotEntries(runtimeEntries, t),
-    [runtimeEntries, t],
+    () => buildReadableSnapshotEntries(runtimeEntries),
+    [runtimeEntries],
   )
   const { readableEntries: readablePersistableEntries, technicalCount: persistableTechnicalCount } = useMemo(
-    () => buildReadableSnapshotEntries(persistableEntries, t),
-    [persistableEntries, t],
+    () => buildReadableSnapshotEntries(persistableEntries),
+    [persistableEntries],
   )
   const { readableDiffs, technicalDiffCount } = useMemo(
-    () => buildSnapshotDiff(runtimeEntries, persistableEntries, t),
-    [persistableEntries, runtimeEntries, t],
+    () => buildSnapshotDiff(runtimeEntries, persistableEntries),
+    [persistableEntries, runtimeEntries],
   )
   const resultTask = useMemo(
     () => tuningTasks.find((task) => String(task.status ?? '') === 'completed') ?? tuningTasks[0],
     [tuningTasks],
   )
   const runtimeResultText = runtimeEntries.length > 0
-    ? t('memory.tuning.snapshot.runtimeResultApplied')
-    : t('memory.tuning.snapshot.runtimeResultEmpty')
+    ? '调优结果已经用于当前记忆搜索。'
+    : '暂时没有正在使用的结果。'
   const persistableResultText = persistableEntries.length > 0
-    ? t('memory.tuning.snapshot.persistableResultReady')
-    : t('memory.tuning.snapshot.persistableResultEmpty')
+    ? '这组结果可按需保存为默认设置。'
+    : '暂时没有可保存结果。'
   const hasConfigDiff = readableDiffs.length + technicalDiffCount > 0
   const diffResultText = hasConfigDiff
-    ? t('memory.tuning.snapshot.diffResultChanged')
-    : t('memory.tuning.snapshot.diffResultClean')
+    ? '当前使用的设置与可保存设置存在差异，展开详情可查看。'
+    : '当前使用的设置与可保存设置一致。'
   const isSummaryView = snapshotViewMode === 'summary'
   const toggleSnapshotView = () => setSnapshotViewMode(isSummaryView ? 'toml' : 'summary')
   const SnapshotToggleIcon = isSummaryView ? FileText : ListTree
@@ -634,14 +663,14 @@ export function TuningTab({ tuning }: TuningTabProps) {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
-                {t('memory.tuning.task.title')}
+                {'记忆搜索调优'}
               </CardTitle>
-              <CardDescription>{t('memory.tuning.task.description')}</CardDescription>
+              <CardDescription>{'评估并改善记忆搜索效果'}</CardDescription>
             </CardHeader>
             <CardContent className="flex items-center gap-2">
               <Button className="min-w-0 flex-1" onClick={() => void submitTuningTask()} disabled={creatingTuning}>
                 <Sparkles className="mr-2 h-4 w-4" />
-                {t('memory.tuning.actions.createTask')}
+                {'开始调优'}
               </Button>
               <Dialog>
                 <DialogTrigger asChild>
@@ -650,50 +679,50 @@ export function TuningTab({ tuning }: TuningTabProps) {
                     variant="outline"
                     size="icon"
                     className="shrink-0"
-                    aria-label={t('memory.tuning.form.parameters')}
-                    title={t('memory.tuning.form.parameters')}
+                    aria-label={'调优参数'}
+                    title={'调优参数'}
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
                   <DialogHeader>
-                    <DialogTitle>{t('memory.tuning.form.parameters')}</DialogTitle>
-                    <DialogDescription>{t('memory.tuning.form.parametersDescription')}</DialogDescription>
+                    <DialogTitle>{'调优参数'}</DialogTitle>
+                    <DialogDescription>{'这些设置只影响下一次调优任务，一般保持默认即可。'}</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-5">
                     <section className="space-y-3">
-                      <div className="text-sm font-medium">{t('memory.tuning.form.strategy')}</div>
+                      <div className="text-sm font-medium">{'调优策略'}</div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor="tuning-objective">{t('memory.tuning.form.objective')}</Label>
+                          <Label htmlFor="tuning-objective">{'优化目标'}</Label>
                           <Select value={tuningObjective} onValueChange={setTuningObjective}>
                             <SelectTrigger id="tuning-objective"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="precision_priority">{t('memory.tuning.objectives.precision')}</SelectItem>
-                              <SelectItem value="balanced">{t('memory.tuning.objectives.balanced')}</SelectItem>
-                              <SelectItem value="recall_priority">{t('memory.tuning.objectives.recall')}</SelectItem>
+                              <SelectItem value="precision_priority">{'优先准确率'}</SelectItem>
+                              <SelectItem value="balanced">{'准确率与召回平衡'}</SelectItem>
+                              <SelectItem value="recall_priority">{'优先召回率'}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="tuning-intensity">{t('memory.tuning.form.intensity')}</Label>
+                          <Label htmlFor="tuning-intensity">{'评估强度'}</Label>
                           <Select value={tuningIntensity} onValueChange={setTuningIntensity}>
                             <SelectTrigger id="tuning-intensity"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="quick">{t('memory.tuning.intensity.quick')}</SelectItem>
-                              <SelectItem value="standard">{t('memory.tuning.intensity.standard')}</SelectItem>
-                              <SelectItem value="deep">{t('memory.tuning.intensity.deep')}</SelectItem>
+                              <SelectItem value="quick">{'快速'}</SelectItem>
+                              <SelectItem value="standard">{'标准'}</SelectItem>
+                              <SelectItem value="deep">{'深入'}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                     </section>
                     <section className="space-y-3 border-t pt-4">
-                      <div className="text-sm font-medium">{t('memory.tuning.form.evalScope')}</div>
+                      <div className="text-sm font-medium">{'评估范围'}</div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor="tuning-sample-size">{t('memory.tuning.form.sampleSize')}</Label>
+                          <Label htmlFor="tuning-sample-size">{'样本量'}</Label>
                           <Input
                             id="tuning-sample-size"
                             type="number"
@@ -702,7 +731,7 @@ export function TuningTab({ tuning }: TuningTabProps) {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="tuning-top-k-eval">{t('memory.tuning.form.topKEval')}</Label>
+                          <Label htmlFor="tuning-top-k-eval">{'每次评估查看数量'}</Label>
                           <Input
                             id="tuning-top-k-eval"
                             type="number"
@@ -718,7 +747,7 @@ export function TuningTab({ tuning }: TuningTabProps) {
                         checked={persistBestProfile}
                         onCheckedChange={(checked) => setPersistBestProfile(checked === true)}
                       />
-                      <Label htmlFor="persist-best-profile">{t('memory.tuning.form.persist')}</Label>
+                      <Label htmlFor="persist-best-profile">{'同时保存为默认设置'}</Label>
                     </div>
                   </div>
                 </DialogContent>
@@ -731,77 +760,77 @@ export function TuningTab({ tuning }: TuningTabProps) {
           <Card className="min-w-0 self-start">
             <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <CardTitle>{t('memory.tuning.snapshot.title')}</CardTitle>
+                <CardTitle>{'当前调优结果'}</CardTitle>
                 <CardDescription>
-                  {isSummaryView ? t('memory.tuning.snapshot.summaryDescription') : t('memory.tuning.snapshot.tomlDescription')}
+                  {isSummaryView ? '默认展示最近完成任务的评估结果，设置细节放在详情里。' : '面向排查的高级配置内容。'}
                 </CardDescription>
               </div>
               {!isSummaryView ? (
                 <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={toggleSnapshotView}>
                   <SnapshotToggleIcon className="h-4 w-4" />
-                  {t('memory.tuning.actions.showSummary')}
+                  {'返回结果摘要'}
                 </Button>
               ) : null}
             </CardHeader>
             <CardContent className="space-y-4">
               {snapshotViewMode === 'summary' ? (
                 <>
-                  <TuningResultOverview task={resultTask} t={t} />
+                  <TuningResultOverview task={resultTask} />
 
                   <details className="group overflow-hidden rounded-md border bg-background">
                     <summary className="flex cursor-pointer list-none flex-col gap-1 px-4 py-3 text-sm font-medium outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center [&::-webkit-details-marker]:hidden">
                       <span className="flex min-w-0 items-center gap-2">
                         <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-                        <span>{t('memory.tuning.snapshot.detailsTitle')}</span>
+                        <span>{'设置详情'}</span>
                       </span>
                       <span className="text-xs font-normal text-muted-foreground sm:ml-auto">
-                        {t('memory.tuning.snapshot.detailsHint')}
+                        {'排查时查看'}
                       </span>
                     </summary>
                     <div className="border-t">
                       <section className="grid gap-3 p-4 md:grid-cols-3">
                         <SnapshotResultCard
-                          title={t('memory.tuning.snapshot.runtimeTitle')}
+                          title={'当前使用中'}
                           description={runtimeResultText}
                         />
                         <SnapshotResultCard
-                          title={t('memory.tuning.snapshot.persistableTitle')}
+                          title={'可保存设置'}
                           description={persistableResultText}
                         />
                         <SnapshotResultCard
-                          title={t('memory.tuning.snapshot.diffTitle')}
+                          title={'差异项'}
                           description={diffResultText}
                         />
                       </section>
                       <div className="flex items-center justify-between gap-3 border-t px-4 py-3">
-                        <div className="text-sm font-medium">{t('memory.tuning.snapshot.parameterDetailsTitle')}</div>
+                        <div className="text-sm font-medium">{'参数明细'}</div>
                         <Button type="button" variant="ghost" size="sm" onClick={toggleSnapshotView}>
                           <FileText className="h-4 w-4" />
-                          {t('memory.tuning.actions.showToml')}
+                          {'查看高级配置'}
                         </Button>
                       </div>
                       <div className="max-h-[30vh] overflow-y-auto overscroll-contain border-t px-4 py-4 pr-3">
                         <div className="space-y-4">
                           <SnapshotSummarySection
-                            title={t('memory.tuning.snapshot.runtimeTitle')}
-                            description={t('memory.tuning.snapshot.runtimeDescription')}
+                            title={'当前使用中'}
+                            description={'已经用于当前记忆搜索的设置。'}
                             entries={readableRuntimeEntries}
                             technicalCount={runtimeTechnicalCount}
-                            technicalNote={t('memory.tuning.snapshot.technicalCount', { count: runtimeTechnicalCount })}
-                            emptyText={t('memory.tuning.snapshot.empty')}
+                            technicalNote={`另有 ${runtimeTechnicalCount} 个高级项目未在摘要中展示，可切到高级配置查看。`}
+                            emptyText={'暂无数据'}
                           />
                           <SnapshotSummarySection
-                            title={t('memory.tuning.snapshot.persistableTitle')}
-                            description={t('memory.tuning.snapshot.persistableDescription')}
+                            title={'可保存设置'}
+                            description={'保存为默认设置时会保留的内容。'}
                             entries={readablePersistableEntries}
                             technicalCount={persistableTechnicalCount}
-                            technicalNote={t('memory.tuning.snapshot.technicalCount', { count: persistableTechnicalCount })}
-                            emptyText={t('memory.tuning.snapshot.empty')}
+                            technicalNote={`另有 ${persistableTechnicalCount} 个高级项目未在摘要中展示，可切到高级配置查看。`}
+                            emptyText={'暂无数据'}
                           />
                           <section className="space-y-3 rounded-md border bg-background p-4">
                             <div>
-                              <div className="text-sm font-medium">{t('memory.tuning.snapshot.diffTitle')}</div>
-                              <div className="text-xs text-muted-foreground">{t('memory.tuning.snapshot.diffDescription')}</div>
+                              <div className="text-sm font-medium">{'差异项'}</div>
+                              <div className="text-xs text-muted-foreground">{'当前使用的设置和可保存设置不一致的项目。'}</div>
                             </div>
                             {readableDiffs.length > 0 ? (
                               <div className="space-y-2">
@@ -809,11 +838,11 @@ export function TuningTab({ tuning }: TuningTabProps) {
                                   <div key={entry.path} className="grid gap-2 rounded-md border bg-background p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                                     <div className="text-xs leading-5 text-muted-foreground lg:col-span-2">{entry.label}</div>
                                     <div className="min-w-0">
-                                      <div className="text-[11px] text-muted-foreground">{t('memory.tuning.snapshot.runtimeShort')}</div>
+                                      <div className="text-[11px] text-muted-foreground">{'当前使用'}</div>
                                       <div className="break-all text-sm leading-6">{entry.runtime}</div>
                                     </div>
                                     <div className="min-w-0">
-                                      <div className="text-[11px] text-muted-foreground">{t('memory.tuning.snapshot.persistableShort')}</div>
+                                      <div className="text-[11px] text-muted-foreground">{'保存后'}</div>
                                       <div className="break-all text-sm leading-6">{entry.persistable}</div>
                                     </div>
                                   </div>
@@ -821,12 +850,12 @@ export function TuningTab({ tuning }: TuningTabProps) {
                               </div>
                             ) : (
                               <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                                {t('memory.tuning.snapshot.noDiff')}
+                                {'两份配置当前没有差异。'}
                               </div>
                             )}
                             {technicalDiffCount > 0 ? (
                               <div className="rounded-md border border-dashed bg-background/60 p-3 text-xs text-muted-foreground">
-                                {t('memory.tuning.snapshot.technicalDiffCount', { count: technicalDiffCount })}
+                                {`另有 ${technicalDiffCount} 个高级差异未在摘要中展示，可切到高级配置查看。`}
                               </div>
                             ) : null}
                           </section>
@@ -846,7 +875,7 @@ export function TuningTab({ tuning }: TuningTabProps) {
             </CardContent>
           </Card>
 
-          <TuningTaskListCard tasks={tuningTasks} applyBestTask={applyBestTask} t={t} />
+          <TuningTaskListCard tasks={tuningTasks} applyBestTask={applyBestTask} />
         </div>
       </div>
     </TabsContent>

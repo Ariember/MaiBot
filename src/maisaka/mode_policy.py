@@ -2,7 +2,7 @@
 
 from typing import List
 
-from src.common.prompt_i18n import load_prompt
+from src.common.prompt_templates import load_prompt
 
 
 IDLE_CYCLE_REASONS = {

@@ -1,6 +1,6 @@
 /** 首页版本信息共享自更新检查；一言独立加载。 */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import {
   getVersionCompatibility,
@@ -75,7 +75,6 @@ function loadHitokotoIndex(): number {
 }
 
 export function useMaibotVersion() {
-  const { t } = useTranslation()
   const [hitokoto, setHitokoto] = useState<{ hitokoto: string; from: string } | null>(null)
   const [hitokotoLoading, setHitokotoLoading] = useState(true)
   const [hitokotoSettings, setHitokotoSettings] = useState(loadHitokotoSettings)
@@ -168,15 +167,15 @@ export function useMaibotVersion() {
             const data = await response.json()
             candidates.push({
               hitokoto: String(data.hitokoto),
-              from: String(data.from || data.from_who || t('home.unknownSource')),
+              from: String(data.from || data.from_who || '未知'),
             })
           } catch (error) {
             if (!isCurrentRequest()) return
             console.error('获取默认一言失败:', error)
             if (candidates.length === 0) {
               candidates.push({
-                hitokoto: t('home.hitokotoFallback'),
-                from: t('home.hitokotoFallbackFrom'),
+                hitokoto: '人生就像一盒巧克力，你永远不知道下一颗是什么味道。',
+                from: '阿甘正传',
               })
             }
           }
@@ -198,7 +197,7 @@ export function useMaibotVersion() {
         }
       }
     },
-    [t]
+    []
   )
 
   // 获取下一条一言

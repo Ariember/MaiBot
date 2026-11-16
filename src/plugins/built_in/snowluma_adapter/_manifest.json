@@ -47,8 +47,7 @@
   "i18n": {
     "default_locale": "zh-CN",
     "supported_locales": [
-      "zh-CN",
-      "en-US"
+      "zh-CN"
     ]
   },
   "id": "maibot-team.snowluma-adapter"

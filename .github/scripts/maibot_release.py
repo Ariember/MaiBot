@@ -72,9 +72,8 @@ def audit_names(names: List[str], prefix: str = "") -> None:
     if not prefix:
         if not required.issubset(paths):
             raise ValueError(f"wheel 缺少运行资源: {sorted(required - paths)}")
-        for directory in ("prompts/zh-CN", "prompts/en-US", "prompts/ja-JP", "locales/zh-CN"):
-            if not any(name.startswith(f"src/_resources/{directory}/") for name in paths):
-                raise ValueError(f"wheel 缺少资源目录: {directory}")
+        if not any(name.startswith("src/_resources/prompts/zh-CN/") for name in paths):
+            raise ValueError("wheel 缺少资源目录: prompts/zh-CN")
 
 
 def read_manifest(directory: Path) -> Dict[str, Any]:

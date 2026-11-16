@@ -51,7 +51,7 @@ function createMarketItem(overrides: Record<string, unknown> = {}): Record<strin
     manifest: { manifest_version: 2, id: 'plugin-a', name: '插件 A', version: '1.0.0',
       description: '测试插件', author: { name: '作者' }, license: 'MIT',
       host_application: { min_version: '1.0.0' }, keywords: ['测试'],
-      plugin_type: 'chat', i18n: { default_locale: 'ja', locales_path: '_locales' } },
+      plugin_type: 'chat' },
     releases: { id: 'market-a', manifest_id: 'plugin-a', repositoryUrl: 'https://github.com/test/a',
       mode: 'releases', versions: [], recommended_version: null },
     ...overrides,
@@ -74,7 +74,6 @@ describe('plugin-api/marketplace', () => {
       const marketplace = await loadMarketplace()
       const plugins = await marketplace.fetchPluginList()
       expect(plugins[0]).toMatchObject({ id: 'plugin-a', marketplace_id: 'market-a', market_data_source: source })
-      expect(plugins[0].manifest).toMatchObject({ default_locale: 'ja', locales_path: '_locales' })
       expect(httpMocks.backendApi.get).toHaveBeenCalledTimes(1)
       expect(httpMocks.backendApi.post).not.toHaveBeenCalled()
     })

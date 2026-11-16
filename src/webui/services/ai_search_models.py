@@ -26,7 +26,6 @@ class AISearchRequest(BaseModel):
     """AI 搜索请求。"""
 
     query: str = Field(..., min_length=1, max_length=500)
-    language: str = Field(default="zh-CN", max_length=16)
     candidates: List[AISearchCandidate] = Field(..., min_length=1, max_length=AI_SEARCH_MAX_CANDIDATES)
 
 

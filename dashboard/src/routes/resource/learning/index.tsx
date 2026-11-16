@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMediaQuery } from '@/hooks/use-media-query'
@@ -9,20 +9,19 @@ import { ExpressionManagementPage } from '../expression'
 import { JargonManagementPage } from '../jargon'
 
 export function LearningPage() {
-  const { t } = useTranslation()
   const { tab } = useSearch({ from: '/protected/resource/learning' })
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 1023.98px)')
   const browserHeader = (
-    <TabsList aria-label={t('sidebar.menu.learning')} className="w-auto shrink-0">
+    <TabsList aria-label={'学习'} className="w-auto shrink-0">
       <TabsTrigger value="expression" size="sm" className="min-w-0 px-3 text-xs">
-        {t('sidebar.menu.expressionManagement')}
+        {'表达方式'}
       </TabsTrigger>
       <TabsTrigger value="jargon" size="sm" className="min-w-0 px-3 text-xs">
-        {t('sidebar.menu.slangManagement')}
+        {'黑话'}
       </TabsTrigger>
       <TabsTrigger value="emoji" size="sm" className="min-w-0 px-3 text-xs">
-        {t('sidebar.menu.emojiManagement')}
+        {'表情包'}
       </TabsTrigger>
     </TabsList>
   )

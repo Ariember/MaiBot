@@ -1,5 +1,5 @@
 import { ListFilter, Trash2 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+
 
 import { Button } from '@/components/ui/button'
 import { ConversationAvatar, ConversationHeader } from '@/components/ui/conversation'
@@ -12,21 +12,20 @@ import { getChatTabDisplayName } from './utils'
 
 /** 本地与虚拟会话共用标题栏；清空仅作用于当前显示的消息。 */
 export function ChatConversationHeader({ tab, onClear }: { tab: ChatTab; onClear: () => void }) {
-  const { t } = useTranslation()
-  const name = getChatTabDisplayName(tab, t('chat.botNameFallback'))
+  const name = getChatTabDisplayName(tab, '麦麦')
   const virtual = tab.type === 'virtual'
   const avatar = useResolvedAvatarUrl(
     virtual ? tab.virtualConfig?.platform : 'qq',
     virtual ? tab.virtualConfig?.userId : tab.sessionInfo.bot_qq
   )
-  const connection = t(tab.isConnected ? 'chat.sidebar.online' : 'chat.sidebar.offline')
+  const connection = (tab.isConnected ? '在线' : '离线')
   return (
     <ConversationHeader
       title={name}
       avatar={<ConversationAvatar src={avatar} name={name} bot={!virtual} />}
       subtitle={
         <StatusIndicator variant="inline" status={tab.isConnected ? 'on' : 'off'}>
-          {virtual ? t('chat.sidebar.virtualBadge') : '本地聊天室'} · {connection}
+          {virtual ? '虚拟' : '本地聊天室'} · {connection}
         </StatusIndicator>
       }
       actions={

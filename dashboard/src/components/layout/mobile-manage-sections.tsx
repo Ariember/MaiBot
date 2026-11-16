@@ -9,31 +9,31 @@ import type { MenuSection } from './types'
  */
 export const MOBILE_EXTRA_MANAGE_SECTIONS: MenuSection[] = [
   {
-    title: 'manage.groups.runtime',
+    title: "运行记录",
     items: [
       {
         icon: (props) => <ScrollText strokeWidth={1.7} {...props} />,
-        label: 'sidebar.menu.logViewer',
+        label: "日志查看器",
         path: '/logs',
       },
       {
         icon: (props) => <BrainCircuit strokeWidth={1.7} {...props} />,
-        label: 'sidebar.menu.reasoningProcess',
+        label: "推理过程",
         path: '/reasoning-process',
       },
       {
         icon: (props) => <BarChart3 strokeWidth={1.7} {...props} />,
-        label: 'sidebar.menu.statistics',
+        label: "详细统计数据",
         path: '/statistics',
       },
     ],
   },
   {
-    title: 'sidebar.groups.system',
+    title: "系统",
     items: [
       {
         icon: (props) => <Settings strokeWidth={1.7} {...props} />,
-        label: 'sidebar.menu.settings',
+        label: "WEBUI设置",
         path: '/settings',
       },
     ],

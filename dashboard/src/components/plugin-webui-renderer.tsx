@@ -1,5 +1,5 @@
 import { createContext, useContext, useId, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
 import { Button } from '@/components/ui/button'
@@ -73,7 +73,6 @@ function imageSource(value: unknown): string | null {
 }
 
 function NodeRenderer({ node, ...props }: Omit<RendererProps, 'nodes'> & { node: WebUINode }) {
-  const { t } = useTranslation()
   const id = useId()
   const [tablePage, setTablePage] = useState(0)
   const [expanded, setExpanded] = useState(node.type === 'collapsible' && !!node.default_open)
@@ -104,7 +103,7 @@ function NodeRenderer({ node, ...props }: Omit<RendererProps, 'nodes'> & { node:
   if (awaitingData)
     return (
       <p role="status" className="text-muted-foreground text-sm">
-        {props.busy ? t('pluginWebUI.loading') : t('pluginWebUI.empty')}
+        {props.busy ? '加载中…' : '暂无数据'}
       </p>
     )
 
@@ -138,7 +137,7 @@ function NodeRenderer({ node, ...props }: Omit<RendererProps, 'nodes'> & { node:
           className="bg-muted h-72 w-full rounded-md object-contain"
         />
       ) : (
-        <p className="text-muted-foreground text-sm">{t('pluginWebUI.empty')}</p>
+        <p className="text-muted-foreground text-sm">{'暂无数据'}</p>
       )
     }
     case 'dialog':
@@ -355,7 +354,7 @@ function NodeRenderer({ node, ...props }: Omit<RendererProps, 'nodes'> & { node:
           className="flex flex-wrap items-center justify-between gap-3"
         >
           <span className="text-muted-foreground text-sm">
-            {t('pluginWebUI.paginationSummary', { page: current, pages, total })}
+            {`第${current} / ${pages}页 · 共${total}张`}
           </span>
           <div className="flex gap-2">
             <Button
@@ -363,14 +362,14 @@ function NodeRenderer({ node, ...props }: Omit<RendererProps, 'nodes'> & { node:
               disabled={disabled || current === 1}
               onClick={() => change(current - 1)}
             >
-              {t('pluginWebUI.previous')}
+              {'上一页'}
             </Button>
             <Button
               variant="outline"
               disabled={disabled || current === pages}
               onClick={() => change(current + 1)}
             >
-              {t('pluginWebUI.next')}
+              {'下一页'}
             </Button>
           </div>
         </nav>
@@ -433,7 +432,7 @@ function NodeRenderer({ node, ...props }: Omit<RendererProps, 'nodes'> & { node:
             </TableBody>
           </Table>
           {rows.length === 0 && (
-            <p className="text-muted-foreground text-sm">{t('pluginWebUI.empty')}</p>
+            <p className="text-muted-foreground text-sm">{'暂无数据'}</p>
           )}
           {lastPage > 0 && (
             <div className="flex items-center gap-3">
@@ -442,7 +441,7 @@ function NodeRenderer({ node, ...props }: Omit<RendererProps, 'nodes'> & { node:
                 disabled={current === 0}
                 onClick={() => setTablePage(current - 1)}
               >
-                {t('pluginWebUI.previous')}
+                {'上一页'}
               </Button>
               <span>
                 {current + 1} / {lastPage + 1}
@@ -452,7 +451,7 @@ function NodeRenderer({ node, ...props }: Omit<RendererProps, 'nodes'> & { node:
                 disabled={current === lastPage}
                 onClick={() => setTablePage(current + 1)}
               >
-                {t('pluginWebUI.next')}
+                {'下一页'}
               </Button>
             </div>
           )}

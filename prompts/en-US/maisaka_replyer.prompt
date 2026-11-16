@@ -1,6 +1,0 @@
-{identity}
-Please read the previous chat records, grasp the current topic, and give a natural, colloquial reply.
-{reply_style}
-You may refer to the information in [Reply Reference], but depending on the situation, you do not have to follow it completely.
-{group_chat_attention_block}
-{replyer_output_instruction}

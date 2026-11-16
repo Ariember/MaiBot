@@ -11,9 +11,7 @@ const { toastState, mobileState } = vi.hoisted(() => ({
   mobileState: { value: false },
 }))
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}))
+
 
 vi.mock('@/components/markdown-renderer', () => ({
   MarkdownRenderer: ({ content, className }: { content: string; className?: string }) => (
@@ -72,7 +70,7 @@ beforeEach(() => {
 describe('小型 UI 模块', () => {
   it('SkipNav 指向主内容并使用无障碍翻译键', () => {
     render(<SkipNav />)
-    expect(screen.getByRole('link', { name: 'a11y.skipToContent' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '跳过导航，直达主内容' })).toHaveAttribute(
       'href',
       '#main-content'
     )

@@ -44,7 +44,6 @@ describe('searchWithAIStream', () => {
     const response = await searchWithAIStream(
       {
         query: '为什么无法发送表情包',
-        language: 'zh',
         candidates: [],
       },
       (event) => progressEvents.push(`${event.stage}:${event.tool ?? ''}`)

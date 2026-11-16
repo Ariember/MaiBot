@@ -8,7 +8,7 @@ import pytest
 from src.agent.config import AgentConfig
 from src.agent.planner import ACPPlannerSnapshot
 from src.common.data_models.llm_service_data_models import LLMResponseResult
-from src.common.prompt_i18n import list_prompt_templates, load_prompt
+from src.common.prompt_templates import list_prompt_templates, load_prompt
 from src.config.model_configs import ModelInfo
 from src.llm_models.model_client.base_client import ResponseRequest
 from src.llm_models.payload_content.context_item import ContextItemBuilder, RoleType, get_item_text
@@ -117,10 +117,9 @@ async def test_provider_failure_and_cancellation_do_not_regenerate(summary_reque
     assert len(requests) == 1
 
 
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
-def test_retry_prompt_preserves_budget_and_localized_metadata(locale):
-    metadata = list_prompt_templates(locale=locale)["context_compaction_retry"].metadata
+def test_retry_prompt_preserves_budget_and_metadata():
+    metadata = list_prompt_templates()["context_compaction_retry"].metadata
     assert metadata.display_name and metadata.description
-    prompt = load_prompt("context_compaction_retry", locale=locale, max_summary_chars=120)
+    prompt = load_prompt("context_compaction_retry", max_summary_chars=120)
     assert "120" in prompt
     assert all(name in prompt for name in compaction.STATE_LABELS)

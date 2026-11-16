@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+
 
 import {
   AlertCircle,
@@ -53,7 +53,6 @@ export function AuthPage() {
   const [error, setError] = useState('')
   const [checkingAuth, setCheckingAuth] = useState(true)
   const navigate = useNavigate()
-  const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
   // 避免 React StrictMode 下重复触发 URL token 自动登录。
   const urlTokenHandledRef = useRef(false)
@@ -131,7 +130,7 @@ export function AuthPage() {
       setError('')
 
       if (!trimmed) {
-        setError(t('auth.tokenRequired'))
+        setError('请输入访问密码')
         return false
       }
 
@@ -146,7 +145,7 @@ export function AuthPage() {
           message?: string
         }>('/api/webui/auth/verify', {
           body: { token: trimmed },
-          errorMessage: t('auth.verifyFailed'),
+          errorMessage: 'Token 验证失败，请检查后重试',
         })
 
         if (data.valid) {
@@ -167,17 +166,17 @@ export function AuthPage() {
         }
 
         console.error('Token 验证失败:', data.message)
-        setError(data.message || t('auth.verifyFailed'))
+        setError(data.message || 'Token 验证失败，请检查后重试')
         return false
       } catch (err) {
         console.error('Token 验证错误:', err)
-        setError(err instanceof Error ? err.message : t('auth.connFailed'))
+        setError(err instanceof Error ? err.message : '连接服务器失败，请检查网络连接')
         return false
       } finally {
         setIsValidating(false)
       }
     },
-    [navigate, t]
+    [navigate]
   )
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -226,7 +225,7 @@ export function AuthPage() {
   if (checkingAuth) {
     return (
       <div data-auth-page="true" className="relative isolate flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
-        <div className="text-muted-foreground">{t('auth.checkingAuth')}</div>
+        <div className="text-muted-foreground">{'正在检查登录状态...'}</div>
       </div>
     )
   }
@@ -242,7 +241,7 @@ export function AuthPage() {
           data-auth-theme-toggle="true"
           onClick={toggleTheme}
           className="absolute right-4 top-4 rounded-lg p-2 hover:bg-accent transition-colors z-10 text-foreground"
-          title={actualTheme === 'dark' ? t('auth.switchToLight') : t('auth.switchToDark')}
+          title={actualTheme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
         >
           {actualTheme === 'dark' ? (
             <Sun className="h-5 w-5" strokeWidth={2.5} fill="none" />
@@ -253,10 +252,10 @@ export function AuthPage() {
 
         <CardHeader className="pr-16 text-left">
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold">{t('auth.welcome')}</CardTitle>
+            <CardTitle className="text-2xl font-bold">{'欢迎使用 MaiBot'}</CardTitle>
             <CardDescription className="flex items-center gap-2 text-base">
               <span aria-hidden="true" className="font-mono text-primary">&gt;</span>
-              {t('auth.accessDesc')}
+              {'输入访问密码以进入 MaiBot'}
             </CardDescription>
           </div>
         </CardHeader>
@@ -271,7 +270,7 @@ export function AuthPage() {
                   id="token"
                   aria-label="Access Token"
                   type="password"
-                  placeholder={t('auth.tokenPlaceholder')}
+                  placeholder={'请输入 访问密码'}
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   className={cn('pl-10', error && 'border-red-500 focus-visible:ring-red-500')}
@@ -302,10 +301,10 @@ export function AuthPage() {
               {isValidating ? (
                 <>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  {t('auth.verifyingLabel')}
+                  {'验证中...'}
                 </>
               ) : (
-                t('auth.verifyEnter')
+                '验证并进入'
               )}
             </Button>
 
@@ -314,14 +313,14 @@ export function AuthPage() {
               <DialogTrigger asChild>
                 <button className="flex w-full items-center justify-start gap-1 text-left text-[11px] text-primary transition-colors underline-offset-4 hover:text-primary/80 hover:underline">
                   <HelpCircle className="h-3 w-3" strokeWidth={2} fill="none" />
-                  {t('auth.helpLink')}
+                  {'我没有密码，我该去哪里获得密码？'}
                 </button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Lock className="h-5 w-5 text-primary" strokeWidth={2} fill="none" />
-                    {t('auth.helpTitle')}
+                    {'访问密码'}
                   </DialogTitle>
                 </DialogHeader>
 
@@ -331,13 +330,13 @@ export function AuthPage() {
                     <div className="flex items-start gap-3">
                       <Terminal className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" strokeWidth={2} fill="none" />
                       <div className="flex-1 space-y-2">
-                        <h4 className="font-semibold text-sm">{t('auth.method1Title')}</h4>
+                        <h4 className="font-semibold text-sm">{'方式一：查看启动日志'}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {t('auth.method1Desc')}
+                          {'在 MaiBot 启动时，控制台会显示 WebUI Access Token。'}
                         </p>
                         <div className="rounded bg-background p-2 font-mono text-xs">
-                          <p className="text-muted-foreground">{t('auth.method1Example1')}</p>
-                          <p className="text-muted-foreground">{t('auth.method1Example2')}</p>
+                          <p className="text-muted-foreground">{'🔑 WebUI Access Token: abc123...'}</p>
+                          <p className="text-muted-foreground">{'💡 请使用此 Token 登录 WebUI'}</p>
                         </div>
                       </div>
                     </div>
@@ -348,15 +347,15 @@ export function AuthPage() {
                     <div className="flex items-start gap-3">
                       <FileText className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" strokeWidth={2} fill="none" />
                       <div className="flex-1 space-y-2">
-                        <h4 className="font-semibold text-sm">{t('auth.method2Title')}</h4>
+                        <h4 className="font-semibold text-sm">{'方式二：查看配置文件'}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {t('auth.method2Desc')}
+                          {'Token 保存在项目根目录的配置文件中：'}
                         </p>
                         <div className="rounded bg-background p-2 font-mono text-xs break-all">
                           <code className="text-primary">data/webui.json</code>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {t('auth.method2FileHint')} <code className="px-1 py-0.5 bg-background rounded">access_token</code>
+                          {'打开此文件，复制 access_token 字段的值'} <code className="px-1 py-0.5 bg-background rounded">access_token</code>
                         </p>
                       </div>
                     </div>
@@ -365,8 +364,8 @@ export function AuthPage() {
                   {/* 安全提示 */}
                   <div className="text-xs text-muted-foreground">
                     <ul className="list-disc list-inside space-y-1">
-                      <li>{t('auth.securityTip1')}</li>
-                      <li>{t('auth.securityTip2')}</li>
+                      <li>{'请妥善保管您的 Token，不要泄露给他人'}</li>
+                      <li>{'如需重置 Token，请在登录后前往 WEBUI设置'}</li>
                     </ul>
                   </div>
                 </div>

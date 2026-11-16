@@ -75,11 +75,7 @@ class BotConfig(ConfigBase):
     platform: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "备用主平台",
-                "en_US": "Fallback primary platform",
-                "ja_JP": "予備のメインプラットフォーム",
-            },
+            "label": '备用主平台',
             "x-widget": "input",
             "x-layout": "inline-right",
             "x-input-width": "12rem",
@@ -91,11 +87,7 @@ class BotConfig(ConfigBase):
     qq_account: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "备用 QQ 账号",
-                "en_US": "Fallback QQ account",
-                "ja_JP": "予備の QQ アカウント",
-            },
+            "label": '备用 QQ 账号',
             "x-widget": "input",
             "x-layout": "inline-right",
             "x-input-width": "12rem",
@@ -107,11 +99,7 @@ class BotConfig(ConfigBase):
     platforms: list[str] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "其他备用平台",
-                "en_US": "Other fallback platforms",
-                "ja_JP": "その他の予備プラットフォーム",
-            },
+            "label": '其他备用平台',
             "x-widget": "custom",
         },
     )
@@ -120,11 +108,7 @@ class BotConfig(ConfigBase):
     nickname: str = Field(
         default="麦麦",
         json_schema_extra={
-            "label": {
-                "zh_CN": "机器人昵称",
-                "en_US": "Bot nickname",
-                "ja_JP": "ボットのニックネーム",
-            },
+            "label": '机器人昵称',
             "x-widget": "input",
         },
     )
@@ -133,11 +117,7 @@ class BotConfig(ConfigBase):
     alias_names: list[str] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "别名",
-                "en_US": "Aliases",
-                "ja_JP": "別名",
-            },
+            "label": '别名',
             "x-widget": "custom",
             "advanced": True,
         },
@@ -155,7 +135,7 @@ class EnvironmentConfig(ConfigBase):
         default="Asia/Shanghai",
         min_length=1,
         json_schema_extra={
-            "label": {"zh_CN": "时区", "en_US": "Timezone", "ja_JP": "タイムゾーン"},
+            "label": '时区',
             "x-widget": "input",
         },
     )
@@ -164,7 +144,7 @@ class EnvironmentConfig(ConfigBase):
     city: str = Field(
         default="Shanghai",
         json_schema_extra={
-            "label": {"zh_CN": "城市 / 地区", "en_US": "City / Region", "ja_JP": "都市・地域"},
+            "label": '城市 / 地区',
             "x-widget": "input",
         },
     )
@@ -215,11 +195,7 @@ class PersonalityConfig(ConfigBase):
     personality: str = Field(
         default="是女大学生，现在正在上网聊天。一般不包容且善良，但有时候有点一反常态，表现出锐利攻击性。善于用人类的角度思考问题，聊天比较日常。",
         json_schema_extra={
-            "label": {
-                "zh_CN": "人格设定",
-                "en_US": "Personality",
-                "ja_JP": "人格設定",
-            },
+            "label": '人格设定',
             "x-widget": "textarea",
             "x-textarea-min-height": 40,
             "x-textarea-rows": 1,
@@ -233,11 +209,7 @@ class PersonalityConfig(ConfigBase):
             "是女大学生，现在正在上网聊天。一般不包容且善良，但有时候有点一反常态，表现出锐利攻击性。善于用人类的角度思考问题，聊天比较日常。不会没话题硬找话题，具有足够的自主性，会自行搜集信息理解内容。"
         ),
         json_schema_extra={
-            "label": {
-                "zh_CN": "行为风格",
-                "en_US": "Behavior style",
-                "ja_JP": "行動スタイル",
-            },
+            "label": '行为风格',
             "x-widget": "textarea",
             "x-textarea-min-height": 40,
             "x-textarea-rows": 1,
@@ -249,11 +221,7 @@ class PersonalityConfig(ConfigBase):
     reply_style: str = Field(
         default="你的风格平淡简短，可以参考贴吧的回复风格。不滥用比喻或者生硬句子。视情况省略主语或者进行倒装，风格较为随意。",
         json_schema_extra={
-            "label": {
-                "zh_CN": "表达风格",
-                "en_US": "Reply style",
-                "ja_JP": "返信スタイル",
-            },
+            "label": '表达风格',
             "x-widget": "textarea",
             "x-textarea-min-height": 40,
             "x-textarea-rows": 1,
@@ -265,12 +233,7 @@ class PersonalityConfig(ConfigBase):
     dialogue_examples: List[str] = Field(
         default_factory=list,
         json_schema_extra={
-            "label": {
-                "zh_CN": "场景与黑话表达",
-                "en_US": "Situational expressions and slang",
-                "ja_JP": "場面別の表現とスラング",
-                "ko_KR": "상황별 표현과 은어",
-            },
+            "label": '场景与黑话表达',
             "x-widget": "custom",
         },
     )
@@ -284,11 +247,7 @@ class ImageCacheCleanupConfig(ConfigBase):
         default=True,
         json_schema_extra={
             "x-widget": "switch",
-            "label": {
-                "zh_CN": "启用图片缓存自动清理",
-                "en_US": "Enable image cache cleanup",
-                "ja_JP": "画像キャッシュ自動クリーンアップを有効化",
-            },
+            "label": '启用图片缓存自动清理',
         },
     )
     """开启后会自动删除长期不用的图片缓存。"""
@@ -298,11 +257,7 @@ class ImageCacheCleanupConfig(ConfigBase):
         ge=1.0 / 60.0,
         json_schema_extra={
             "x-widget": "input",
-            "label": {
-                "zh_CN": "清理检查间隔（小时）",
-                "en_US": "Cleanup check interval (hours)",
-                "ja_JP": "クリーンアップ確認間隔（時間）",
-            },
+            "label": '清理检查间隔（小时）',
         },
     )
     """每隔多少小时检查一次旧图片。"""
@@ -312,11 +267,7 @@ class ImageCacheCleanupConfig(ConfigBase):
         ge=1,
         json_schema_extra={
             "x-widget": "input",
-            "label": {
-                "zh_CN": "图片文件保留天数",
-                "en_US": "Image file retention days",
-                "ja_JP": "画像ファイル保持日数",
-            },
+            "label": '图片文件保留天数',
         },
     )
     """图片文件多久没被使用后可以删除。"""
@@ -326,11 +277,7 @@ class ImageCacheCleanupConfig(ConfigBase):
         ge=1,
         json_schema_extra={
             "x-widget": "input",
-            "label": {
-                "zh_CN": "图片理解保留天数",
-                "en_US": "image recognition retention days",
-                "ja_JP": "認識結果保持日数",
-            },
+            "label": '图片理解保留天数',
         },
     )
     """图片文件删掉后，识别文字还能保留多久。"""
@@ -346,11 +293,7 @@ class VisualConfig(ConfigBase):
         default="normal",
         json_schema_extra={
             "x-widget": "discrete-slider",
-            "label": {
-                "zh_CN": "图片画质",
-                "en_US": "Image quality",
-                "ja_JP": "画像品質",
-            },
+            "label": '图片画质',
             "x-option-labels": {"normal": "普通", "high": "超清"},
             "x-option-descriptions": {
                 "normal": "最长边 512 像素，默认档位。",
@@ -366,11 +309,7 @@ class VisualConfig(ConfigBase):
         json_schema_extra={
             "advanced": True,
             "x-widget": "input",
-            "label": {
-                "zh_CN": "多模态最大图片数",
-                "en_US": "Max multimodal images",
-                "ja_JP": "マルチモーダル最大画像数",
-            },
+            "label": '多模态最大图片数',
         },
     )
     """一次多模态请求最多带多少张图，太大可能更慢更贵。"""
@@ -382,11 +321,7 @@ class VisualConfig(ConfigBase):
             "x-widget": "input",
             "x-layout": "inline-right",
             "x-input-width": "7.5rem",
-            "label": {
-                "zh_CN": "识图最长等待时间",
-                "en_US": "Max image recognition wait time",
-                "ja_JP": "画像認識の最長待機時間",
-            },
+            "label": '识图最长等待时间',
         },
     )
     """等图片识别完成的最长秒数；0 表示不等待。"""
@@ -397,11 +332,7 @@ class VisualConfig(ConfigBase):
             "x-widget": "switch",
             "x-layout": "inline-right",
             "x-row": "visual-image-compression",
-            "label": {
-                "zh_CN": "是否处理过大图片",
-                "en_US": "Handle oversized images",
-                "ja_JP": "是否過大画像を処理",
-            },
+            "label": '是否处理过大图片',
         },
     )
     """收到太大的图片时，是否自动压缩或丢弃。"""
@@ -414,11 +345,7 @@ class VisualConfig(ConfigBase):
             "x-layout": "inline-right",
             "x-input-width": "min(100%, 5.5rem)",
             "x-row": "visual-image-compression",
-            "label": {
-                "zh_CN": "最大图片大小(MB)",
-                "en_US": "Max image size (MB)",
-                "ja_JP": "最大画像サイズ(MB)",
-            },
+            "label": '最大图片大小(MB)',
         },
     )
     """超过这个大小的图片会按过大图片处理方法处理；0 表示不限。"""
@@ -431,11 +358,7 @@ class VisualConfig(ConfigBase):
             "x-input-width": "min(100%, 8.5rem)",
             "x-row": "visual-image-compression",
             "x-option-descriptions": OVERSIZED_IMAGE_HANDLE_METHOD_DESCRIPTIONS,
-            "label": {
-                "zh_CN": "过大图片处理方法",
-                "en_US": "Oversized image handling",
-                "ja_JP": "過大画像の処理方法",
-            },
+            "label": '过大图片处理方法',
         },
     )
     """大图的处理方式：压缩后继续用，或直接丢弃。"""
@@ -448,11 +371,7 @@ class TalkRulesItem(ConfigBase):
     platform: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "平台",
-                "en_US": "Platform",
-                "ja_JP": "プラットフォーム",
-            },
+            "label": '平台',
         },
     )
     """规则作用的平台；留空表示不限定平台，* 表示任意平台。"""
@@ -460,11 +379,7 @@ class TalkRulesItem(ConfigBase):
     item_id: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天流 ID",
-                "en_US": "Chat stream ID",
-                "ja_JP": "チャットストリーム ID",
-            },
+            "label": '聊天流 ID',
         },
     )
     """规则作用的群号或用户 ID；留空表示不限定聊天，* 表示任意聊天。"""
@@ -472,11 +387,7 @@ class TalkRulesItem(ConfigBase):
     rule_type: Literal["group", "private"] = Field(
         default="group",
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天类型",
-                "en_US": "Chat type",
-                "ja_JP": "チャット種別",
-            },
+            "label": '聊天类型',
             "x-widget": "select",
             "x-option-descriptions": RULE_TYPE_OPTION_DESCRIPTIONS,
         },
@@ -486,11 +397,7 @@ class TalkRulesItem(ConfigBase):
     time: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "时间段",
-                "en_US": "Time range",
-                "ja_JP": "時間帯",
-            },
+            "label": '时间段',
             "x-widget": "talk-time",
         },
     )
@@ -499,11 +406,7 @@ class TalkRulesItem(ConfigBase):
     value: float = Field(
         default=0.5,
         json_schema_extra={
-            "label": {
-                "zh_CN": "发言频率",
-                "en_US": "Talk frequency",
-                "ja_JP": "発言頻度",
-            },
+            "label": '发言频率',
         },
     )
     """该规则下的发言频率；0 更安静，1 按正常频率。"""
@@ -513,21 +416,21 @@ class PrivateReplyPauseRule(ConfigBase):
     platform: str = Field(
         default="",
         min_length=1,
-        json_schema_extra={"label": {"zh_CN": "平台", "en_US": "Platform", "ja_JP": "プラットフォーム"}},
+        json_schema_extra={"label": '平台'},
     )
     """私聊所在的平台，需填写具体平台。"""
 
     item_id: str = Field(
         default="",
         min_length=1,
-        json_schema_extra={"label": {"zh_CN": "用户 ID", "en_US": "User ID", "ja_JP": "ユーザー ID"}},
+        json_schema_extra={"label": '用户 ID'},
     )
     """私聊对象的用户 ID，需填写具体用户。"""
 
     paused: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {"zh_CN": "暂停回复", "en_US": "Pause replies", "ja_JP": "返信を一時停止"},
+            "label": '暂停回复',
             "x-widget": "switch",
         },
     )
@@ -545,11 +448,7 @@ class ChatReplyTimingConfig(ConfigBase):
         ge=0,
         le=8,
         json_schema_extra={
-            "label": {
-                "zh_CN": "群聊消息防抖（秒）",
-                "en_US": "Group message debounce (seconds)",
-                "ja_JP": "グループメッセージのデバウンス（秒）",
-            },
+            "label": '群聊消息防抖（秒）',
             "x-widget": "slider",
             "step": 0.1,
         },
@@ -564,11 +463,7 @@ class ChatReplyTimingConfig(ConfigBase):
         ge=0,
         le=8,
         json_schema_extra={
-            "label": {
-                "zh_CN": "私聊消息防抖（秒）",
-                "en_US": "Private message debounce (seconds)",
-                "ja_JP": "プライベートメッセージのデバウンス（秒）",
-            },
+            "label": '私聊消息防抖（秒）',
             "x-widget": "slider",
             "step": 0.1,
         },
@@ -581,11 +476,7 @@ class ChatReplyTimingConfig(ConfigBase):
     planner_message_steering: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "快速反应模式",
-                "en_US": "Quick reaction mode",
-                "ja_JP": "即応モード",
-            },
+            "label": '快速反应模式',
             "x-widget": "switch",
         },
     )
@@ -596,11 +487,7 @@ class ChatReplyTimingConfig(ConfigBase):
         ge=0,
         le=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "群聊频率",
-                "en_US": "Group talk frequency",
-                "ja_JP": "グループ発言頻度",
-            },
+            "label": '群聊频率',
             "x-widget": "slider",
             "x-row": "talk-values",
             "step": 0.001,
@@ -611,11 +498,7 @@ class ChatReplyTimingConfig(ConfigBase):
     private_reply_paused: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "暂停私聊回复",
-                "en_US": "Pause private replies",
-                "ja_JP": "個別チャットの返信を一時停止",
-            },
+            "label": '暂停私聊回复',
             "x-widget": "switch",
             "x-row": "talk-values",
         },
@@ -625,11 +508,7 @@ class ChatReplyTimingConfig(ConfigBase):
     private_reply_pause_rules: List[PrivateReplyPauseRule] = Field(
         default_factory=list,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单个私聊暂停规则",
-                "en_US": "Private reply pause overrides",
-                "ja_JP": "個別チャットの返信一時停止ルール",
-            },
+            "label": '单个私聊暂停规则',
             "x-widget": "custom",
         },
     )
@@ -638,11 +517,7 @@ class ChatReplyTimingConfig(ConfigBase):
     mentioned_bot_reply: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "提及必回复",
-                "en_US": "Always reply when mentioned",
-                "ja_JP": "メンション時に必ず返信",
-            },
+            "label": '提及必回复',
             "x-widget": "switch",
             "x-row": "reply-switches",
         },
@@ -652,11 +527,7 @@ class ChatReplyTimingConfig(ConfigBase):
     inevitable_at_reply: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "At 必回复",
-                "en_US": "Always reply to @",
-                "ja_JP": "@ に必ず返信",
-            },
+            "label": 'At 必回复',
             "x-widget": "switch",
             "x-row": "reply-switches",
         },
@@ -667,11 +538,7 @@ class ChatReplyTimingConfig(ConfigBase):
         default=15,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "空闲退避基准",
-                "en_US": "Idle backoff base",
-                "ja_JP": "アイドルバックオフ基準",
-            },
+            "label": '空闲退避基准',
             "x-widget": "input",
             "x-layout": "inline-right",
             "x-input-width": "7.5rem",
@@ -685,11 +552,7 @@ class ChatReplyTimingConfig(ConfigBase):
         default=300,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "空闲退避上限",
-                "en_US": "Idle backoff cap",
-                "ja_JP": "アイドルバックオフ上限",
-            },
+            "label": '空闲退避上限',
             "x-widget": "input",
             "x-description-display": "icon",
             "advanced": True,
@@ -701,11 +564,7 @@ class ChatReplyTimingConfig(ConfigBase):
         default=2,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "空闲退避起点",
-                "en_US": "Idle backoff start",
-                "ja_JP": "アイドルバックオフ開始",
-            },
+            "label": '空闲退避起点',
             "x-widget": "input",
             "x-description-display": "icon",
             "advanced": True,
@@ -717,11 +576,7 @@ class ChatReplyTimingConfig(ConfigBase):
         default=6,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "空闲退避绕过消息数",
-                "en_US": "Idle backoff bypass messages",
-                "ja_JP": "アイドルバックオフ迂回メッセージ数",
-            },
+            "label": '空闲退避绕过消息数',
             "x-widget": "input",
             "x-description-display": "icon",
             "advanced": True,
@@ -732,11 +587,7 @@ class ChatReplyTimingConfig(ConfigBase):
     enable_talk_value_rules: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用动态发言频率规则",
-                "en_US": "Enable dynamic talk frequency rules",
-                "ja_JP": "動的な発言頻度ルールを有効化",
-            },
+            "label": '启用动态发言频率规则',
             "x-widget": "switch",
         },
     )
@@ -748,11 +599,7 @@ class ChatReplyTimingConfig(ConfigBase):
             TalkRulesItem(platform="", item_id="", rule_type="group", time="09:00-18:59", value=1.0),
         ],
         json_schema_extra={
-            "label": {
-                "zh_CN": "动态发言频率规则",
-                "en_US": "Dynamic talk frequency rules",
-                "ja_JP": "動的な発言頻度ルール",
-            },
+            "label": '动态发言频率规则',
             "x-widget": "custom",
         },
     )
@@ -770,11 +617,7 @@ class ChatReplyStyleConfig(ConfigBase):
     group_quote_frequency: Literal["never", "occasionally", "often"] = Field(
         default="occasionally",
         json_schema_extra={
-            "label": {
-                "zh_CN": "群聊引用频率",
-                "en_US": "Group reply quote frequency",
-                "ja_JP": "グループチャットの引用返信頻度",
-            },
+            "label": '群聊引用频率',
             "x-widget": "discrete-slider",
             "x-option-labels": {"never": "不引用", "occasionally": "偶尔引用", "often": "经常引用"},
         },
@@ -784,11 +627,7 @@ class ChatReplyStyleConfig(ConfigBase):
     private_quote_frequency: Literal["never", "occasionally", "often"] = Field(
         default="occasionally",
         json_schema_extra={
-            "label": {
-                "zh_CN": "私聊引用频率",
-                "en_US": "Private reply quote frequency",
-                "ja_JP": "個人チャットの引用返信頻度",
-            },
+            "label": '私聊引用频率',
             "x-widget": "discrete-slider",
             "x-option-labels": {"never": "不引用", "occasionally": "偶尔引用", "often": "经常引用"},
         },
@@ -803,11 +642,7 @@ class ChatReplyStyleConfig(ConfigBase):
             "不用刻意回复其他人发送的表情包。你可以适当发送表情包表达情绪。如果有人不喜欢你或者不理你，就不要强行回复，回复前读空气。不要每个人的消息都回复，适当回复其他话题。可以适当回过头回复之前用户的消息。\n"
         ),
         json_schema_extra={
-            "label": {
-                "zh_CN": "群聊提示词",
-                "en_US": "Group chat prompt",
-                "ja_JP": "グループチャットプロンプト",
-            },
+            "label": '群聊提示词',
             "x-widget": "textarea",
         },
     )
@@ -820,11 +655,7 @@ class ChatReplyStyleConfig(ConfigBase):
             "请考虑对方的发言频率，想法，思考自己何时回复以及回复内容。\n"
         ),
         json_schema_extra={
-            "label": {
-                "zh_CN": "私聊提示词",
-                "en_US": "Private chat prompt",
-                "ja_JP": "個別チャットプロンプト",
-            },
+            "label": '私聊提示词',
             "x-widget": "textarea",
         },
     )
@@ -833,11 +664,7 @@ class ChatReplyStyleConfig(ConfigBase):
     chat_prompts: list["ExtraPromptItem"] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "额外 Prompt",
-                "en_US": "Extra prompts",
-                "ja_JP": "追加プロンプト",
-            },
+            "label": '额外 Prompt',
             "x-widget": "custom",
         },
     )
@@ -855,11 +682,7 @@ class ChatConfig(ConfigBase):
     enable_reply_at: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "允许回复时 @ 用户",
-                "en_US": "Allow mentions in replies",
-                "ja_JP": "返信でユーザーへのメンションを許可",
-            },
+            "label": '允许回复时 @ 用户',
             "x-widget": "switch",
         },
     )
@@ -868,11 +691,7 @@ class ChatConfig(ConfigBase):
     max_context_size: int = Field(
         default=50,
         json_schema_extra={
-            "label": {
-                "zh_CN": "群聊上下文",
-                "en_US": "Group context size",
-                "ja_JP": "グループ文脈数",
-            },
+            "label": '群聊上下文',
             "x-widget": "input",
             "x-layout": "inline-right",
             "x-input-width": "6.5rem",
@@ -884,11 +703,7 @@ class ChatConfig(ConfigBase):
     max_private_context_size: int = Field(
         default=75,
         json_schema_extra={
-            "label": {
-                "zh_CN": "私聊上下文",
-                "en_US": "Private context size",
-                "ja_JP": "個別チャット文脈数",
-            },
+            "label": '私聊上下文',
             "x-widget": "input",
             "x-layout": "inline-right",
             "x-input-width": "6.5rem",
@@ -902,11 +717,7 @@ class ChatConfig(ConfigBase):
         ge=1000,
         le=8000,
         json_schema_extra={
-            "label": {
-                "zh_CN": "状态摘要字符上限",
-                "en_US": "State summary character limit",
-                "ja_JP": "状態要約の文字数上限",
-            },
+            "label": '状态摘要字符上限',
             "x-widget": "input",
             "advanced": True,
         },
@@ -929,11 +740,7 @@ class AttentionDriftConfig(ConfigBase):
     enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "注意力漂移模式",
-                "en_US": "Attention drift mode",
-                "ja_JP": "注意ドリフトモード",
-            },
+            "label": '注意力漂移模式',
             "x-widget": "switch",
         },
     )
@@ -942,11 +749,7 @@ class AttentionDriftConfig(ConfigBase):
     drift_level: Literal["subtle", "active", "scattered", "wild"] = Field(
         default="scattered",
         json_schema_extra={
-            "label": {
-                "zh_CN": "漂移档位",
-                "en_US": "Drift level",
-                "ja_JP": "ドリフト段階",
-            },
+            "label": '漂移档位',
             "x-widget": "discrete-slider",
             "x-option-labels": ATTENTION_DRIFT_LEVEL_OPTION_LABELS,
             "x-option-descriptions": ATTENTION_DRIFT_LEVEL_OPTION_DESCRIPTIONS,
@@ -958,11 +761,7 @@ class AttentionDriftConfig(ConfigBase):
     anchor_policy: Literal["strict", "balanced", "loose"] = Field(
         default="balanced",
         json_schema_extra={
-            "label": {
-                "zh_CN": "回钩策略",
-                "en_US": "Anchor policy",
-                "ja_JP": "アンカー方針",
-            },
+            "label": '回钩策略',
             "x-widget": "discrete-slider",
             "x-option-labels": ATTENTION_DRIFT_ANCHOR_OPTION_LABELS,
             "x-option-descriptions": ATTENTION_DRIFT_ANCHOR_OPTION_DESCRIPTIONS,
@@ -974,11 +773,7 @@ class AttentionDriftConfig(ConfigBase):
     reaction_style: Literal["reserved", "natural", "lively"] = Field(
         default="lively",
         json_schema_extra={
-            "label": {
-                "zh_CN": "短反应风格",
-                "en_US": "Short reaction style",
-                "ja_JP": "短い反応スタイル",
-            },
+            "label": '短反应风格',
             "x-widget": "discrete-slider",
             "x-option-labels": ATTENTION_DRIFT_REACTION_OPTION_LABELS,
             "x-option-descriptions": ATTENTION_DRIFT_REACTION_OPTION_DESCRIPTIONS,
@@ -1009,11 +804,7 @@ class CapabilitiesConfig(ConfigBase):
     web_search_enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "联网搜索能力",
-                "en_US": "Web search capability",
-                "ja_JP": "ウェブ検索機能",
-            },
+            "label": '联网搜索能力',
             "x-widget": "switch",
         },
     )
@@ -1022,11 +813,7 @@ class CapabilitiesConfig(ConfigBase):
     web_search_priority: Literal["provider_first", "engine_first"] = Field(
         default="provider_first",
         json_schema_extra={
-            "label": {
-                "zh_CN": "联网搜索优先级",
-                "en_US": "Web search priority",
-                "ja_JP": "ウェブ検索の優先順位",
-            },
+            "label": '联网搜索优先级',
             "x-widget": "select",
             "x-option-labels": {
                 "provider_first": "联网搜索提供商优先",
@@ -1039,11 +826,7 @@ class CapabilitiesConfig(ConfigBase):
     web_search_engine: Literal["google", "bing"] = Field(
         default="google",
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认搜索引擎",
-                "en_US": "Default search engine",
-                "ja_JP": "既定の検索エンジン",
-            },
+            "label": '默认搜索引擎',
             "x-widget": "select",
             "x-option-labels": {"google": "Google", "bing": "Bing"},
         },
@@ -1053,11 +836,7 @@ class CapabilitiesConfig(ConfigBase):
     web_search_proxy: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "搜索引擎代理",
-                "en_US": "Search engine proxy",
-                "ja_JP": "検索エンジンのプロキシ",
-            },
+            "label": '搜索引擎代理',
             "x-widget": "input",
         },
     )
@@ -1068,11 +847,7 @@ class CapabilitiesConfig(ConfigBase):
         gt=0,
         le=120,
         json_schema_extra={
-            "label": {
-                "zh_CN": "搜索引擎超时（秒）",
-                "en_US": "Search engine timeout (seconds)",
-                "ja_JP": "検索エンジンのタイムアウト（秒）",
-            },
+            "label": '搜索引擎超时（秒）',
             "x-widget": "input",
         },
     )
@@ -1081,11 +856,7 @@ class CapabilitiesConfig(ConfigBase):
     files: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "文件功能",
-                "en_US": "File capabilities",
-                "ja_JP": "ファイル機能",
-            },
+            "label": '文件功能',
             "x-widget": "switch",
         },
     )
@@ -1094,11 +865,7 @@ class CapabilitiesConfig(ConfigBase):
     tool_result_condense: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "超长工具结果整理",
-                "en_US": "Condense long tool results",
-                "ja_JP": "長いツール結果の要約",
-            },
+            "label": '超长工具结果整理',
             "x-widget": "switch",
         },
     )
@@ -1110,11 +877,7 @@ class CapabilitiesConfig(ConfigBase):
         json_schema_extra={
             "advanced": True,
             "x-widget": "input",
-            "label": {
-                "zh_CN": "工具结果整理阈值",
-                "en_US": "Tool result condense threshold",
-                "ja_JP": "ツール結果要約のしきい値",
-            },
+            "label": '工具结果整理阈值',
         },
     )
     """工具结果达到多少字时才触发整理，仅在开启“超长工具结果整理”时生效；调低会更频繁地整理，调高则更多原文留在上下文里。"""
@@ -1122,11 +885,7 @@ class CapabilitiesConfig(ConfigBase):
     planner_subagent: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "子代理任务派发",
-                "en_US": "Delegate tasks to sub-agents",
-                "ja_JP": "サブエージェントへのタスク委任",
-            },
+            "label": '子代理任务派发',
             "x-widget": "switch",
         },
     )
@@ -1135,11 +894,7 @@ class CapabilitiesConfig(ConfigBase):
     advanced_sub_agent: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "高级子代理",
-                "en_US": "Advanced sub-agents",
-                "ja_JP": "高度なサブエージェント",
-            },
+            "label": '高级子代理',
             "x-widget": "switch",
         },
     )
@@ -1156,11 +911,7 @@ class ExperimentalConfig(ConfigBase):
     passive_replyer: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "被动式 replyer",
-                "en_US": "Passive replyer",
-                "ja_JP": "受動型 replyer",
-            },
+            "label": '被动式 replyer',
             "x-widget": "switch",
         },
     )
@@ -1169,11 +920,7 @@ class ExperimentalConfig(ConfigBase):
     group_attention_drift: GroupAttentionDriftConfig = Field(
         default_factory=GroupAttentionDriftConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "群聊注意力漂移",
-                "en_US": "Group chat attention drift",
-                "ja_JP": "グループチャットの注意ドリフト",
-            },
+            "label": '群聊注意力漂移',
         },
     )
     """群聊注意力漂移实验模式；让麦麦在群聊中表现出更活跃的联想和轻微话题漂移。"""
@@ -1181,11 +928,7 @@ class ExperimentalConfig(ConfigBase):
     private_attention_drift: PrivateAttentionDriftConfig = Field(
         default_factory=PrivateAttentionDriftConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "私聊注意力漂移",
-                "en_US": "Private chat attention drift",
-                "ja_JP": "個人チャットの注意ドリフト",
-            },
+            "label": '私聊注意力漂移',
         },
     )
     """私聊注意力漂移实验模式；让麦麦在私聊中表现出更活跃的联想和轻微话题漂移。"""
@@ -1193,11 +936,7 @@ class ExperimentalConfig(ConfigBase):
     focus_mode: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "Focus 模式",
-                "en_US": "Focus mode",
-                "ja_JP": "Focus モード",
-            },
+            "label": 'Focus 模式',
             "x-widget": "switch",
         },
     )
@@ -1206,11 +945,7 @@ class ExperimentalConfig(ConfigBase):
     focus_on_private: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "私聊启用 Focus",
-                "en_US": "Focus private chats",
-                "ja_JP": "私聊で Focus を有効化",
-            },
+            "label": '私聊启用 Focus',
             "x-widget": "switch",
         },
     )
@@ -1219,11 +954,7 @@ class ExperimentalConfig(ConfigBase):
     focus_chat_whitelist: list["TargetItem"] = Field(
         default_factory=list,
         json_schema_extra={
-            "label": {
-                "zh_CN": "Focus 白名单",
-                "en_US": "Focus whitelist",
-                "ja_JP": "Focus ホワイトリスト",
-            },
+            "label": 'Focus 白名单',
             "x-widget": "custom",
         },
     )
@@ -1232,11 +963,7 @@ class ExperimentalConfig(ConfigBase):
     focus_groups: list["ChatStreamGroup"] = Field(
         default_factory=list,
         json_schema_extra={
-            "label": {
-                "zh_CN": "Focus 共享组",
-                "en_US": "Focus sharing groups",
-                "ja_JP": "Focus 共有グループ",
-            },
+            "label": 'Focus 共享组',
             "x-widget": "custom",
         },
     )
@@ -1279,11 +1006,7 @@ class TargetItem(ConfigBase):
     platform: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "平台",
-                "en_US": "Platform",
-                "ja_JP": "プラットフォーム",
-            },
+            "label": '平台',
             "x-widget": "input",
         },
     )
@@ -1292,11 +1015,7 @@ class TargetItem(ConfigBase):
     item_id: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天流 ID",
-                "en_US": "Chat stream ID",
-                "ja_JP": "チャットストリーム ID",
-            },
+            "label": '聊天流 ID',
             "x-widget": "input",
         },
     )
@@ -1305,11 +1024,7 @@ class TargetItem(ConfigBase):
     rule_type: Literal["group", "private"] = Field(
         default="group",
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天类型",
-                "en_US": "Chat type",
-                "ja_JP": "チャット種別",
-            },
+            "label": '聊天类型',
             "x-widget": "select",
             "x-option-descriptions": RULE_TYPE_OPTION_DESCRIPTIONS,
         },
@@ -1323,11 +1038,7 @@ class ChatStreamGroup(ConfigBase):
     targets: list[TargetItem] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "共享聊天流",
-                "en_US": "Shared chat streams",
-                "ja_JP": "共有チャットストリーム",
-            },
+            "label": '共享聊天流',
             "x-widget": "custom",
         },
     )
@@ -1342,11 +1053,7 @@ class AMemorixIntegrationConfig(ConfigBase):
     enable_memory_query_tool: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用记忆检索",
-                "en_US": "Enable memory search",
-                "ja_JP": "記憶検索を有効化",
-            },
+            "label": '启用记忆检索',
             "x-widget": "switch",
         },
     )
@@ -1357,11 +1064,7 @@ class AMemorixIntegrationConfig(ConfigBase):
         ge=1,
         le=20,
         json_schema_extra={
-            "label": {
-                "zh_CN": "回忆记忆条数",
-                "en_US": "Default memory result count",
-                "ja_JP": "記憶検索件数",
-            },
+            "label": '回忆记忆条数',
             "x-widget": "input",
         },
     )
@@ -1370,11 +1073,7 @@ class AMemorixIntegrationConfig(ConfigBase):
     enable_person_profile_query_tool: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用人物画像查询",
-                "en_US": "Enable profile search",
-                "ja_JP": "人物プロファイル検索を有効化",
-            },
+            "label": '启用人物画像查询',
             "x-widget": "switch",
         },
     )
@@ -1383,11 +1082,7 @@ class AMemorixIntegrationConfig(ConfigBase):
     enable_person_profile_injection: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自动注入人物画像",
-                "en_US": "Inject person profiles",
-                "ja_JP": "人物プロファイルを自動注入",
-            },
+            "label": '自动注入人物画像',
             "x-widget": "switch",
         },
     )
@@ -1398,11 +1093,7 @@ class AMemorixIntegrationConfig(ConfigBase):
         ge=1,
         le=5,
         json_schema_extra={
-            "label": {
-                "zh_CN": "注入画像上限",
-                "en_US": "Injected profile limit",
-                "ja_JP": "注入プロファイル上限",
-            },
+            "label": '注入画像上限',
             "x-widget": "input",
         },
     )
@@ -1411,11 +1102,7 @@ class AMemorixIntegrationConfig(ConfigBase):
     heuristic_memory_recall_enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启发式拉起记忆",
-                "en_US": "Heuristic memory recall",
-                "ja_JP": "ヒューリスティック記憶呼び出し",
-            },
+            "label": '启发式拉起记忆',
             "x-widget": "switch",
         },
     )
@@ -1424,11 +1111,7 @@ class AMemorixIntegrationConfig(ConfigBase):
     heuristic_memory_cross_chat_enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "允许跨聊天流拉起",
-                "en_US": "Allow cross-chat recall",
-                "ja_JP": "チャット横断呼び出しを許可",
-            },
+            "label": '允许跨聊天流拉起',
             "x-widget": "switch",
         },
     )
@@ -1439,11 +1122,7 @@ class AMemorixIntegrationConfig(ConfigBase):
         ge=1,
         le=200,
         json_schema_extra={
-            "label": {
-                "zh_CN": "召回窗口消息数",
-                "en_US": "Recall message window size",
-                "ja_JP": "呼び出しメッセージウィンドウ件数",
-            },
+            "label": '召回窗口消息数',
             "x-widget": "input",
             "advanced": True,
         },
@@ -1455,11 +1134,7 @@ class AMemorixIntegrationConfig(ConfigBase):
         ge=1,
         le=10,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自然拉起记忆条数",
-                "en_US": "Heuristic memory limit",
-                "ja_JP": "自然呼び出し記憶数",
-            },
+            "label": '自然拉起记忆条数',
             "x-widget": "input",
             "advanced": True,
         },
@@ -1471,11 +1146,7 @@ class AMemorixIntegrationConfig(ConfigBase):
         ge=100,
         le=4000,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自然拉起文本上限",
-                "en_US": "Heuristic memory text limit",
-                "ja_JP": "自然呼び出し文字数上限",
-            },
+            "label": '自然拉起文本上限',
             "x-widget": "input",
             "advanced": True,
         },
@@ -1486,11 +1157,7 @@ class AMemorixIntegrationConfig(ConfigBase):
         default=180,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自然拉起冷却秒数",
-                "en_US": "Heuristic recall cooldown",
-                "ja_JP": "自然呼び出しクールダウン",
-            },
+            "label": '自然拉起冷却秒数',
             "x-widget": "input",
             "advanced": True,
         },
@@ -1501,11 +1168,7 @@ class AMemorixIntegrationConfig(ConfigBase):
         default=60,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自然拉起新增消息阈值",
-                "en_US": "Heuristic recall message threshold",
-                "ja_JP": "自然呼び出し新規メッセージ閾値",
-            },
+            "label": '自然拉起新增消息阈值',
             "x-widget": "input",
             "advanced": True,
         },
@@ -1516,11 +1179,7 @@ class AMemorixIntegrationConfig(ConfigBase):
         default=300,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自然拉起缓存秒数",
-                "en_US": "Heuristic recall cache TTL",
-                "ja_JP": "自然呼び出しキャッシュ秒数",
-            },
+            "label": '自然拉起缓存秒数',
             "x-widget": "input",
             "advanced": True,
         },
@@ -1530,11 +1189,7 @@ class AMemorixIntegrationConfig(ConfigBase):
     heuristic_memory_group_to_private_enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "私聊拉起群聊记忆",
-                "en_US": "Group memories in private chats",
-                "ja_JP": "個人チャットでグループ記憶を使う",
-            },
+            "label": '私聊拉起群聊记忆',
             "x-widget": "switch",
             "advanced": True,
         },
@@ -1544,11 +1199,7 @@ class AMemorixIntegrationConfig(ConfigBase):
     heuristic_memory_private_to_group_enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "群聊拉起私聊记忆",
-                "en_US": "Private memories in group chats",
-                "ja_JP": "グループチャットで個人記憶を使う",
-            },
+            "label": '群聊拉起私聊记忆',
             "x-widget": "switch",
             "advanced": True,
         },
@@ -1558,11 +1209,7 @@ class AMemorixIntegrationConfig(ConfigBase):
     person_fact_writeback_enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "写回人物事实",
-                "en_US": "Write back person facts",
-                "ja_JP": "人物事実を書き戻す",
-            },
+            "label": '写回人物事实',
             "x-widget": "switch",
         },
     )
@@ -1571,11 +1218,7 @@ class AMemorixIntegrationConfig(ConfigBase):
     chat_summary_writeback_enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "写回聊天摘要",
-                "en_US": "Write back chat summaries",
-                "ja_JP": "チャット要約を書き戻す",
-            },
+            "label": '写回聊天摘要',
             "x-widget": "switch",
         },
     )
@@ -1868,11 +1511,7 @@ class AMemorixPluginConfig(ConfigBase):
     enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用记忆",
-                "en_US": "Enable memory",
-                "ja_JP": "記憶を有効化",
-            },
+            "label": '启用记忆',
         },
     )
     """是否启用长期记忆系统"""
@@ -1884,11 +1523,7 @@ class AMemorixStorageConfig(ConfigBase):
     data_dir: str = Field(
         default="data/a-memorix",
         json_schema_extra={
-            "label": {
-                "zh_CN": "数据目录",
-                "en_US": "Data directory",
-                "ja_JP": "データディレクトリ",
-            },
+            "label": '数据目录',
         },
     )
     """数据目录"""
@@ -1900,90 +1535,78 @@ class AMemorixImageMemoryConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用图片记忆",
-                "en_US": "Enable image memory",
-                "ja_JP": "画像記憶を有効化",
-            }
+            "label": '启用图片记忆'
         },
     )
     task_name: str = Field(
         default="image_embedding",
         json_schema_extra={
-            "label": {
-                "zh_CN": "图片嵌入任务",
-                "en_US": "Image embedding task",
-                "ja_JP": "画像埋め込みタスク",
-            }
+            "label": '图片嵌入任务'
         },
     )
     preprocess_version: str = Field(
         default="identity_v1",
-        json_schema_extra={"label": {"zh_CN": "预处理版本", "en_US": "Preprocess version", "ja_JP": "前処理バージョン"}},
+        json_schema_extra={"label": '预处理版本'},
     )
     probe_retry_seconds: float = Field(
         default=60.0,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "模型探测重试间隔",
-                "en_US": "Model probe retry interval",
-                "ja_JP": "モデル確認の再試行間隔",
-            }
+            "label": '模型探测重试间隔'
         },
     )
     max_bytes: int = Field(
         default=10 * 1024 * 1024,
         ge=1,
-        json_schema_extra={"label": {"zh_CN": "单图大小上限", "en_US": "Image size limit", "ja_JP": "画像サイズ上限"}},
+        json_schema_extra={"label": '单图大小上限'},
     )
     max_pixels: int = Field(
         default=40_000_000,
         ge=1,
-        json_schema_extra={"label": {"zh_CN": "单图像素上限", "en_US": "Image pixel limit", "ja_JP": "画像ピクセル上限"}},
+        json_schema_extra={"label": '单图像素上限'},
     )
     candidate_limit: int = Field(
         default=8,
         ge=1,
         le=100,
-        json_schema_extra={"label": {"zh_CN": "相似候选数量", "en_US": "Similar candidate count", "ja_JP": "類似候補数"}},
+        json_schema_extra={"label": '相似候选数量'},
     )
     similarity_threshold: float = Field(
         default=0.72,
         ge=-1.0,
         le=1.0,
-        json_schema_extra={"label": {"zh_CN": "相似度阈值", "en_US": "Similarity threshold", "ja_JP": "類似度しきい値"}},
+        json_schema_extra={"label": '相似度阈值'},
     )
     job_poll_interval_seconds: float = Field(
         default=2.0,
         ge=0.1,
-        json_schema_extra={"label": {"zh_CN": "任务轮询间隔", "en_US": "Job polling interval", "ja_JP": "ジョブ確認間隔"}},
+        json_schema_extra={"label": '任务轮询间隔'},
     )
     job_batch_size: int = Field(
         default=4,
         ge=1,
         le=100,
-        json_schema_extra={"label": {"zh_CN": "任务处理批量", "en_US": "Job batch size", "ja_JP": "ジョブ処理バッチ数"}},
+        json_schema_extra={"label": '任务处理批量'},
     )
     job_enqueue_batch_size: int = Field(
         default=200,
         ge=1,
-        json_schema_extra={"label": {"zh_CN": "任务入队批量", "en_US": "Job enqueue batch", "ja_JP": "ジョブ登録バッチ数"}},
+        json_schema_extra={"label": '任务入队批量'},
     )
     job_lease_seconds: float = Field(
         default=120.0,
         ge=1.0,
-        json_schema_extra={"label": {"zh_CN": "任务租约秒数", "en_US": "Job lease seconds", "ja_JP": "ジョブリース秒数"}},
+        json_schema_extra={"label": '任务租约秒数'},
     )
     job_max_retries: int = Field(
         default=5,
         ge=0,
-        json_schema_extra={"label": {"zh_CN": "任务最大重试", "en_US": "Maximum job retries", "ja_JP": "ジョブ最大再試行回数"}},
+        json_schema_extra={"label": '任务最大重试'},
     )
     min_train_threshold: int = Field(
         default=40,
         ge=1,
-        json_schema_extra={"label": {"zh_CN": "索引训练最小样本", "en_US": "Minimum index training samples", "ja_JP": "索引学習の最小サンプル数"}},
+        json_schema_extra={"label": '索引训练最小样本'},
     )
 
 
@@ -1993,11 +1616,7 @@ class AMemorixEmbeddingFallbackConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用回退",
-                "en_US": "Enable fallback",
-                "ja_JP": "フォールバックを有効化",
-            },
+            "label": '启用回退',
         },
     )
     """是否启用回退机制"""
@@ -2006,11 +1625,7 @@ class AMemorixEmbeddingFallbackConfig(ConfigBase):
         default=180,
         ge=10,
         json_schema_extra={
-            "label": {
-                "zh_CN": "探测间隔",
-                "en_US": "Probe interval",
-                "ja_JP": "プローブ間隔",
-            },
+            "label": '探测间隔',
         },
     )
     """探测间隔秒数"""
@@ -2018,11 +1633,7 @@ class AMemorixEmbeddingFallbackConfig(ConfigBase):
     allow_metadata_only_write: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "允许仅写元数据",
-                "en_US": "Allow metadata-only writes",
-                "ja_JP": "メタデータのみの書き込みを許可",
-            },
+            "label": '允许仅写元数据',
         },
     )
     """是否允许仅写入元数据"""
@@ -2034,11 +1645,7 @@ class AMemorixParagraphVectorBackfillConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用回填",
-                "en_US": "Enable backfill",
-                "ja_JP": "バックフィルを有効化",
-            },
+            "label": '启用回填',
         },
     )
     """是否启用回填任务"""
@@ -2047,11 +1654,7 @@ class AMemorixParagraphVectorBackfillConfig(ConfigBase):
         default=60,
         ge=5,
         json_schema_extra={
-            "label": {
-                "zh_CN": "回填间隔",
-                "en_US": "Backfill interval",
-                "ja_JP": "バックフィル間隔",
-            },
+            "label": '回填间隔',
         },
     )
     """回填轮询间隔"""
@@ -2060,11 +1663,7 @@ class AMemorixParagraphVectorBackfillConfig(ConfigBase):
         default=64,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "批量大小",
-                "en_US": "Batch size",
-                "ja_JP": "バッチサイズ",
-            },
+            "label": '批量大小',
         },
     )
     """单批回填数量"""
@@ -2073,11 +1672,7 @@ class AMemorixParagraphVectorBackfillConfig(ConfigBase):
         default=5,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最大重试",
-                "en_US": "Max retries",
-                "ja_JP": "最大リトライ回数",
-            },
+            "label": '最大重试',
         },
     )
     """最大重试次数"""
@@ -2089,11 +1684,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
     model_name: str = Field(
         default="auto",
         json_schema_extra={
-            "label": {
-                "zh_CN": "向量化模型",
-                "en_US": "Embedding model",
-                "ja_JP": "Embedding モデル",
-            },
+            "label": '向量化模型',
         },
     )
     """用于把记忆内容转换成向量的模型，auto 表示自动选择"""
@@ -2102,11 +1693,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
         default=1024,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "向量维度",
-                "en_US": "Vector dimension",
-                "ja_JP": "ベクトル次元",
-            },
+            "label": '向量维度',
         },
     )
     """记忆向量的维度，需要与向量化模型保持一致"""
@@ -2114,11 +1701,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
     dimension_request_mode: Literal["explicit", "always", "never"] = Field(
         default="explicit",
         json_schema_extra={
-            "label": {
-                "zh_CN": "维度请求模式",
-                "en_US": "Dimension request mode",
-                "ja_JP": "次元リクエストモード",
-            },
+            "label": '维度请求模式',
         },
     )
     """是否在 embedding 请求中携带维度参数：explicit 仅显式指定时携带，always 总是携带，never 不携带"""
@@ -2127,11 +1710,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
         default=32,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单批数量",
-                "en_US": "Batch size",
-                "ja_JP": "バッチサイズ",
-            },
+            "label": '单批数量',
         },
     )
     """每次向量化请求处理的记忆条数"""
@@ -2140,11 +1719,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
         default=5,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最大并发数",
-                "en_US": "Max concurrency",
-                "ja_JP": "最大同時実行数",
-            },
+            "label": '最大并发数',
         },
     )
     """同时进行的向量化请求数量"""
@@ -2152,11 +1727,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
     enable_cache: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用向量缓存",
-                "en_US": "Enable cache",
-                "ja_JP": "キャッシュを有効化",
-            },
+            "label": '启用向量缓存',
         },
     )
     """是否缓存向量化结果"""
@@ -2165,11 +1736,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
         default=256,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "运行期向量训练阈值",
-                "en_US": "Runtime vector training threshold",
-                "ja_JP": "実行時ベクトル学習しきい値",
-            },
+            "label": '运行期向量训练阈值',
         },
     )
     """未训练向量池在运行期间触发 SQ8 后台训练所需的最少向量数"""
@@ -2177,11 +1744,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
     quantization_type: Literal["int8"] = Field(
         default="int8",
         json_schema_extra={
-            "label": {
-                "zh_CN": "量化方式",
-                "en_US": "Quantization type",
-                "ja_JP": "量子化方式",
-            },
+            "label": '量化方式',
         },
     )
     """向量压缩方式，当前仅支持 int8(SQ8)"""
@@ -2189,11 +1752,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
     fallback: AMemorixEmbeddingFallbackConfig = Field(
         default_factory=AMemorixEmbeddingFallbackConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "Embedding 回退",
-                "en_US": "Embedding fallback",
-                "ja_JP": "Embedding フォールバック",
-            },
+            "label": 'Embedding 回退',
         },
     )
     """Embedding 回退配置"""
@@ -2201,11 +1760,7 @@ class AMemorixEmbeddingConfig(ConfigBase):
     paragraph_vector_backfill: AMemorixParagraphVectorBackfillConfig = Field(
         default_factory=AMemorixParagraphVectorBackfillConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "段落向量回填",
-                "en_US": "Paragraph vector backfill",
-                "ja_JP": "段落ベクトルバックフィル",
-            },
+            "label": '段落向量回填',
         },
     )
     """段落向量回填配置"""
@@ -2217,11 +1772,7 @@ class AMemorixSparseRetrievalConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用稀疏检索",
-                "en_US": "Enable sparse retrieval",
-                "ja_JP": "疎検索を有効化",
-            },
+            "label": '启用稀疏检索',
         },
     )
     """是否启用稀疏检索"""
@@ -2229,11 +1780,7 @@ class AMemorixSparseRetrievalConfig(ConfigBase):
     backend: Literal["fts5"] = Field(
         default="fts5",
         json_schema_extra={
-            "label": {
-                "zh_CN": "检索后端",
-                "en_US": "Retrieval backend",
-                "ja_JP": "検索バックエンド",
-            },
+            "label": '检索后端',
         },
     )
     """稀疏检索后端"""
@@ -2241,11 +1788,7 @@ class AMemorixSparseRetrievalConfig(ConfigBase):
     mode: Literal["auto", "fallback_only", "hybrid"] = Field(
         default="auto",
         json_schema_extra={
-            "label": {
-                "zh_CN": "检索模式",
-                "en_US": "Retrieval mode",
-                "ja_JP": "検索モード",
-            },
+            "label": '检索模式',
         },
     )
     """稀疏检索模式"""
@@ -2253,11 +1796,7 @@ class AMemorixSparseRetrievalConfig(ConfigBase):
     tokenizer_mode: Literal["jieba", "mixed", "char_2gram"] = Field(
         default="jieba",
         json_schema_extra={
-            "label": {
-                "zh_CN": "分词模式",
-                "en_US": "Tokenizer mode",
-                "ja_JP": "トークナイザーモード",
-            },
+            "label": '分词模式',
         },
     )
     """分词模式"""
@@ -2266,11 +1805,7 @@ class AMemorixSparseRetrievalConfig(ConfigBase):
         default=80,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "段落候选数",
-                "en_US": "Paragraph candidates",
-                "ja_JP": "段落候補数",
-            },
+            "label": '段落候选数',
         },
     )
     """段落候选数"""
@@ -2279,11 +1814,7 @@ class AMemorixSparseRetrievalConfig(ConfigBase):
         default=60,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系候选数",
-                "en_US": "Relation candidates",
-                "ja_JP": "関係候補数",
-            },
+            "label": '关系候选数',
         },
     )
     """关系候选数"""
@@ -2295,11 +1826,7 @@ class AMemorixSmartFallbackConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用智能兜底",
-                "en_US": "Enable smart fallback",
-                "ja_JP": "スマートフォールバックを有効化",
-            },
+            "label": '启用智能兜底',
         },
     )
     """是否启用智能兜底检索"""
@@ -2311,11 +1838,7 @@ class AMemorixRetrievalSearchConfig(ConfigBase):
     smart_fallback: AMemorixSmartFallbackConfig = Field(
         default_factory=AMemorixSmartFallbackConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "智能兜底",
-                "en_US": "Smart fallback",
-                "ja_JP": "スマートフォールバック",
-            },
+            "label": '智能兜底',
         },
     )
     """智能兜底检索配置"""
@@ -2327,11 +1850,7 @@ class AMemorixFusionRetrievalConfig(ConfigBase):
     method: Literal["weighted_rrf", "alpha_legacy"] = Field(
         default="weighted_rrf",
         json_schema_extra={
-            "label": {
-                "zh_CN": "融合方法",
-                "en_US": "Fusion method",
-                "ja_JP": "融合方式",
-            },
+            "label": '融合方法',
         },
     )
     """检索融合方法"""
@@ -2340,11 +1859,7 @@ class AMemorixFusionRetrievalConfig(ConfigBase):
         default=60,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "RRF K",
-                "en_US": "RRF K",
-                "ja_JP": "RRF K",
-            },
+            "label": 'RRF K',
         },
     )
     """RRF 融合参数"""
@@ -2354,11 +1869,7 @@ class AMemorixFusionRetrievalConfig(ConfigBase):
         ge=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "向量权重",
-                "en_US": "Vector weight",
-                "ja_JP": "ベクトル重み",
-            },
+            "label": '向量权重',
         },
     )
     """向量检索权重"""
@@ -2368,11 +1879,7 @@ class AMemorixFusionRetrievalConfig(ConfigBase):
         ge=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "BM25 权重",
-                "en_US": "BM25 weight",
-                "ja_JP": "BM25 重み",
-            },
+            "label": 'BM25 权重',
         },
     )
     """BM25 稀疏检索权重"""
@@ -2384,11 +1891,7 @@ class AMemorixRelationVectorizationConfig(ConfigBase):
     enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用关系向量",
-                "en_US": "Enable relation vectors",
-                "ja_JP": "関係ベクトルを有効化",
-            },
+            "label": '启用关系向量',
         },
     )
     """是否启用关系向量化"""
@@ -2396,11 +1899,7 @@ class AMemorixRelationVectorizationConfig(ConfigBase):
     backfill_enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用关系向量回填",
-                "en_US": "Enable relation vector backfill",
-                "ja_JP": "関係ベクトルバックフィルを有効化",
-            },
+            "label": '启用关系向量回填',
         },
     )
     """是否启用关系向量回填"""
@@ -2408,11 +1907,7 @@ class AMemorixRelationVectorizationConfig(ConfigBase):
     write_on_import: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "导入时写入关系向量",
-                "en_US": "Write relation vectors on import",
-                "ja_JP": "インポート時に関係ベクトルを書き込む",
-            },
+            "label": '导入时写入关系向量',
         },
     )
     """导入时是否写入关系向量"""
@@ -2425,11 +1920,7 @@ class AMemorixRelationIntentVectorPoolConfig(ConfigBase):
         default=80,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系意图图谱候选数",
-                "en_US": "Relation-intent graph candidates",
-                "ja_JP": "関係意図グラフ候補数",
-            },
+            "label": '关系意图图谱候选数',
         },
     )
     """关系意图命中时的图谱池候选数"""
@@ -2438,11 +1929,7 @@ class AMemorixRelationIntentVectorPoolConfig(ConfigBase):
         default=0.45,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系意图语义权重",
-                "en_US": "Relation-intent semantic weight",
-                "ja_JP": "関係意図セマンティック重み",
-            },
+            "label": '关系意图语义权重',
         },
     )
     """关系意图命中时的段落语义权重"""
@@ -2451,11 +1938,7 @@ class AMemorixRelationIntentVectorPoolConfig(ConfigBase):
         default=0.15,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系意图稀疏权重",
-                "en_US": "Relation-intent sparse weight",
-                "ja_JP": "関係意図疎検索重み",
-            },
+            "label": '关系意图稀疏权重',
         },
     )
     """关系意图命中时的稀疏检索权重"""
@@ -2464,11 +1947,7 @@ class AMemorixRelationIntentVectorPoolConfig(ConfigBase):
         default=0.40,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系意图图谱权重",
-                "en_US": "Relation-intent graph weight",
-                "ja_JP": "関係意図グラフ重み",
-            },
+            "label": '关系意图图谱权重',
         },
     )
     """关系意图命中时的图谱证据权重"""
@@ -2476,11 +1955,7 @@ class AMemorixRelationIntentVectorPoolConfig(ConfigBase):
     return_relation_items: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "返回独立关系项",
-                "en_US": "Return relation items",
-                "ja_JP": "独立した関係項目を返す",
-            },
+            "label": '返回独立关系项',
         },
     )
     """关系意图命中时是否返回独立关系结果"""
@@ -2492,11 +1967,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
     mode: Literal["single", "dual"] = Field(
         default="dual",
         json_schema_extra={
-            "label": {
-                "zh_CN": "向量池模式",
-                "en_US": "Vector pool mode",
-                "ja_JP": "ベクトルプールモード",
-            },
+            "label": '向量池模式',
         },
     )
     """向量池模式"""
@@ -2505,11 +1976,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=20,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "段落池候选数",
-                "en_US": "Paragraph pool candidates",
-                "ja_JP": "段落プール候補数",
-            },
+            "label": '段落池候选数',
         },
     )
     """段落向量池候选数"""
@@ -2518,11 +1985,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=40,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "图谱池候选数",
-                "en_US": "Graph pool candidates",
-                "ja_JP": "グラフプール候補数",
-            },
+            "label": '图谱池候选数',
         },
     )
     """图谱向量池候选数"""
@@ -2531,11 +1994,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=80,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "图谱展开段落上限",
-                "en_US": "Graph expanded paragraph limit",
-                "ja_JP": "グラフ展開段落上限",
-            },
+            "label": '图谱展开段落上限',
         },
     )
     """图谱证据展开段落上限"""
@@ -2544,11 +2003,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=5,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "每个关系展开段落数",
-                "en_US": "Paragraphs per relation hit",
-                "ja_JP": "関係ヒットごとの段落数",
-            },
+            "label": '每个关系展开段落数',
         },
     )
     """每个关系命中最多展开的段落数"""
@@ -2557,11 +2012,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=8,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "每个实体展开段落数",
-                "en_US": "Paragraphs per entity hit",
-                "ja_JP": "エンティティヒットごとの段落数",
-            },
+            "label": '每个实体展开段落数',
         },
     )
     """每个实体命中最多展开的段落数"""
@@ -2570,11 +2021,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=1.0,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系证据权重",
-                "en_US": "Relation evidence weight",
-                "ja_JP": "関係証拠重み",
-            },
+            "label": '关系证据权重',
         },
     )
     """关系证据分权重"""
@@ -2583,11 +2030,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=0.55,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "实体证据权重",
-                "en_US": "Entity evidence weight",
-                "ja_JP": "エンティティ証拠重み",
-            },
+            "label": '实体证据权重',
         },
     )
     """实体证据分权重"""
@@ -2596,11 +2039,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=0.65,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "段落语义权重",
-                "en_US": "Paragraph semantic weight",
-                "ja_JP": "段落セマンティック重み",
-            },
+            "label": '段落语义权重',
         },
     )
     """段落语义分权重"""
@@ -2609,11 +2048,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=0.20,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "稀疏检索权重",
-                "en_US": "Sparse retrieval weight",
-                "ja_JP": "疎検索重み",
-            },
+            "label": '稀疏检索权重',
         },
     )
     """稀疏检索分权重"""
@@ -2622,11 +2057,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
         default=0.15,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "图谱证据权重",
-                "en_US": "Graph evidence weight",
-                "ja_JP": "グラフ証拠重み",
-            },
+            "label": '图谱证据权重',
         },
     )
     """图谱证据分权重"""
@@ -2634,11 +2065,7 @@ class AMemorixVectorPoolsConfig(ConfigBase):
     relation_intent: AMemorixRelationIntentVectorPoolConfig = Field(
         default_factory=AMemorixRelationIntentVectorPoolConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系意图权重",
-                "en_US": "Relation intent weights",
-                "ja_JP": "関係意図重み",
-            },
+            "label": '关系意图权重',
         },
     )
     """关系意图命中时的双向量池配置"""
@@ -2651,11 +2078,7 @@ class AMemorixRetrievalConfig(ConfigBase):
         default=20,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "段落 Top-K",
-                "en_US": "Paragraph Top-K",
-                "ja_JP": "段落 Top-K",
-            },
+            "label": '段落 Top-K',
         },
     )
     """段落候选数"""
@@ -2664,11 +2087,7 @@ class AMemorixRetrievalConfig(ConfigBase):
         default=10,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系 Top-K",
-                "en_US": "Relation Top-K",
-                "ja_JP": "関係 Top-K",
-            },
+            "label": '关系 Top-K',
         },
     )
     """关系候选数"""
@@ -2677,11 +2096,7 @@ class AMemorixRetrievalConfig(ConfigBase):
         default=10,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最终 Top-K",
-                "en_US": "Final Top-K",
-                "ja_JP": "最終 Top-K",
-            },
+            "label": '最终 Top-K',
         },
     )
     """最终返回条数"""
@@ -2691,11 +2106,7 @@ class AMemorixRetrievalConfig(ConfigBase):
         ge=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系融合权重",
-                "en_US": "Relation fusion weight",
-                "ja_JP": "関係融合重み",
-            },
+            "label": '关系融合权重',
         },
     )
     """关系融合权重"""
@@ -2703,11 +2114,7 @@ class AMemorixRetrievalConfig(ConfigBase):
     enable_ppr: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用 PPR",
-                "en_US": "Enable PPR",
-                "ja_JP": "PPR を有効化",
-            },
+            "label": '启用 PPR',
         },
     )
     """是否启用 PPR"""
@@ -2717,11 +2124,7 @@ class AMemorixRetrievalConfig(ConfigBase):
         ge=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "PPR Alpha",
-                "en_US": "PPR alpha",
-                "ja_JP": "PPR Alpha",
-            },
+            "label": 'PPR Alpha',
         },
     )
     """PPR alpha"""
@@ -2730,11 +2133,7 @@ class AMemorixRetrievalConfig(ConfigBase):
         default=1.5,
         ge=0.1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "PPR 超时",
-                "en_US": "PPR timeout",
-                "ja_JP": "PPR タイムアウト",
-            },
+            "label": 'PPR 超时',
         },
     )
     """PPR 超时秒数"""
@@ -2743,11 +2142,7 @@ class AMemorixRetrievalConfig(ConfigBase):
         default=4,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "PPR 并发限制",
-                "en_US": "PPR concurrency limit",
-                "ja_JP": "PPR 同時実行制限",
-            },
+            "label": 'PPR 并发限制',
         },
     )
     """PPR 并发限制"""
@@ -2755,11 +2150,7 @@ class AMemorixRetrievalConfig(ConfigBase):
     enable_parallel: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "并行检索",
-                "en_US": "Parallel retrieval",
-                "ja_JP": "並列検索",
-            },
+            "label": '并行检索',
         },
     )
     """是否启用并行检索"""
@@ -2767,11 +2158,7 @@ class AMemorixRetrievalConfig(ConfigBase):
     search: AMemorixRetrievalSearchConfig = Field(
         default_factory=AMemorixRetrievalSearchConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "搜索后处理",
-                "en_US": "Search post-processing",
-                "ja_JP": "検索後処理",
-            },
+            "label": '搜索后处理',
         },
     )
     """搜索后处理配置"""
@@ -2779,11 +2166,7 @@ class AMemorixRetrievalConfig(ConfigBase):
     fusion: AMemorixFusionRetrievalConfig = Field(
         default_factory=AMemorixFusionRetrievalConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "检索融合",
-                "en_US": "Retrieval fusion",
-                "ja_JP": "検索融合",
-            },
+            "label": '检索融合',
         },
     )
     """检索融合配置"""
@@ -2791,11 +2174,7 @@ class AMemorixRetrievalConfig(ConfigBase):
     relation_vectorization: AMemorixRelationVectorizationConfig = Field(
         default_factory=AMemorixRelationVectorizationConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "关系向量化",
-                "en_US": "Relation vectorization",
-                "ja_JP": "関係ベクトル化",
-            },
+            "label": '关系向量化',
         },
     )
     """关系向量化配置"""
@@ -2803,11 +2182,7 @@ class AMemorixRetrievalConfig(ConfigBase):
     vector_pools: AMemorixVectorPoolsConfig = Field(
         default_factory=AMemorixVectorPoolsConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "向量池检索",
-                "en_US": "Vector pool retrieval",
-                "ja_JP": "ベクトルプール検索",
-            },
+            "label": '向量池检索',
         },
     )
     """双向量池检索配置"""
@@ -2815,11 +2190,7 @@ class AMemorixRetrievalConfig(ConfigBase):
     sparse: AMemorixSparseRetrievalConfig = Field(
         default_factory=AMemorixSparseRetrievalConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "稀疏检索",
-                "en_US": "Sparse retrieval",
-                "ja_JP": "疎検索",
-            },
+            "label": '稀疏检索',
         },
     )
     """稀疏检索配置"""
@@ -2833,11 +2204,7 @@ class AMemorixThresholdConfig(ConfigBase):
         ge=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最小阈值",
-                "en_US": "Minimum threshold",
-                "ja_JP": "最小しきい値",
-            },
+            "label": '最小阈值',
         },
     )
     """最小阈值"""
@@ -2847,11 +2214,7 @@ class AMemorixThresholdConfig(ConfigBase):
         ge=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最大阈值",
-                "en_US": "Maximum threshold",
-                "ja_JP": "最大しきい値",
-            },
+            "label": '最大阈值',
         },
     )
     """最大阈值"""
@@ -2861,11 +2224,7 @@ class AMemorixThresholdConfig(ConfigBase):
         ge=0,
         le=100,
         json_schema_extra={
-            "label": {
-                "zh_CN": "动态百分位",
-                "en_US": "Dynamic percentile",
-                "ja_JP": "動的パーセンタイル",
-            },
+            "label": '动态百分位',
         },
     )
     """动态阈值百分位"""
@@ -2874,11 +2233,7 @@ class AMemorixThresholdConfig(ConfigBase):
         default=4,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最小保留数",
-                "en_US": "Minimum results",
-                "ja_JP": "最小保持件数",
-            },
+            "label": '最小保留数',
         },
     )
     """最小保留条数"""
@@ -2894,11 +2249,7 @@ class AMemorixRetrievalSubtypeFilterConfig(ConfigBase):
     enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用跨聊天流过滤",
-                "en_US": "Enable cross-chat filter",
-                "ja_JP": "チャット横断フィルターを有効化",
-            },
+            "label": '启用跨聊天流过滤',
         },
     )
     """是否启用当前检索结果类型的跨聊天流过滤"""
@@ -2906,11 +2257,7 @@ class AMemorixRetrievalSubtypeFilterConfig(ConfigBase):
     mode: Literal["blacklist", "whitelist"] = Field(
         default="blacklist",
         json_schema_extra={
-            "label": {
-                "zh_CN": "过滤模式",
-                "en_US": "Filter mode",
-                "ja_JP": "フィルターモード",
-            },
+            "label": '过滤模式',
         },
     )
     """过滤模式"""
@@ -2918,11 +2265,7 @@ class AMemorixRetrievalSubtypeFilterConfig(ConfigBase):
     chats: list[str] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天流列表",
-                "en_US": "Chat stream list",
-                "ja_JP": "チャットストリーム一覧",
-            },
+            "label": '聊天流列表',
         },
     )
     """聊天流列表"""
@@ -2934,11 +2277,7 @@ class AMemorixRetrievalFilterConfig(ConfigBase):
     chat_stream: AMemorixRetrievalSubtypeFilterConfig = Field(
         default_factory=AMemorixRetrievalSubtypeFilterConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "普通聊天流记忆",
-                "en_US": "Chat stream memory",
-                "ja_JP": "通常チャット記憶",
-            },
+            "label": '普通聊天流记忆',
             "x-collapsed-by-default": True,
         },
     )
@@ -2947,11 +2286,7 @@ class AMemorixRetrievalFilterConfig(ConfigBase):
     chat_summary: AMemorixRetrievalSubtypeFilterConfig = Field(
         default_factory=AMemorixRetrievalSubtypeFilterConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天总结记忆",
-                "en_US": "Chat summary memory",
-                "ja_JP": "チャット要約記憶",
-            },
+            "label": '聊天总结记忆',
             "x-collapsed-by-default": True,
         },
     )
@@ -2960,11 +2295,7 @@ class AMemorixRetrievalFilterConfig(ConfigBase):
     episode: AMemorixRetrievalSubtypeFilterConfig = Field(
         default_factory=AMemorixRetrievalSubtypeFilterConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "Episode 记忆",
-                "en_US": "Episode memory",
-                "ja_JP": "Episode 記憶",
-            },
+            "label": 'Episode 记忆',
             "x-collapsed-by-default": True,
         },
     )
@@ -2977,11 +2308,7 @@ class AMemorixFilterConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用聊天过滤",
-                "en_US": "Enable chat filter",
-                "ja_JP": "チャットフィルターを有効化",
-            },
+            "label": '启用聊天过滤',
         },
     )
     """是否启用聊天过滤"""
@@ -2989,11 +2316,7 @@ class AMemorixFilterConfig(ConfigBase):
     mode: Literal["blacklist", "whitelist"] = Field(
         default="blacklist",
         json_schema_extra={
-            "label": {
-                "zh_CN": "过滤模式",
-                "en_US": "Filter mode",
-                "ja_JP": "フィルターモード",
-            },
+            "label": '过滤模式',
         },
     )
     """过滤模式"""
@@ -3001,11 +2324,7 @@ class AMemorixFilterConfig(ConfigBase):
     chats: list[str] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天流列表",
-                "en_US": "Chat stream list",
-                "ja_JP": "チャットストリーム一覧",
-            },
+            "label": '聊天流列表',
         },
     )
     """聊天流列表"""
@@ -3013,11 +2332,7 @@ class AMemorixFilterConfig(ConfigBase):
     retrieval: AMemorixRetrievalFilterConfig = Field(
         default_factory=AMemorixRetrievalFilterConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "跨聊天流检索结果过滤",
-                "en_US": "Cross-chat retrieval result filter",
-                "ja_JP": "チャット横断検索結果フィルター",
-            },
+            "label": '跨聊天流检索结果过滤',
             "x-collapsed-by-default": True,
         },
     )
@@ -3030,11 +2345,7 @@ class AMemorixEpisodeConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用 Episode",
-                "en_US": "Enable episodes",
-                "ja_JP": "Episode を有効化",
-            },
+            "label": '启用 Episode',
         },
     )
     """是否启用 Episode"""
@@ -3042,11 +2353,7 @@ class AMemorixEpisodeConfig(ConfigBase):
     generation_enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自动生成 Episode",
-                "en_US": "Generate episodes",
-                "ja_JP": "Episode を自動生成",
-            },
+            "label": '自动生成 Episode',
         },
     )
     """是否启用自动生成"""
@@ -3055,11 +2362,7 @@ class AMemorixEpisodeConfig(ConfigBase):
         default=1.0,
         ge=0.1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "来源任务轮询间隔",
-                "en_US": "Source task polling interval",
-                "ja_JP": "ソースタスクのポーリング間隔",
-            },
+            "label": '来源任务轮询间隔',
         },
     )
     """来源级 Episode 任务轮询间隔秒数"""
@@ -3068,11 +2371,7 @@ class AMemorixEpisodeConfig(ConfigBase):
         default=20,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "来源任务批量",
-                "en_US": "Source task batch size",
-                "ja_JP": "ソースタスクのバッチサイズ",
-            },
+            "label": '来源任务批量',
         },
     )
     """单轮领取的来源任务数"""
@@ -3081,11 +2380,7 @@ class AMemorixEpisodeConfig(ConfigBase):
         default=3,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "来源任务最大尝试次数",
-                "en_US": "Source task max attempts",
-                "ja_JP": "ソースタスクの最大試行回数",
-            },
+            "label": '来源任务最大尝试次数',
         },
     )
     """每个来源版本的最大尝试次数，包含首次尝试"""
@@ -3094,11 +2389,7 @@ class AMemorixEpisodeConfig(ConfigBase):
         default=1800.0,
         ge=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "来源任务租约时长",
-                "en_US": "Source task lease duration",
-                "ja_JP": "ソースタスクのリース時間",
-            },
+            "label": '来源任务租约时长',
         },
     )
     """来源任务租约时长秒数"""
@@ -3107,11 +2398,7 @@ class AMemorixEpisodeConfig(ConfigBase):
         default=60.0,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "来源任务最大防抖等待",
-                "en_US": "Source task maximum debounce wait",
-                "ja_JP": "ソースタスクの最大デバウンス待機時間",
-            },
+            "label": '来源任务最大防抖等待',
         },
     )
     """来源持续写入时允许的最大防抖等待秒数"""
@@ -3120,11 +2407,7 @@ class AMemorixEpisodeConfig(ConfigBase):
         default=20,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单次段落上限",
-                "en_US": "Paragraphs per call",
-                "ja_JP": "1回あたりの段落上限",
-            },
+            "label": '单次段落上限',
         },
     )
     """单次最大段落数"""
@@ -3133,11 +2416,7 @@ class AMemorixEpisodeConfig(ConfigBase):
         default=6000,
         ge=100,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单次字符上限",
-                "en_US": "Characters per call",
-                "ja_JP": "1回あたりの文字上限",
-            },
+            "label": '单次字符上限',
         },
     )
     """单次最大字符数"""
@@ -3146,11 +2425,7 @@ class AMemorixEpisodeConfig(ConfigBase):
         default=24.0,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "来源时间窗口",
-                "en_US": "Source time window",
-                "ja_JP": "ソース時間窓",
-            },
+            "label": '来源时间窗口',
         },
     )
     """时间窗口小时数"""
@@ -3158,11 +2433,7 @@ class AMemorixEpisodeConfig(ConfigBase):
     segmentation_model: str = Field(
         default="auto",
         json_schema_extra={
-            "label": {
-                "zh_CN": "分段模型",
-                "en_US": "Segmentation model",
-                "ja_JP": "分割モデル",
-            },
+            "label": '分段模型',
         },
     )
     """分段模型选择"""
@@ -3170,11 +2441,7 @@ class AMemorixEpisodeConfig(ConfigBase):
     disabled_source_types: List[str] = Field(
         default_factory=lambda: ["person_fact"],
         json_schema_extra={
-            "label": {
-                "zh_CN": "跳过来源类型",
-                "en_US": "Disabled source types",
-                "ja_JP": "スキップするソース種別",
-            },
+            "label": '跳过来源类型',
             "advanced": True,
         },
     )
@@ -3187,11 +2454,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用人物画像",
-                "en_US": "Enable person profiles",
-                "ja_JP": "人物プロファイルを有効化",
-            },
+            "label": '启用人物画像',
         },
     )
     """是否启用画像"""
@@ -3200,11 +2463,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=30,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "刷新间隔",
-                "en_US": "Refresh interval",
-                "ja_JP": "更新間隔",
-            },
+            "label": '刷新间隔',
         },
     )
     """刷新间隔分钟数"""
@@ -3213,11 +2472,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=72.0,
         ge=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "活跃窗口",
-                "en_US": "Active window",
-                "ja_JP": "アクティブ期間",
-            },
+            "label": '活跃窗口',
         },
     )
     """活跃窗口小时数"""
@@ -3226,11 +2481,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=50,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单轮刷新上限",
-                "en_US": "Refreshes per cycle",
-                "ja_JP": "1サイクル更新上限",
-            },
+            "label": '单轮刷新上限',
         },
     )
     """单轮最大刷新数"""
@@ -3239,11 +2490,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=120,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "刷新静默期",
-                "en_US": "Refresh debounce",
-                "ja_JP": "更新デバウンス",
-            },
+            "label": '刷新静默期',
             "advanced": True,
         },
     )
@@ -3253,11 +2500,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=60,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "刷新队列间隔",
-                "en_US": "Refresh queue interval",
-                "ja_JP": "更新キュー間隔",
-            },
+            "label": '刷新队列间隔',
             "advanced": True,
         },
     )
@@ -3267,11 +2510,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=10,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "刷新队列批量",
-                "en_US": "Refresh queue batch size",
-                "ja_JP": "更新キューバッチサイズ",
-            },
+            "label": '刷新队列批量',
             "advanced": True,
         },
     )
@@ -3281,11 +2520,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=300,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "刷新重试等待",
-                "en_US": "Refresh retry backoff",
-                "ja_JP": "更新リトライ待機",
-            },
+            "label": '刷新重试等待',
             "advanced": True,
         },
     )
@@ -3295,11 +2530,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=3,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "刷新最大重试",
-                "en_US": "Refresh max retries",
-                "ja_JP": "更新最大リトライ",
-            },
+            "label": '刷新最大重试',
             "advanced": True,
         },
     )
@@ -3309,11 +2540,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=12,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "证据条数",
-                "en_US": "Evidence count",
-                "ja_JP": "証拠件数",
-            },
+            "label": '证据条数',
         },
     )
     """证据条数"""
@@ -3322,11 +2549,7 @@ class AMemorixPersonProfileConfig(ConfigBase):
         default=1200,
         ge=128,
         json_schema_extra={
-            "label": {
-                "zh_CN": "证据分类输出上限",
-                "en_US": "Evidence classification max tokens",
-                "ja_JP": "証拠分類の最大トークン数",
-            },
+            "label": '证据分类输出上限',
         },
     )
     """人物画像证据分类最大输出 token 数"""
@@ -3338,11 +2561,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用记忆演化",
-                "en_US": "Enable memory evolution",
-                "ja_JP": "記憶進化を有効化",
-            },
+            "label": '启用记忆演化',
         },
     )
     """是否启用记忆演化"""
@@ -3351,11 +2570,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
         default=24.0,
         ge=0.1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "半衰期",
-                "en_US": "Half-life",
-                "ja_JP": "半減期",
-            },
+            "label": '半衰期',
         },
     )
     """半衰期小时数"""
@@ -3365,11 +2580,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
         gt=0.0,
         lt=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "裁剪阈值",
-                "en_US": "Prune threshold",
-                "ja_JP": "剪定しきい値",
-            },
+            "label": '裁剪阈值',
         },
     )
     """裁剪阈值"""
@@ -3378,11 +2589,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
         default=24.0,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "冻结时长",
-                "en_US": "Freeze duration",
-                "ja_JP": "凍結時間",
-            },
+            "label": '冻结时长',
         },
     )
     """冻结时长小时数"""
@@ -3392,11 +2599,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
         gt=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "恢复阈值",
-                "en_US": "Revival threshold",
-                "ja_JP": "復帰しきい値",
-            },
+            "label": '恢复阈值',
         },
     )
     """冻结关系恢复为活跃状态的保留强度阈值"""
@@ -3406,11 +2609,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
         ge=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "访问加强系数",
-                "en_US": "Access reinforcement factor",
-                "ja_JP": "アクセス強化係数",
-            },
+            "label": '访问加强系数',
         },
     )
     """记忆被最终采用时的饱和加强系数"""
@@ -3419,11 +2618,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
         default=60.0,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "访问加强冷却时间",
-                "en_US": "Access reinforcement cooldown",
-                "ja_JP": "アクセス強化クールダウン",
-            },
+            "label": '访问加强冷却时间',
         },
     )
     """同一关系两次访问加强之间的最短分钟数，0表示不限制"""
@@ -3433,11 +2628,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
         ge=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "显式加强系数",
-                "en_US": "Explicit reinforcement factor",
-                "ja_JP": "明示的強化係数",
-            },
+            "label": '显式加强系数',
         },
     )
     """用户显式加强或独立新证据的饱和加强系数"""
@@ -3447,11 +2638,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
         ge=0.0,
         le=1.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "弱化系数",
-                "en_US": "Weakening factor",
-                "ja_JP": "弱化係数",
-            },
+            "label": '弱化系数',
         },
     )
     """显式弱化事件的比例系数"""
@@ -3460,11 +2647,7 @@ class AMemorixMemoryEvolutionConfig(ConfigBase):
         default=1000,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "生命周期批量",
-                "en_US": "Lifecycle batch size",
-                "ja_JP": "ライフサイクルのバッチサイズ",
-            },
+            "label": '生命周期批量',
         },
     )
     """单轮处理的到期关系数量"""
@@ -3481,11 +2664,7 @@ class AMemorixAdvancedConfig(ConfigBase):
     enable_auto_save: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自动保存",
-                "en_US": "Auto save",
-                "ja_JP": "自動保存",
-            },
+            "label": '自动保存',
         },
     )
     """是否启用自动保存"""
@@ -3494,11 +2673,7 @@ class AMemorixAdvancedConfig(ConfigBase):
         default=5,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自动保存间隔",
-                "en_US": "Auto-save interval",
-                "ja_JP": "自動保存間隔",
-            },
+            "label": '自动保存间隔',
         },
     )
     """自动保存间隔"""
@@ -3506,11 +2681,7 @@ class AMemorixAdvancedConfig(ConfigBase):
     debug: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "调试模式",
-                "en_US": "Debug mode",
-                "ja_JP": "デバッグモード",
-            },
+            "label": '调试模式',
         },
     )
     """是否启用调试"""
@@ -3523,11 +2694,7 @@ class AMemorixWebImportTimeoutConfig(ConfigBase):
         default=240.0,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "LLM 单次调用超时",
-                "en_US": "LLM call timeout",
-                "ja_JP": "LLM 呼び出しタイムアウト",
-            },
+            "label": 'LLM 单次调用超时',
         },
     )
     """Web 导入中单次 LLM 抽取调用的超时时间，0 表示不额外限制"""
@@ -3536,11 +2703,7 @@ class AMemorixWebImportTimeoutConfig(ConfigBase):
         default=1.0,
         ge=0.1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "子进程轮询等待",
-                "en_US": "Process poll wait",
-                "ja_JP": "子プロセス待機ポーリング",
-            },
+            "label": '子进程轮询等待',
         },
     )
     """迁移或转换子进程状态轮询等待时间"""
@@ -3549,11 +2712,7 @@ class AMemorixWebImportTimeoutConfig(ConfigBase):
         default=5.0,
         ge=0.1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "子进程终止等待",
-                "en_US": "Process terminate wait",
-                "ja_JP": "子プロセス終了待機",
-            },
+            "label": '子进程终止等待',
         },
     )
     """取消任务时等待子进程正常终止的时间"""
@@ -3562,11 +2721,7 @@ class AMemorixWebImportTimeoutConfig(ConfigBase):
         default=3.0,
         ge=0.1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "子进程强杀等待",
-                "en_US": "Process kill wait",
-                "ja_JP": "子プロセス強制終了待機",
-            },
+            "label": '子进程强杀等待',
         },
     )
     """取消任务时强制结束子进程后的等待时间"""
@@ -3575,11 +2730,7 @@ class AMemorixWebImportTimeoutConfig(ConfigBase):
         default=20.0,
         ge=0.1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "转换预检超时",
-                "en_US": "Convert preflight timeout",
-                "ja_JP": "変換事前チェックタイムアウト",
-            },
+            "label": '转换预检超时',
         },
     )
     """LPMM 转换依赖预检的超时时间"""
@@ -3591,11 +2742,7 @@ class AMemorixWebImportConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用导入中心",
-                "en_US": "Enable import center",
-                "ja_JP": "インポートセンターを有効化",
-            },
+            "label": '启用导入中心',
         },
     )
     """是否启用导入中心"""
@@ -3604,11 +2751,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=20,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最大队列",
-                "en_US": "Max queue size",
-                "ja_JP": "最大キューサイズ",
-            },
+            "label": '最大队列',
         },
     )
     """最大队列长度"""
@@ -3617,11 +2760,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=200,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单任务文件上限",
-                "en_US": "Files per task",
-                "ja_JP": "タスクあたりのファイル上限",
-            },
+            "label": '单任务文件上限',
         },
     )
     """单任务最大文件数"""
@@ -3630,11 +2769,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=20,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单文件大小上限",
-                "en_US": "File size limit",
-                "ja_JP": "ファイルサイズ上限",
-            },
+            "label": '单文件大小上限',
         },
     )
     """单文件大小上限 MB"""
@@ -3643,11 +2778,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=200000,
         ge=100,
         json_schema_extra={
-            "label": {
-                "zh_CN": "粘贴字符上限",
-                "en_US": "Paste character limit",
-                "ja_JP": "貼り付け文字数上限",
-            },
+            "label": '粘贴字符上限',
         },
     )
     """粘贴字符数上限"""
@@ -3656,11 +2787,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=2,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认文件并发",
-                "en_US": "Default file concurrency",
-                "ja_JP": "既定ファイル並列数",
-            },
+            "label": '默认文件并发',
         },
     )
     """默认文件并发"""
@@ -3669,11 +2796,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=4,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认分块并发",
-                "en_US": "Default chunk concurrency",
-                "ja_JP": "既定チャンク並列数",
-            },
+            "label": '默认分块并发',
         },
     )
     """默认分块并发"""
@@ -3682,11 +2805,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=1600,
         ge=200,
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认叙事抽取窗口",
-                "en_US": "Default narrative extraction window",
-                "ja_JP": "既定ナラティブ抽出ウィンドウ",
-            },
+            "label": '默认叙事抽取窗口',
             "advanced": True,
         },
     )
@@ -3696,11 +2815,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=400,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认叙事重叠字符",
-                "en_US": "Default narrative overlap",
-                "ja_JP": "既定ナラティブ重複文字数",
-            },
+            "label": '默认叙事重叠字符',
             "advanced": True,
         },
     )
@@ -3710,11 +2825,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=1200,
         ge=200,
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认事实分块目标",
-                "en_US": "Default factual chunk target",
-                "ja_JP": "既定ファクトチャンク目標",
-            },
+            "label": '默认事实分块目标',
             "advanced": True,
         },
     )
@@ -3724,11 +2835,7 @@ class AMemorixWebImportConfig(ConfigBase):
         default=3200,
         ge=200,
         json_schema_extra={
-            "label": {
-                "zh_CN": "分块字符上限",
-                "en_US": "Chunk character limit",
-                "ja_JP": "チャンク文字数上限",
-            },
+            "label": '分块字符上限',
             "advanced": True,
         },
     )
@@ -3737,11 +2844,7 @@ class AMemorixWebImportConfig(ConfigBase):
     timeout: AMemorixWebImportTimeoutConfig = Field(
         default_factory=AMemorixWebImportTimeoutConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "导入超时",
-                "en_US": "Import timeouts",
-                "ja_JP": "インポートタイムアウト",
-            },
+            "label": '导入超时',
         },
     )
     """导入中心超时配置"""
@@ -3753,11 +2856,7 @@ class AMemorixWebTuningConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用调优中心",
-                "en_US": "Enable tuning center",
-                "ja_JP": "チューニングセンターを有効化",
-            },
+            "label": '启用调优中心',
         },
     )
     """是否启用调优中心"""
@@ -3766,11 +2865,7 @@ class AMemorixWebTuningConfig(ConfigBase):
         default=8,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最大队列",
-                "en_US": "Max queue size",
-                "ja_JP": "最大キューサイズ",
-            },
+            "label": '最大队列',
         },
     )
     """最大队列长度"""
@@ -3779,11 +2874,7 @@ class AMemorixWebTuningConfig(ConfigBase):
         default=1200,
         ge=200,
         json_schema_extra={
-            "label": {
-                "zh_CN": "轮询间隔",
-                "en_US": "Poll interval",
-                "ja_JP": "ポーリング間隔",
-            },
+            "label": '轮询间隔',
         },
     )
     """轮询间隔毫秒数"""
@@ -3791,11 +2882,7 @@ class AMemorixWebTuningConfig(ConfigBase):
     default_intensity: Literal["quick", "standard", "deep"] = Field(
         default="standard",
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认强度",
-                "en_US": "Default intensity",
-                "ja_JP": "既定の強度",
-            },
+            "label": '默认强度',
         },
     )
     """默认调优强度"""
@@ -3803,11 +2890,7 @@ class AMemorixWebTuningConfig(ConfigBase):
     default_objective: Literal["precision_priority", "balanced", "recall_priority"] = Field(
         default="precision_priority",
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认目标",
-                "en_US": "Default objective",
-                "ja_JP": "既定の目標",
-            },
+            "label": '默认目标',
         },
     )
     """默认调优目标"""
@@ -3816,11 +2899,7 @@ class AMemorixWebTuningConfig(ConfigBase):
         default=20,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认评估 Top-K",
-                "en_US": "Default eval Top-K",
-                "ja_JP": "既定評価 Top-K",
-            },
+            "label": '默认评估 Top-K',
         },
     )
     """默认评估 Top-K"""
@@ -3829,11 +2908,7 @@ class AMemorixWebTuningConfig(ConfigBase):
         default=24,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "默认样本数",
-                "en_US": "Default sample size",
-                "ja_JP": "既定サンプル数",
-            },
+            "label": '默认样本数',
         },
     )
     """默认样本数"""
@@ -3845,11 +2920,7 @@ class AMemorixWebConfig(ConfigBase):
     import_config: AMemorixWebImportConfig = Field(
         default_factory=AMemorixWebImportConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "导入中心",
-                "en_US": "Import center",
-                "ja_JP": "インポートセンター",
-            },
+            "label": '导入中心',
         },
     )
     """导入中心配置"""
@@ -3857,11 +2928,7 @@ class AMemorixWebConfig(ConfigBase):
     tuning: AMemorixWebTuningConfig = Field(
         default_factory=AMemorixWebTuningConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "调优中心",
-                "en_US": "Tuning center",
-                "ja_JP": "チューニングセンター",
-            },
+            "label": '调优中心',
         },
     )
     """调优中心配置"""
@@ -3876,11 +2943,7 @@ class AMemorixConfig(ConfigBase):
     plugin: AMemorixPluginConfig = Field(
         default_factory=AMemorixPluginConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "记忆系统",
-                "en_US": "Memory system",
-                "ja_JP": "記憶システム",
-            },
+            "label": '记忆系统',
         },
     )
     """长期记忆系统的总开关"""
@@ -3888,11 +2951,7 @@ class AMemorixConfig(ConfigBase):
     integration: AMemorixIntegrationConfig = Field(
         default_factory=AMemorixIntegrationConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天中使用记忆",
-                "en_US": "Use memory in chat",
-                "ja_JP": "MaiSaka 連携",
-            },
+            "label": '聊天中使用记忆',
         },
     )
     """控制麦麦在聊天中如何使用长期记忆"""
@@ -3900,11 +2959,7 @@ class AMemorixConfig(ConfigBase):
     storage: AMemorixStorageConfig = Field(
         default_factory=AMemorixStorageConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "存储",
-                "en_US": "Storage",
-                "ja_JP": "ストレージ",
-            },
+            "label": '存储',
         },
     )
     """存储位置"""
@@ -3912,11 +2967,7 @@ class AMemorixConfig(ConfigBase):
     image_memory: AMemorixImageMemoryConfig = Field(
         default_factory=AMemorixImageMemoryConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "图片记忆",
-                "en_US": "Image memory",
-                "ja_JP": "画像記憶",
-            },
+            "label": '图片记忆',
             "x-collapsed-by-default": True,
         },
     )
@@ -3925,11 +2976,7 @@ class AMemorixConfig(ConfigBase):
     embedding: AMemorixEmbeddingConfig = Field(
         default_factory=AMemorixEmbeddingConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "记忆向量化",
-                "en_US": "Memory embedding",
-                "ja_JP": "記憶ベクトル化",
-            },
+            "label": '记忆向量化',
             "x-collapsed-by-default": True,
         },
     )
@@ -3938,11 +2985,7 @@ class AMemorixConfig(ConfigBase):
     retrieval: AMemorixRetrievalConfig = Field(
         default_factory=AMemorixRetrievalConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "检索",
-                "en_US": "Retrieval",
-                "ja_JP": "検索",
-            },
+            "label": '检索',
         },
     )
     """检索配置"""
@@ -3950,11 +2993,7 @@ class AMemorixConfig(ConfigBase):
     threshold: AMemorixThresholdConfig = Field(
         default_factory=AMemorixThresholdConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "阈值",
-                "en_US": "Thresholds",
-                "ja_JP": "しきい値",
-            },
+            "label": '阈值',
         },
     )
     """阈值过滤配置"""
@@ -3962,11 +3001,7 @@ class AMemorixConfig(ConfigBase):
     filter: AMemorixFilterConfig = Field(
         default_factory=AMemorixFilterConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "过滤",
-                "en_US": "Filter",
-                "ja_JP": "フィルター",
-            },
+            "label": '过滤',
         },
     )
     """聊天过滤配置"""
@@ -3974,11 +3009,7 @@ class AMemorixConfig(ConfigBase):
     global_memory_sharing_enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "全局共享记忆",
-                "en_US": "Global memory sharing",
-                "ja_JP": "記憶のグローバル共有",
-            },
+            "label": '全局共享记忆',
             "x-widget": "switch",
         },
     )
@@ -3987,11 +3018,7 @@ class AMemorixConfig(ConfigBase):
     shared_memory_groups: list[ChatStreamGroup] = Field(
         default_factory=list,
         json_schema_extra={
-            "label": {
-                "zh_CN": "共享记忆组",
-                "en_US": "Shared memory groups",
-                "ja_JP": "共有記憶グループ",
-            },
+            "label": '共享记忆组',
             "x-widget": "custom",
             "x-display-as-section": True,
         },
@@ -4001,11 +3028,7 @@ class AMemorixConfig(ConfigBase):
     episode: AMemorixEpisodeConfig = Field(
         default_factory=AMemorixEpisodeConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "Episode",
-                "en_US": "Episodes",
-                "ja_JP": "Episode",
-            },
+            "label": 'Episode',
         },
     )
     """Episode 配置"""
@@ -4013,11 +3036,7 @@ class AMemorixConfig(ConfigBase):
     person_profile: AMemorixPersonProfileConfig = Field(
         default_factory=AMemorixPersonProfileConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "人物画像",
-                "en_US": "Person profiles",
-                "ja_JP": "人物プロファイル",
-            },
+            "label": '人物画像',
         },
     )
     """人物画像配置"""
@@ -4025,11 +3044,7 @@ class AMemorixConfig(ConfigBase):
     memory: AMemorixMemoryEvolutionConfig = Field(
         default_factory=AMemorixMemoryEvolutionConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "记忆演化",
-                "en_US": "Memory evolution",
-                "ja_JP": "記憶進化",
-            },
+            "label": '记忆演化',
         },
     )
     """记忆演化配置"""
@@ -4037,11 +3052,7 @@ class AMemorixConfig(ConfigBase):
     advanced: AMemorixAdvancedConfig = Field(
         default_factory=AMemorixAdvancedConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "高级",
-                "en_US": "Advanced",
-                "ja_JP": "詳細設定",
-            },
+            "label": '高级',
         },
     )
     """高级运行时配置"""
@@ -4049,11 +3060,7 @@ class AMemorixConfig(ConfigBase):
     web: AMemorixWebConfig = Field(
         default_factory=AMemorixWebConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "Web 运维",
-                "en_US": "Web operations",
-                "ja_JP": "Web 運用",
-            },
+            "label": 'Web 运维',
         },
     )
     """Web 运维配置"""
@@ -4063,11 +3070,7 @@ class LearningItem(ConfigBase):
     platform: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "平台",
-                "en_US": "Platform",
-                "ja_JP": "プラットフォーム",
-            },
+            "label": '平台',
             "x-widget": "input",
         },
     )
@@ -4076,11 +3079,7 @@ class LearningItem(ConfigBase):
     item_id: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天流 ID",
-                "en_US": "Chat stream ID",
-                "ja_JP": "チャットストリーム ID",
-            },
+            "label": '聊天流 ID',
             "x-widget": "input",
         },
     )
@@ -4089,11 +3088,7 @@ class LearningItem(ConfigBase):
     type: Literal["group", "private"] = Field(
         default="group",
         json_schema_extra={
-            "label": {
-                "zh_CN": "聊天类型",
-                "en_US": "Chat type",
-                "ja_JP": "チャット種別",
-            },
+            "label": '聊天类型',
             "x-widget": "select",
             "x-option-descriptions": RULE_TYPE_OPTION_DESCRIPTIONS,
         },
@@ -4103,11 +3098,7 @@ class LearningItem(ConfigBase):
     use: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "使用",
-                "en_US": "Use",
-                "ja_JP": "使用",
-            },
+            "label": '使用',
             "x-widget": "switch",
         },
     )
@@ -4116,11 +3107,7 @@ class LearningItem(ConfigBase):
     learn: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "学习",
-                "en_US": "Learn",
-                "ja_JP": "学習",
-            },
+            "label": '学习',
             "x-widget": "switch",
         },
     )
@@ -4148,11 +3135,7 @@ class ExpressionConfig(ConfigBase):
     expression_checked_only: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "仅使用精选表达",
-                "en_US": "Use only curated expressions",
-                "ja_JP": "厳選した表現のみを使用",
-            },
+            "label": '仅使用精选表达',
             "x-widget": "switch",
             "x-row": "expression-learning-switches",
         },
@@ -4162,11 +3145,7 @@ class ExpressionConfig(ConfigBase):
     expression_self_reflect: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "优化表达方式学习",
-                "en_US": "Optimize expression learning",
-                "ja_JP": "表現学習を最適化",
-            },
+            "label": '优化表达方式学习',
             "x-widget": "switch",
             "x-row": "expression-learning-switches",
         },
@@ -4176,11 +3155,7 @@ class ExpressionConfig(ConfigBase):
     use_vector_expression: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "表达选择",
-                "en_US": "Expression selection",
-                "ja_JP": "表現の選択",
-            },
+            "label": '表达选择',
             "x-widget": "discrete-slider",
             "options": ["false", "true"],
             "x-option-labels": {"false": "快速", "true": "精细"},
@@ -4196,11 +3171,7 @@ class ExpressionConfig(ConfigBase):
     expression_vector_index_path: str = Field(
         default="data/expression_selection/expression_vector_index.json",
         json_schema_extra={
-            "label": {
-                "zh_CN": "表达向量索引路径",
-                "en_US": "Expression vector index path",
-                "ja_JP": "表現ベクトル索引パス",
-            },
+            "label": '表达向量索引路径',
             "x-widget": "input",
             "advanced": True,
         },
@@ -4212,11 +3183,7 @@ class ExpressionConfig(ConfigBase):
         ge=1,
         le=50,
         json_schema_extra={
-            "label": {
-                "zh_CN": "向量候选上限",
-                "en_US": "Vector candidate limit",
-                "ja_JP": "ベクトル候補上限",
-            },
+            "label": '向量候选上限',
             "x-widget": "input",
             "advanced": True,
         },
@@ -4226,11 +3193,7 @@ class ExpressionConfig(ConfigBase):
     max_expression_learner: int = Field(
         default=3,
         json_schema_extra={
-            "label": {
-                "zh_CN": "表达学习最大并发",
-                "en_US": "Max expression learners",
-                "ja_JP": "表現学習の最大同時実行数",
-            },
+            "label": '表达学习最大并发',
             "x-widget": "input",
             "advanced": True,
         },
@@ -4248,11 +3211,7 @@ class ExpressionConfig(ConfigBase):
             )
         ],
         json_schema_extra={
-            "label": {
-                "zh_CN": "学习配置",
-                "en_US": "Learning settings",
-                "ja_JP": "学習設定",
-            },
+            "label": '学习配置',
             "x-widget": "custom",
         },
     )
@@ -4261,11 +3220,7 @@ class ExpressionConfig(ConfigBase):
     expression_groups: list[ChatStreamGroup] = Field(
         default_factory=list,
         json_schema_extra={
-            "label": {
-                "zh_CN": "共享共享组",
-                "en_US": "Expression sharing groups",
-                "ja_JP": "表現共有グループ",
-            },
+            "label": '共享共享组',
             "x-widget": "custom",
         },
     )
@@ -4296,11 +3251,7 @@ class JargonConfig(ConfigBase):
             )
         ],
         json_schema_extra={
-            "label": {
-                "zh_CN": "学习配置",
-                "en_US": "Learning settings",
-                "ja_JP": "学習設定",
-            },
+            "label": '学习配置',
             "x-widget": "custom",
         },
     )
@@ -4309,11 +3260,7 @@ class JargonConfig(ConfigBase):
     jargon_groups: list[ChatStreamGroup] = Field(
         default_factory=list,
         json_schema_extra={
-            "label": {
-                "zh_CN": "黑话共享组",
-                "en_US": "Jargon sharing groups",
-                "ja_JP": "隠語共有グループ",
-            },
+            "label": '黑话共享组',
             "x-widget": "custom",
         },
     )
@@ -4349,11 +3296,7 @@ class EmojiCacheCleanupConfig(ConfigBase):
         default=True,
         json_schema_extra={
             "x-widget": "switch",
-            "label": {
-                "zh_CN": "启用表情包缓存自动清理",
-                "en_US": "Enable emoji cache cleanup",
-                "ja_JP": "絵文字キャッシュ自動クリーンアップを有効化",
-            },
+            "label": '启用表情包缓存自动清理',
         },
     )
     """开启后会自动删除长期未注册、未使用的表情包缓存。"""
@@ -4363,11 +3306,7 @@ class EmojiCacheCleanupConfig(ConfigBase):
         ge=1.0 / 60.0,
         json_schema_extra={
             "x-widget": "input",
-            "label": {
-                "zh_CN": "表情包清理检查间隔（小时）",
-                "en_US": "Emoji cleanup check interval (hours)",
-                "ja_JP": "絵文字クリーンアップ確認間隔（時間）",
-            },
+            "label": '表情包清理检查间隔（小时）',
         },
     )
     """每隔多少小时检查一次旧表情包缓存。"""
@@ -4377,11 +3316,7 @@ class EmojiCacheCleanupConfig(ConfigBase):
         ge=1,
         json_schema_extra={
             "x-widget": "input",
-            "label": {
-                "zh_CN": "未注册表情包文件保留天数",
-                "en_US": "Unregistered emoji file retention days",
-                "ja_JP": "未登録絵文字ファイル保持日数",
-            },
+            "label": '未注册表情包文件保留天数',
         },
     )
     """未注册表情包文件多久没被使用后可以删除；已注册表情包永远不会由该任务删除。"""
@@ -4391,11 +3326,7 @@ class EmojiCacheCleanupConfig(ConfigBase):
         ge=1,
         json_schema_extra={
             "x-widget": "input",
-            "label": {
-                "zh_CN": "未注册表情包无文件记录保留天数",
-                "en_US": "Unregistered emoji no-file record retention days",
-                "ja_JP": "未登録絵文字のファイルなし記録保持日数",
-            },
+            "label": '未注册表情包无文件记录保留天数',
         },
     )
     """未注册表情包文件删掉后，描述缓存记录还能保留多久。"""
@@ -4411,11 +3342,7 @@ class EmojiConfig(ConfigBase):
     use_new_send_logic: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "采用新表情包发送逻辑",
-                "en_US": "Use new emoji sending logic",
-                "ja_JP": "新しい絵文字送信方式を使用",
-            },
+            "label": '采用新表情包发送逻辑',
             "x-widget": "switch",
         },
     )
@@ -4426,11 +3353,7 @@ class EmojiConfig(ConfigBase):
         ge=1,
         le=64,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单次发送候选数",
-                "en_US": "Emoji send candidate count",
-                "ja_JP": "送信候補の絵文字数",
-            },
+            "label": '单次发送候选数',
             "x-widget": "input",
             "advanced": True,
         },
@@ -4440,11 +3363,7 @@ class EmojiConfig(ConfigBase):
     max_reg_num: int = Field(
         default=64,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最大注册数量",
-                "en_US": "Max registered emojis",
-                "ja_JP": "最大登録数",
-            },
+            "label": '最大注册数量',
             "x-widget": "input",
         },
     )
@@ -4453,11 +3372,7 @@ class EmojiConfig(ConfigBase):
     do_replace: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "满额后替换旧表情",
-                "en_US": "Replace old emojis when full",
-                "ja_JP": "上限到達時に古い絵文字を置換",
-            },
+            "label": '满额后替换旧表情',
             "x-widget": "switch",
             "advanced": True,
         },
@@ -4467,11 +3382,7 @@ class EmojiConfig(ConfigBase):
     check_interval: int = Field(
         default=10,
         json_schema_extra={
-            "label": {
-                "zh_CN": "检查间隔",
-                "en_US": "Check interval",
-                "ja_JP": "チェック間隔",
-            },
+            "label": '检查间隔',
             "x-widget": "input",
         },
     )
@@ -4480,11 +3391,7 @@ class EmojiConfig(ConfigBase):
     steal_emoji: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "收集聊天表情",
-                "en_US": "Collect chat emojis",
-                "ja_JP": "チャット絵文字を収集",
-            },
+            "label": '收集聊天表情',
             "x-widget": "switch",
         },
     )
@@ -4494,11 +3401,7 @@ class EmojiConfig(ConfigBase):
         default=5.0,
         ge=0.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "收集表情大小上限（MB）",
-                "en_US": "Collected emoji size limit (MB)",
-                "ja_JP": "収集する絵文字サイズ上限（MB）",
-            },
+            "label": '收集表情大小上限（MB）',
             "x-widget": "input",
             "advanced": True,
         },
@@ -4508,11 +3411,7 @@ class EmojiConfig(ConfigBase):
     content_filtration: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用内容过滤",
-                "en_US": "Enable content filtering",
-                "ja_JP": "内容フィルタリングを有効化",
-            },
+            "label": '启用内容过滤',
             "advanced": True,
             "x-widget": "switch",
         },
@@ -4522,11 +3421,7 @@ class EmojiConfig(ConfigBase):
     collect_images: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自动收图到额外图库",
-                "en_US": "Collect images to gallery",
-                "ja_JP": "画像を追加ギャラリーに収集",
-            },
+            "label": '自动收图到额外图库',
             "x-widget": "switch",
         },
     )
@@ -4535,11 +3430,7 @@ class EmojiConfig(ConfigBase):
     image_collection_mode: Literal["whitelist", "blacklist"] = Field(
         default="whitelist",
         json_schema_extra={
-            "label": {
-                "zh_CN": "群聊收图名单模式",
-                "en_US": "Group collection list mode",
-                "ja_JP": "グループ収集リスト方式",
-            },
+            "label": '群聊收图名单模式',
         },
     )
     """白名单只收列表中的群，黑名单收列表以外的群；不影响私聊。"""
@@ -4547,11 +3438,7 @@ class EmojiConfig(ConfigBase):
     image_collection_groups: List[str] = Field(
         default_factory=list,
         json_schema_extra={
-            "label": {
-                "zh_CN": "收图群号列表",
-                "en_US": "Image collection group IDs",
-                "ja_JP": "画像収集グループID",
-            },
+            "label": '收图群号列表',
         },
     )
     """逐项填写群号；空白名单不收群图，空黑名单收所有群图。"""
@@ -4566,11 +3453,7 @@ class KeywordRuleConfig(ConfigBase):
     keywords: list[str] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "关键词",
-                "en_US": "Keywords",
-                "ja_JP": "キーワード",
-            },
+            "label": '关键词',
             "x-widget": "custom",
         },
     )
@@ -4579,11 +3462,7 @@ class KeywordRuleConfig(ConfigBase):
     regex: list[str] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "正则表达式",
-                "en_US": "Regular expressions",
-                "ja_JP": "正規表現",
-            },
+            "label": '正则表达式',
             "x-widget": "custom",
         },
     )
@@ -4592,11 +3471,7 @@ class KeywordRuleConfig(ConfigBase):
     reaction: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "反应提示",
-                "en_US": "Reaction prompt",
-                "ja_JP": "リアクションプロンプト",
-            },
+            "label": '反应提示',
             "x-widget": "textarea",
         },
     )
@@ -4626,11 +3501,7 @@ class KeywordReactionConfig(ConfigBase):
     keyword_rules: list[KeywordRuleConfig] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "关键词规则",
-                "en_US": "Keyword rules",
-                "ja_JP": "キーワードルール",
-            },
+            "label": '关键词规则',
             "x-widget": "custom",
         },
     )
@@ -4639,11 +3510,7 @@ class KeywordReactionConfig(ConfigBase):
     regex_rules: list[KeywordRuleConfig] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "正则规则",
-                "en_US": "Regex rules",
-                "ja_JP": "正規表現ルール",
-            },
+            "label": '正则规则',
             "x-widget": "custom",
         },
     )
@@ -4667,11 +3534,7 @@ class ResponsePostProcessConfig(ConfigBase):
     enable_response_post_process: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用回复后处理",
-                "en_US": "Enable response post-process",
-                "ja_JP": "返信後処理を有効化",
-            },
+            "label": '启用回复后处理',
             "x-widget": "switch",
         },
     )
@@ -4682,11 +3545,7 @@ class ResponsePostProcessConfig(ConfigBase):
         ge=0,
         le=2,
         json_schema_extra={
-            "label": {
-                "zh_CN": "打字速度",
-                "en_US": "Typing speed",
-                "ja_JP": "タイピング速度",
-            },
+            "label": '打字速度',
             "x-widget": "slider",
             "x-row": "reply-speed",
             "step": 0.1,
@@ -4704,11 +3563,7 @@ class ChineseTypoConfig(ConfigBase):
     enable: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用错别字",
-                "en_US": "Enable typos",
-                "ja_JP": "誤字生成を有効化",
-            },
+            "label": '启用错别字',
             "x-widget": "switch",
         },
     )
@@ -4717,11 +3572,7 @@ class ChineseTypoConfig(ConfigBase):
     enable_correction_quote: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "错别字纠正时引用原消息",
-                "en_US": "Quote typo message when correcting",
-                "ja_JP": "誤字訂正時に元メッセージを引用",
-            },
+            "label": '错别字纠正时引用原消息',
             "x-widget": "switch",
             "x-row": "typo-correction-quote",
         },
@@ -4733,11 +3584,7 @@ class ChineseTypoConfig(ConfigBase):
         ge=0,
         le=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "错别字纠正引用概率",
-                "en_US": "Typo correction quote chance",
-                "ja_JP": "誤字訂正の引用確率",
-            },
+            "label": '错别字纠正引用概率',
             "x-widget": "slider",
             "x-row": "typo-correction-quote",
             "step": 0.01,
@@ -4751,11 +3598,7 @@ class ChineseTypoConfig(ConfigBase):
         ge=0,
         le=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单字错字概率",
-                "en_US": "Single-character typo chance",
-                "ja_JP": "単字誤字確率",
-            },
+            "label": '单字错字概率',
             "x-widget": "slider",
             "step": 0.01,
             "advanced": True,
@@ -4766,11 +3609,7 @@ class ChineseTypoConfig(ConfigBase):
     min_freq: int = Field(
         default=9,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最小字频",
-                "en_US": "Minimum character frequency",
-                "ja_JP": "最小文字頻度",
-            },
+            "label": '最小字频',
             "x-widget": "input",
             "advanced": True,
         },
@@ -4782,11 +3621,7 @@ class ChineseTypoConfig(ConfigBase):
         ge=0,
         le=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "声调错字概率",
-                "en_US": "Tone typo chance",
-                "ja_JP": "声調誤字確率",
-            },
+            "label": '声调错字概率',
             "x-widget": "slider",
             "step": 0.1,
             "advanced": True,
@@ -4799,11 +3634,7 @@ class ChineseTypoConfig(ConfigBase):
         ge=0,
         le=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "整词替换概率",
-                "en_US": "Word replacement chance",
-                "ja_JP": "単語置換確率",
-            },
+            "label": '整词替换概率',
             "x-widget": "slider",
             "step": 0.001,
             "advanced": True,
@@ -4820,11 +3651,7 @@ class ResponseSplitterConfig(ConfigBase):
     mode: Literal["rule", "llm"] = Field(
         default="rule",
         json_schema_extra={
-            "label": {
-                "zh_CN": "断句模式",
-                "en_US": "Splitting mode",
-                "ja_JP": "分割モード",
-            },
+            "label": '断句模式',
             "x-widget": "select",
             "options": ["rule", "llm"],
         },
@@ -4834,11 +3661,7 @@ class ResponseSplitterConfig(ConfigBase):
     enable: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用回复分割",
-                "en_US": "Enable response splitting",
-                "ja_JP": "返信分割を有効化",
-            },
+            "label": '启用回复分割',
             "x-widget": "switch",
         },
     )
@@ -4847,11 +3670,7 @@ class ResponseSplitterConfig(ConfigBase):
     max_length: int = Field(
         default=512,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单条最大长度",
-                "en_US": "Max message length",
-                "ja_JP": "1通の最大長",
-            },
+            "label": '单条最大长度',
             "x-widget": "input",
         },
     )
@@ -4860,11 +3679,7 @@ class ResponseSplitterConfig(ConfigBase):
     max_sentence_num: int = Field(
         default=8,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单条最大句数",
-                "en_US": "Max sentences per message",
-                "ja_JP": "1通の最大文数",
-            },
+            "label": '单条最大句数',
             "x-widget": "input",
         },
     )
@@ -4874,11 +3689,7 @@ class ResponseSplitterConfig(ConfigBase):
         default=3,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最多分割条数",
-                "en_US": "Max split messages",
-                "ja_JP": "最大分割数",
-            },
+            "label": '最多分割条数',
             "x-widget": "input",
         },
     )
@@ -4887,11 +3698,7 @@ class ResponseSplitterConfig(ConfigBase):
     enable_kaomoji_protection: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "保护颜文字",
-                "en_US": "Protect kaomoji",
-                "ja_JP": "顔文字を保護",
-            },
+            "label": '保护颜文字',
             "x-widget": "switch",
             "advanced": True,
         },
@@ -4901,11 +3708,7 @@ class ResponseSplitterConfig(ConfigBase):
     enable_overflow_return_all: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "超限保留全文",
-                "en_US": "Keep full text on overflow",
-                "ja_JP": "超過時に全文保持",
-            },
+            "label": '超限保留全文',
             "x-widget": "switch",
             "advanced": True,
         },
@@ -4923,11 +3726,7 @@ class LogConfig(ConfigBase):
     date_style: str = Field(
         default="m-d H:i:s",
         json_schema_extra={
-            "label": {
-                "zh_CN": "日期格式",
-                "en_US": "Date format",
-                "ja_JP": "日付形式",
-            },
+            "label": '日期格式',
             "x-widget": "input",
         },
     )
@@ -4936,11 +3735,7 @@ class LogConfig(ConfigBase):
     log_level_style: Literal["lite", "compact", "full"] = Field(
         default="lite",
         json_schema_extra={
-            "label": {
-                "zh_CN": "日志等级样式",
-                "en_US": "Log level style",
-                "ja_JP": "ログレベル表示",
-            },
+            "label": '日志等级样式',
             "x-widget": "select",
         },
     )
@@ -4949,11 +3744,7 @@ class LogConfig(ConfigBase):
     color_text: Literal["none", "title", "full"] = Field(
         default="full",
         json_schema_extra={
-            "label": {
-                "zh_CN": "控制台颜色",
-                "en_US": "Console color",
-                "ja_JP": "コンソール色",
-            },
+            "label": '控制台颜色',
             "x-widget": "select",
         },
     )
@@ -4962,11 +3753,7 @@ class LogConfig(ConfigBase):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO",
         json_schema_extra={
-            "label": {
-                "zh_CN": "全局日志级别",
-                "en_US": "Global log level",
-                "ja_JP": "全体ログレベル",
-            },
+            "label": '全局日志级别',
             "x-widget": "select",
         },
     )
@@ -4975,11 +3762,7 @@ class LogConfig(ConfigBase):
     console_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO",
         json_schema_extra={
-            "label": {
-                "zh_CN": "控制台日志级别",
-                "en_US": "Console log level",
-                "ja_JP": "コンソールログレベル",
-            },
+            "label": '控制台日志级别',
             "x-widget": "select",
         },
     )
@@ -4988,11 +3771,7 @@ class LogConfig(ConfigBase):
     file_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="DEBUG",
         json_schema_extra={
-            "label": {
-                "zh_CN": "文件日志级别",
-                "en_US": "File log level",
-                "ja_JP": "ファイルログレベル",
-            },
+            "label": '文件日志级别',
             "x-widget": "select",
         },
     )
@@ -5001,11 +3780,7 @@ class LogConfig(ConfigBase):
     log_file_max_bytes: int = Field(
         default=5 * 1024 * 1024,
         json_schema_extra={
-            "label": {
-                "zh_CN": "单个日志大小",
-                "en_US": "Single log file size",
-                "ja_JP": "単一ログサイズ",
-            },
+            "label": '单个日志大小',
             "x-widget": "input",
         },
     )
@@ -5014,11 +3789,7 @@ class LogConfig(ConfigBase):
     max_log_files: int = Field(
         default=30,
         json_schema_extra={
-            "label": {
-                "zh_CN": "日志文件保留数",
-                "en_US": "Retained log files",
-                "ja_JP": "保持ログ数",
-            },
+            "label": '日志文件保留数',
             "x-widget": "input",
         },
     )
@@ -5027,11 +3798,7 @@ class LogConfig(ConfigBase):
     log_cleanup_days: int = Field(
         default=30,
         json_schema_extra={
-            "label": {
-                "zh_CN": "日志保留天数",
-                "en_US": "Log retention days",
-                "ja_JP": "ログ保持日数",
-            },
+            "label": '日志保留天数',
             "x-widget": "input",
         },
     )
@@ -5040,11 +3807,7 @@ class LogConfig(ConfigBase):
     llm_request_snapshot_limit: int = Field(
         default=128,
         json_schema_extra={
-            "label": {
-                "zh_CN": "请求快照保留数",
-                "en_US": "Request snapshot limit",
-                "ja_JP": "リクエストスナップショット数",
-            },
+            "label": '请求快照保留数',
             "x-widget": "input",
         },
     )
@@ -5053,11 +3816,7 @@ class LogConfig(ConfigBase):
     maisaka_prompt_preview_limit: int = Field(
         default=256,
         json_schema_extra={
-            "label": {
-                "zh_CN": "Prompt 预览保留数",
-                "en_US": "Prompt preview limit",
-                "ja_JP": "Prompt プレビュー保持数",
-            },
+            "label": 'Prompt 预览保留数',
             "x-widget": "input",
         },
     )
@@ -5076,11 +3835,7 @@ class LogConfig(ConfigBase):
     event_loop_watchdog_enabled: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "事件循环卡顿看门狗",
-                "en_US": "Event loop lag watchdog",
-                "ja_JP": "イベントループ遅延ウォッチドッグ",
-            },
+            "label": '事件循环卡顿看门狗',
             "x-widget": "switch",
         },
     )
@@ -5089,11 +3844,7 @@ class LogConfig(ConfigBase):
     event_loop_watchdog_warn_seconds: float = Field(
         default=0.5,
         json_schema_extra={
-            "label": {
-                "zh_CN": "卡顿告警阈值（秒）",
-                "en_US": "Lag warning threshold (seconds)",
-                "ja_JP": "遅延警告しきい値（秒）",
-            },
+            "label": '卡顿告警阈值（秒）',
             "x-widget": "input",
         },
     )
@@ -5116,11 +3867,7 @@ class LogConfig(ConfigBase):
             "jieba",
         ],
         json_schema_extra={
-            "label": {
-                "zh_CN": "屏蔽库日志",
-                "en_US": "Suppressed library logs",
-                "ja_JP": "抑制ライブラリログ",
-            },
+            "label": '屏蔽库日志',
             "x-widget": "custom",
             "advanced": True,
         },
@@ -5130,11 +3877,7 @@ class LogConfig(ConfigBase):
     library_log_levels: dict[str, str] = Field(
         default_factory=lambda: {"aiohttp": "WARNING", "PIL": "WARNING"},
         json_schema_extra={
-            "label": {
-                "zh_CN": "库日志级别",
-                "en_US": "Library log levels",
-                "ja_JP": "ライブラリログレベル",
-            },
+            "label": '库日志级别',
             "x-widget": "custom",
             "advanced": True,
         },
@@ -5150,11 +3893,7 @@ class TelemetryConfig(ConfigBase):
     enable: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用遥测",
-                "en_US": "Enable telemetry",
-                "ja_JP": "テレメトリを有効化",
-            },
+            "label": '启用遥测',
             "x-widget": "switch",
         },
     )
@@ -5170,11 +3909,7 @@ class DebugConfig(ConfigBase):
     replyer_retro_prompt: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "复古回复提示词",
-                "en_US": "Retro reply prompt",
-                "ja_JP": "レトロ返信プロンプト",
-            },
+            "label": '复古回复提示词',
             "x-widget": "switch",
         },
     )
@@ -5183,11 +3918,7 @@ class DebugConfig(ConfigBase):
     enable_console_input: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用终端输入",
-                "en_US": "Enable console input",
-                "ja_JP": "ターミナル入力を有効化",
-            },
+            "label": '启用终端输入',
             "x-widget": "switch",
         },
     )
@@ -5196,11 +3927,7 @@ class DebugConfig(ConfigBase):
     show_maisaka_thinking: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "显示终端思考大框",
-                "en_US": "Show thinking panels in terminal",
-                "ja_JP": "ターミナルに思考パネルを表示",
-            },
+            "label": '显示终端思考大框',
             "x-widget": "switch",
         },
     )
@@ -5209,11 +3936,7 @@ class DebugConfig(ConfigBase):
     save_maisaka_reasoning: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "保存推理记录",
-                "en_US": "Save reasoning records",
-                "ja_JP": "推論記録を保存",
-            },
+            "label": '保存推理记录',
             "x-widget": "switch",
         },
     )
@@ -5223,11 +3946,7 @@ class DebugConfig(ConfigBase):
     keep_prompt_preview_json_base64: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "保留预览图片数据",
-                "en_US": "Keep preview image data",
-                "ja_JP": "プレビュー画像データを保持",
-            },
+            "label": '保留预览图片数据',
             "x-widget": "switch",
         },
     )
@@ -5236,11 +3955,7 @@ class DebugConfig(ConfigBase):
     record_tool_structured_content: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "记录工具结构化内容",
-                "en_US": "Record tool structured content",
-                "ja_JP": "ツール構造化内容を記録",
-            },
+            "label": '记录工具结构化内容',
             "x-widget": "switch",
         },
     )
@@ -5249,11 +3964,7 @@ class DebugConfig(ConfigBase):
     enable_llm_cache_stats: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "记录模型缓存统计",
-                "en_US": "Record model cache stats",
-                "ja_JP": "モデルキャッシュ統計を記録",
-            },
+            "label": '记录模型缓存统计',
             "x-widget": "switch",
         },
     )
@@ -5262,11 +3973,7 @@ class DebugConfig(ConfigBase):
     force_plugin_compatibility: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "强制插件兼容",
-                "en_US": "Force plugin compatibility",
-                "ja_JP": "プラグイン互換を強制",
-            },
+            "label": '强制插件兼容',
             "x-widget": "switch",
         },
     )
@@ -5323,11 +4030,7 @@ class MaimMessageConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用 maim_message 服务",
-                "en_US": "Enable maim_message service",
-                "ja_JP": "maim_message サービスを有効化",
-            },
+            "label": '启用 maim_message 服务',
             "x-widget": "switch",
         },
     )
@@ -5336,11 +4039,7 @@ class MaimMessageConfig(ConfigBase):
     ws_server_host: str = Field(
         default="127.0.0.1",
         json_schema_extra={
-            "label": {
-                "zh_CN": "旧版 WS 主机",
-                "en_US": "Legacy WS host",
-                "ja_JP": "旧 WS ホスト",
-            },
+            "label": '旧版 WS 主机',
             "x-widget": "input",
         },
     )
@@ -5349,11 +4048,7 @@ class MaimMessageConfig(ConfigBase):
     ws_server_port: int = Field(
         default=8000,
         json_schema_extra={
-            "label": {
-                "zh_CN": "旧版 WS 端口",
-                "en_US": "Legacy WS port",
-                "ja_JP": "旧 WS ポート",
-            },
+            "label": '旧版 WS 端口',
             "x-widget": "input",
         },
     )
@@ -5362,11 +4057,7 @@ class MaimMessageConfig(ConfigBase):
     auth_token: list[str] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "旧版认证令牌",
-                "en_US": "Legacy auth tokens",
-                "ja_JP": "旧認証トークン",
-            },
+            "label": '旧版认证令牌',
             "x-widget": "custom",
         },
     )
@@ -5375,11 +4066,7 @@ class MaimMessageConfig(ConfigBase):
     enable_api_server: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用新版 API",
-                "en_US": "Enable new API",
-                "ja_JP": "新 API を有効化",
-            },
+            "label": '启用新版 API',
             "x-widget": "switch",
         },
     )
@@ -5388,11 +4075,7 @@ class MaimMessageConfig(ConfigBase):
     api_server_host: str = Field(
         default="0.0.0.0",
         json_schema_extra={
-            "label": {
-                "zh_CN": "新版 API 主机",
-                "en_US": "New API host",
-                "ja_JP": "新 API ホスト",
-            },
+            "label": '新版 API 主机',
             "x-widget": "input",
         },
     )
@@ -5401,11 +4084,7 @@ class MaimMessageConfig(ConfigBase):
     api_server_port: int = Field(
         default=8090,
         json_schema_extra={
-            "label": {
-                "zh_CN": "新版 API 端口",
-                "en_US": "New API port",
-                "ja_JP": "新 API ポート",
-            },
+            "label": '新版 API 端口',
             "x-widget": "input",
         },
     )
@@ -5414,11 +4093,7 @@ class MaimMessageConfig(ConfigBase):
     api_server_use_wss: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "新版 API 使用 WSS",
-                "en_US": "Use WSS for new API",
-                "ja_JP": "新 API で WSS を使用",
-            },
+            "label": '新版 API 使用 WSS',
             "x-widget": "switch",
         },
     )
@@ -5427,11 +4102,7 @@ class MaimMessageConfig(ConfigBase):
     api_server_cert_file: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "WSS 证书文件",
-                "en_US": "WSS certificate file",
-                "ja_JP": "WSS 証明書ファイル",
-            },
+            "label": 'WSS 证书文件',
             "x-widget": "input",
         },
     )
@@ -5440,11 +4111,7 @@ class MaimMessageConfig(ConfigBase):
     api_server_key_file: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "WSS 私钥文件",
-                "en_US": "WSS key file",
-                "ja_JP": "WSS 秘密鍵ファイル",
-            },
+            "label": 'WSS 私钥文件',
             "x-widget": "input",
         },
     )
@@ -5453,11 +4120,7 @@ class MaimMessageConfig(ConfigBase):
     api_server_allowed_api_keys: list[str] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {
-                "zh_CN": "新版 API Key 白名单",
-                "en_US": "New API key allowlist",
-                "ja_JP": "新 API Key 許可リスト",
-            },
+            "label": '新版 API Key 白名单',
             "x-widget": "custom",
         },
     )
@@ -5474,11 +4137,7 @@ class WebUIConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用 WebUI",
-                "en_US": "Enable WebUI",
-                "ja_JP": "WebUI を有効化",
-            },
+            "label": '启用 WebUI',
             "x-widget": "switch",
         },
     )
@@ -5487,11 +4146,7 @@ class WebUIConfig(ConfigBase):
     mode: Literal["development", "production"] = Field(
         default="production",
         json_schema_extra={
-            "label": {
-                "zh_CN": "运行模式",
-                "en_US": "Run mode",
-                "ja_JP": "実行モード",
-            },
+            "label": '运行模式',
             "x-widget": "select",
         },
     )
@@ -5500,11 +4155,7 @@ class WebUIConfig(ConfigBase):
     anti_crawler_mode: Literal["false", "strict", "loose", "basic"] = Field(
         default="basic",
         json_schema_extra={
-            "label": {
-                "zh_CN": "防爬虫模式",
-                "en_US": "Anti-crawler mode",
-                "ja_JP": "クローラー対策モード",
-            },
+            "label": '防爬虫模式',
             "x-widget": "select",
         },
     )
@@ -5513,11 +4164,7 @@ class WebUIConfig(ConfigBase):
     allowed_ips: str = Field(
         default="127.0.0.1",
         json_schema_extra={
-            "label": {
-                "zh_CN": "允许访问 IP",
-                "en_US": "Allowed IPs",
-                "ja_JP": "許可 IP",
-            },
+            "label": '允许访问 IP',
             "x-widget": "comma-list",
             "x-placeholder": "127.0.0.1",
         },
@@ -5527,11 +4174,7 @@ class WebUIConfig(ConfigBase):
     trusted_proxies: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "可信代理 IP",
-                "en_US": "Trusted proxy IPs",
-                "ja_JP": "信頼プロキシ IP",
-            },
+            "label": '可信代理 IP',
             "x-widget": "comma-list",
             "x-placeholder": "127.0.0.1",
         },
@@ -5541,11 +4184,7 @@ class WebUIConfig(ConfigBase):
     trust_xff: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "信任 XFF",
-                "en_US": "Trust XFF",
-                "ja_JP": "XFF を信頼",
-            },
+            "label": '信任 XFF',
             "x-widget": "switch",
         },
     )
@@ -5554,11 +4193,7 @@ class WebUIConfig(ConfigBase):
     secure_cookie: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "安全 Cookie",
-                "en_US": "Secure cookie",
-                "ja_JP": "セキュア Cookie",
-            },
+            "label": '安全 Cookie',
             "x-widget": "switch",
         },
     )
@@ -5567,11 +4202,7 @@ class WebUIConfig(ConfigBase):
     enforce_public_outbound_url: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "强制公网出站 URL 校验",
-                "en_US": "Enforce public outbound URL check",
-                "ja_JP": "公開ネットワーク URL チェックを強制",
-            },
+            "label": '强制公网出站 URL 校验',
             "x-widget": "switch",
             "advanced": False,
         },
@@ -5584,7 +4215,7 @@ class MCPAuthorizationConfig(ConfigBase):
     mode: Literal["none", "bearer"] = Field(
         default="none",
         json_schema_extra={
-            "label": {"zh_CN": "认证方式"},
+            "label": '认证方式',
             "x-widget": "select",
             "x-option-labels": {
                 "none": "无认证",
@@ -5597,7 +4228,7 @@ class MCPAuthorizationConfig(ConfigBase):
     bearer_token: str = Field(
         default="",
         json_schema_extra={
-            "label": {"zh_CN": "Bearer Token"},
+            "label": 'Bearer Token',
             "x-widget": "password",
         },
     )
@@ -5609,7 +4240,7 @@ class MCPRootItemConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {"zh_CN": "启用 Root"},
+            "label": '启用 Root',
             "x-widget": "switch",
         },
     )
@@ -5618,7 +4249,7 @@ class MCPRootItemConfig(ConfigBase):
     uri: str = Field(
         default="",
         json_schema_extra={
-            "label": {"zh_CN": "Root URI"},
+            "label": 'Root URI',
             "x-widget": "input",
         },
     )
@@ -5627,7 +4258,7 @@ class MCPRootItemConfig(ConfigBase):
     name: str = Field(
         default="",
         json_schema_extra={
-            "label": {"zh_CN": "显示名称"},
+            "label": '显示名称',
             "x-widget": "input",
         },
     )
@@ -5654,7 +4285,7 @@ class MCPRootsConfig(ConfigBase):
     enable: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {"zh_CN": "启用 Roots"},
+            "label": '启用 Roots',
             "x-widget": "switch",
         },
     )
@@ -5663,7 +4294,7 @@ class MCPRootsConfig(ConfigBase):
     items: list[MCPRootItemConfig] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {"zh_CN": "Root 列表"},
+            "label": 'Root 列表',
             "x-widget": "custom",
         },
     )
@@ -5676,7 +4307,7 @@ class MCPSamplingConfig(ConfigBase):
     enable: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {"zh_CN": "启用 Sampling"},
+            "label": '启用 Sampling',
             "x-widget": "switch",
         },
     )
@@ -5685,7 +4316,7 @@ class MCPSamplingConfig(ConfigBase):
     task_name: str = Field(
         default="planner",
         json_schema_extra={
-            "label": {"zh_CN": "模型任务"},
+            "label": '模型任务',
             "x-widget": "input",
         },
     )
@@ -5694,7 +4325,7 @@ class MCPSamplingConfig(ConfigBase):
     tool_support: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {"zh_CN": "允许 Sampling 使用工具"},
+            "label": '允许 Sampling 使用工具',
             "x-widget": "switch",
         },
     )
@@ -5707,7 +4338,7 @@ class MCPElicitationConfig(ConfigBase):
     enable: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {"zh_CN": "启用 Elicitation（暂未支持）"},
+            "label": '启用 Elicitation（暂未支持）',
             "x-widget": "switch",
             "advanced": True,
         },
@@ -5717,7 +4348,7 @@ class MCPElicitationConfig(ConfigBase):
     allow_form: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {"zh_CN": "允许表单请求"},
+            "label": '允许表单请求',
             "x-widget": "switch",
             "advanced": True,
         },
@@ -5727,7 +4358,7 @@ class MCPElicitationConfig(ConfigBase):
     allow_url: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {"zh_CN": "允许 URL 请求"},
+            "label": '允许 URL 请求',
             "x-widget": "switch",
             "advanced": True,
         },
@@ -5755,7 +4386,7 @@ class MCPClientConfig(ConfigBase):
     client_name: str = Field(
         default="MaiBot",
         json_schema_extra={
-            "label": {"zh_CN": "客户端名称"},
+            "label": '客户端名称',
             "x-widget": "input",
             "advanced": True,
         },
@@ -5765,7 +4396,7 @@ class MCPClientConfig(ConfigBase):
     client_version: str = Field(
         default="1.0.0",
         json_schema_extra={
-            "label": {"zh_CN": "客户端版本"},
+            "label": '客户端版本',
             "x-widget": "input",
             "advanced": True,
         },
@@ -5774,19 +4405,19 @@ class MCPClientConfig(ConfigBase):
 
     roots: MCPRootsConfig = Field(
         default_factory=MCPRootsConfig,
-        json_schema_extra={"label": {"zh_CN": "Roots 能力"}, "advanced": True},
+        json_schema_extra={"label": 'Roots 能力', "advanced": True},
     )
     """是否向 MCP 服务器提供可访问的文件根目录。"""
 
     sampling: MCPSamplingConfig = Field(
         default_factory=MCPSamplingConfig,
-        json_schema_extra={"label": {"zh_CN": "Sampling 能力"}, "advanced": True},
+        json_schema_extra={"label": 'Sampling 能力', "advanced": True},
     )
     """是否允许 MCP 服务器请求麦麦调用模型。"""
 
     elicitation: MCPElicitationConfig = Field(
         default_factory=MCPElicitationConfig,
-        json_schema_extra={"label": {"zh_CN": "Elicitation 能力"}, "advanced": True},
+        json_schema_extra={"label": 'Elicitation 能力', "advanced": True},
     )
     """是否允许 MCP 服务器向麦麦请求补充信息。"""
 
@@ -5797,7 +4428,7 @@ class MCPServerItemConfig(ConfigBase):
     name: str = Field(
         default="",
         json_schema_extra={
-            "label": {"zh_CN": "服务名称"},
+            "label": '服务名称',
             "x-widget": "input",
         },
     )
@@ -5806,7 +4437,7 @@ class MCPServerItemConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {"zh_CN": "启用服务"},
+            "label": '启用服务',
             "x-widget": "switch",
         },
     )
@@ -5815,7 +4446,7 @@ class MCPServerItemConfig(ConfigBase):
     transport: Literal["stdio", "streamable_http", "sse"] = Field(
         default="stdio",
         json_schema_extra={
-            "label": {"zh_CN": "传输方式"},
+            "label": '传输方式',
             "x-widget": "select",
             "x-option-labels": {
                 "stdio": "本地命令（stdio）",
@@ -5829,7 +4460,7 @@ class MCPServerItemConfig(ConfigBase):
     command: str = Field(
         default="",
         json_schema_extra={
-            "label": {"zh_CN": "启动命令"},
+            "label": '启动命令',
             "x-widget": "input",
         },
     )
@@ -5838,7 +4469,7 @@ class MCPServerItemConfig(ConfigBase):
     args: list[str] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {"zh_CN": "命令参数"},
+            "label": '命令参数',
             "x-widget": "custom",
         },
     )
@@ -5847,7 +4478,7 @@ class MCPServerItemConfig(ConfigBase):
     env: dict[str, str] = Field(
         default_factory=lambda: {},
         json_schema_extra={
-            "label": {"zh_CN": "环境变量"},
+            "label": '环境变量',
             "x-widget": "custom",
         },
     )
@@ -5856,7 +4487,7 @@ class MCPServerItemConfig(ConfigBase):
     url: str = Field(
         default="",
         json_schema_extra={
-            "label": {"zh_CN": "服务 URL"},
+            "label": '服务 URL',
             "x-widget": "input",
         },
     )
@@ -5865,7 +4496,7 @@ class MCPServerItemConfig(ConfigBase):
     headers: dict[str, str] = Field(
         default_factory=lambda: {},
         json_schema_extra={
-            "label": {"zh_CN": "请求 Headers"},
+            "label": '请求 Headers',
             "x-widget": "custom",
         },
     )
@@ -5875,7 +4506,7 @@ class MCPServerItemConfig(ConfigBase):
         default=30.0,
         gt=0,
         json_schema_extra={
-            "label": {"zh_CN": "HTTP 请求超时"},
+            "label": 'HTTP 请求超时',
             "x-widget": "number",
         },
     )
@@ -5885,7 +4516,7 @@ class MCPServerItemConfig(ConfigBase):
         default=300.0,
         gt=0,
         json_schema_extra={
-            "label": {"zh_CN": "会话读取超时"},
+            "label": '会话读取超时',
             "x-widget": "number",
         },
     )
@@ -5893,7 +4524,7 @@ class MCPServerItemConfig(ConfigBase):
 
     authorization: MCPAuthorizationConfig = Field(
         default_factory=MCPAuthorizationConfig,
-        json_schema_extra={"label": {"zh_CN": "远程认证"}},
+        json_schema_extra={"label": '远程认证'},
     )
     """HTTP/SSE 连接的认证设置。"""
 
@@ -5936,7 +4567,7 @@ class MCPConfig(ConfigBase):
     enable: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {"zh_CN": "启用 MCP"},
+            "label": '启用 MCP',
             "x-widget": "switch",
         },
     )
@@ -5944,14 +4575,14 @@ class MCPConfig(ConfigBase):
 
     client: MCPClientConfig = Field(
         default_factory=MCPClientConfig,
-        json_schema_extra={"label": {"zh_CN": "客户端高级能力"}, "advanced": True},
+        json_schema_extra={"label": '客户端高级能力', "advanced": True},
     )
     """麦麦作为 MCP 客户端时声明的能力。"""
 
     servers: list[MCPServerItemConfig] = Field(
         default_factory=lambda: [],
         json_schema_extra={
-            "label": {"zh_CN": "MCP 服务"},
+            "label": 'MCP 服务',
             "x-widget": "custom",
         },
     )
@@ -5993,11 +4624,7 @@ class PluginConfig(ConfigBase):
     permission: list[str] = Field(
         default_factory=list,
         json_schema_extra={
-            "label": {
-                "zh_CN": "插件管理权限",
-                "en_US": "Plugin management permissions",
-                "ja_JP": "プラグイン管理権限",
-            },
+            "label": '插件管理权限',
             "x-widget": "tags",
             "x-placeholder": "qq:123456789",
         },
@@ -6007,11 +4634,7 @@ class PluginConfig(ConfigBase):
     silent_permission_denied: bool = Field(
         default=False,
         json_schema_extra={
-            "label": {
-                "zh_CN": "不显示无权限提示",
-                "en_US": "Hide permission denied notice",
-                "ja_JP": "権限なし通知を非表示",
-            },
+            "label": '不显示无权限提示',
             "x-widget": "switch",
         },
     )
@@ -6036,11 +4659,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用浏览器渲染",
-                "en_US": "Enable browser rendering",
-                "ja_JP": "ブラウザ描画を有効化",
-            },
+            "label": '启用浏览器渲染',
             "x-widget": "switch",
         },
     )
@@ -6049,11 +4668,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
     browser_ws_endpoint: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "浏览器调试地址",
-                "en_US": "Browser debug endpoint",
-                "ja_JP": "ブラウザデバッグアドレス",
-            },
+            "label": '浏览器调试地址',
             "x-widget": "input",
         },
     )
@@ -6062,11 +4677,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
     executable_path: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "浏览器程序路径",
-                "en_US": "Browser executable path",
-                "ja_JP": "ブラウザ実行ファイルパス",
-            },
+            "label": '浏览器程序路径',
             "x-widget": "input",
         },
     )
@@ -6075,11 +4686,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
     browser_install_root: str = Field(
         default="data/playwright-browsers",
         json_schema_extra={
-            "label": {
-                "zh_CN": "浏览器安装目录",
-                "en_US": "Browser install directory",
-                "ja_JP": "ブラウザインストール先",
-            },
+            "label": '浏览器安装目录',
             "x-widget": "input",
         },
     )
@@ -6088,11 +4695,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
     headless: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "无界面运行",
-                "en_US": "Run headless",
-                "ja_JP": "画面なしで実行",
-            },
+            "label": '无界面运行',
             "x-widget": "switch",
         },
     )
@@ -6107,11 +4710,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
             "--no-zygote",
         ],
         json_schema_extra={
-            "label": {
-                "zh_CN": "启动参数",
-                "en_US": "Launch arguments",
-                "ja_JP": "起動引数",
-            },
+            "label": '启动参数',
             "x-widget": "custom",
         },
     )
@@ -6121,11 +4720,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
         default=2,
         ge=1,
         json_schema_extra={
-            "label": {
-                "zh_CN": "并发渲染数",
-                "en_US": "Concurrent renders",
-                "ja_JP": "同時描画数",
-            },
+            "label": '并发渲染数',
             "x-widget": "number",
         },
     )
@@ -6135,11 +4730,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
         default=20.0,
         gt=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启动超时秒数",
-                "en_US": "Startup timeout seconds",
-                "ja_JP": "起動タイムアウト秒数",
-            },
+            "label": '启动超时秒数',
             "x-widget": "number",
         },
     )
@@ -6149,11 +4740,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
         default=15.0,
         gt=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "渲染超时秒数",
-                "en_US": "Render timeout seconds",
-                "ja_JP": "描画タイムアウト秒数",
-            },
+            "label": '渲染超时秒数',
             "x-widget": "number",
         },
     )
@@ -6162,11 +4749,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
     auto_download_chromium: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "自动下载 Chromium",
-                "en_US": "Auto download Chromium",
-                "ja_JP": "Chromium を自動ダウンロード",
-            },
+            "label": '自动下载 Chromium',
             "x-widget": "switch",
         },
     )
@@ -6176,11 +4759,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
         default=120.0,
         gt=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "下载连接超时秒数",
-                "en_US": "Download connection timeout seconds",
-                "ja_JP": "ダウンロード接続タイムアウト秒数",
-            },
+            "label": '下载连接超时秒数',
             "x-widget": "number",
         },
     )
@@ -6190,11 +4769,7 @@ class PluginRuntimeRenderConfig(ConfigBase):
         default=200,
         ge=0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "渲染后重启次数",
-                "en_US": "Restart after render count",
-                "ja_JP": "描画後の再起動回数",
-            },
+            "label": '渲染后重启次数',
             "x-widget": "number",
         },
     )
@@ -6210,11 +4785,7 @@ class PluginRuntimeConfig(ConfigBase):
     enabled: bool = Field(
         default=True,
         json_schema_extra={
-            "label": {
-                "zh_CN": "启用插件运行时",
-                "en_US": "Enable plugin runtime",
-                "ja_JP": "プラグインランタイムを有効化",
-            },
+            "label": '启用插件运行时',
             "x-widget": "switch",
         },
     )
@@ -6223,11 +4794,7 @@ class PluginRuntimeConfig(ConfigBase):
     health_check_interval_sec: float = Field(
         default=30.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "健康检查间隔秒数",
-                "en_US": "Health check interval seconds",
-                "ja_JP": "ヘルスチェック間隔秒数",
-            },
+            "label": '健康检查间隔秒数',
             "x-widget": "number",
         },
     )
@@ -6236,11 +4803,7 @@ class PluginRuntimeConfig(ConfigBase):
     max_restart_attempts: int = Field(
         default=3,
         json_schema_extra={
-            "label": {
-                "zh_CN": "最大重启次数",
-                "en_US": "Maximum restart attempts",
-                "ja_JP": "最大再起動回数",
-            },
+            "label": '最大重启次数',
             "x-widget": "number",
         },
     )
@@ -6249,11 +4812,7 @@ class PluginRuntimeConfig(ConfigBase):
     runner_spawn_timeout_sec: float = Field(
         default=30.0,
         json_schema_extra={
-            "label": {
-                "zh_CN": "Runner 启动超时秒数",
-                "en_US": "Runner startup timeout seconds",
-                "ja_JP": "Runner 起動タイムアウト秒数",
-            },
+            "label": 'Runner 启动超时秒数',
             "x-widget": "number",
         },
     )
@@ -6262,11 +4821,7 @@ class PluginRuntimeConfig(ConfigBase):
     hook_blocking_timeout_sec: float = Field(
         default=60,
         json_schema_extra={
-            "label": {
-                "zh_CN": "阻塞 Hook 超时秒数",
-                "en_US": "Blocking hook timeout seconds",
-                "ja_JP": "ブロッキング Hook タイムアウト秒数",
-            },
+            "label": '阻塞 Hook 超时秒数',
             "x-widget": "number",
         },
     )
@@ -6275,11 +4830,7 @@ class PluginRuntimeConfig(ConfigBase):
     ipc_socket_path: str = Field(
         default="",
         json_schema_extra={
-            "label": {
-                "zh_CN": "通信 Socket 路径",
-                "en_US": "IPC socket path",
-                "ja_JP": "IPC ソケットパス",
-            },
+            "label": '通信 Socket 路径',
             "x-widget": "input",
         },
     )
@@ -6290,11 +4841,7 @@ class PluginRuntimeConfig(ConfigBase):
     render: PluginRuntimeRenderConfig = Field(
         default_factory=PluginRuntimeRenderConfig,
         json_schema_extra={
-            "label": {
-                "zh_CN": "浏览器渲染",
-                "en_US": "Browser rendering",
-                "ja_JP": "ブラウザ描画",
-            },
+            "label": '浏览器渲染',
         },
     )
     """插件需要网页截图或渲染时使用的浏览器配置。"""

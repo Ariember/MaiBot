@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { StepIndicator } from '@/components/ui/step-indicator'
 import { PageFrame } from '@/components/ui/surface'
@@ -18,17 +18,16 @@ export function SetupWizardLayout({
   actions: ReactNode
   headerActions?: ReactNode
 }) {
-  const { t } = useTranslation()
   const step = steps[currentStep]
   return (
     <main className="relative mx-auto w-full max-w-[800px] py-8">
       <div className="mb-6 sm:px-16">
         <StepIndicator
           currentStep={currentStep}
-          label={t('setupPage.header.title')}
+          label={'首次配置向导'}
           steps={steps.map((item) => ({
             id: item.id,
-            label: item.id === 'custom-token' ? t('setupPage.steps.customToken.label') : item.title,
+            label: item.id === 'custom-token' ? '登录密码' : item.title,
           }))}
         />
       </div>

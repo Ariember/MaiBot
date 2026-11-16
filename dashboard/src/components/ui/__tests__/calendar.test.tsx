@@ -9,11 +9,10 @@ describe('Calendar', () => {
     const { container } = render(<Calendar defaultMonth={new Date(2026, 0, 1)} />)
 
     expect(container.querySelector('[data-slot="calendar"]')).toBeInTheDocument()
-    // react-day-picker 默认 date-fns enUS 本地化，标题固定为英文
-    expect(screen.getByText('January 2026')).toBeInTheDocument()
+    expect(screen.getByText('2026年1月')).toBeInTheDocument()
 
-    const previousButton = screen.getByRole('button', { name: /previous month/i })
-    const nextButton = screen.getByRole('button', { name: /next month/i })
+    const previousButton = screen.getByRole('button', { name: '上个月' })
+    const nextButton = screen.getByRole('button', { name: '下个月' })
     expect(previousButton.querySelector('.lucide-chevron-left')).not.toBeNull()
     expect(nextButton.querySelector('.lucide-chevron-right')).not.toBeNull()
   })
@@ -21,8 +20,8 @@ describe('Calendar', () => {
   it('点击下一月按钮切换展示月份', () => {
     render(<Calendar defaultMonth={new Date(2026, 0, 1)} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /next month/i }))
-    expect(screen.getByText('February 2026')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '下个月' }))
+    expect(screen.getByText('2026年2月')).toBeInTheDocument()
   })
 
   it('single 模式点击日期触发 onSelect', () => {
@@ -46,12 +45,14 @@ describe('Calendar', () => {
         mode="single"
         defaultMonth={new Date(2026, 0, 1)}
         selected={new Date(2026, 0, 15)}
+        today={new Date(2026, 0, 15)}
       />
     )
 
     const selectedButton = container.querySelector('button[data-selected-single="true"]')
     expect(selectedButton).not.toBeNull()
     expect(selectedButton).toHaveTextContent('15')
+    expect(selectedButton).toHaveAccessibleName('今天，2026年1月15日星期四，已选择')
   })
 
   it('range 模式下起止与中间日期分别打上范围标记', () => {
@@ -80,10 +81,8 @@ describe('Calendar', () => {
 
     expect(screen.getAllByRole('combobox').length).toBeGreaterThanOrEqual(2)
 
-    // 与组件同样的取值方式计算期望文案，避免受运行环境语言影响
-    const expectedShortMonth = new Date(2026, 0, 1).toLocaleString('default', { month: 'short' })
     const options = screen.getAllByRole('option')
-    expect(options.some((option) => option.textContent === expectedShortMonth)).toBe(true)
+    expect(options.some((option) => option.textContent === '1月')).toBe(true)
   })
 })
 

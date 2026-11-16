@@ -16,9 +16,6 @@ const mocks = vi.hoisted(() => ({
   pathname: '/',
   electron: false,
   inheritedFrom: 'header',
-  language: 'zh-CN',
-  t: vi.fn((key: string) => key),
-  changeLanguage: vi.fn(),
   getActiveBackend: vi.fn(),
   logout: vi.fn(),
   toggleTheme: vi.fn(),
@@ -49,15 +46,7 @@ vi.mock('@tanstack/react-router', () => ({
   }) => select({ location: { pathname: mocks.pathname } }),
 }))
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: mocks.t,
-    i18n: {
-      language: mocks.language,
-      changeLanguage: mocks.changeLanguage,
-    },
-  }),
-}))
+
 
 vi.mock('motion/react', async () => {
   const { forwardRef } = await import('react')
@@ -156,7 +145,7 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
     <div data-dropdown-open={open === undefined ? 'uncontrolled' : String(Boolean(open))}>
       {onOpenChange ? (
         <button type="button" onClick={() => onOpenChange(!open)}>
-          打开语言菜单
+          打开菜单
         </button>
       ) : null}
       {children}
@@ -255,7 +244,6 @@ describe('Header', () => {
     render(<Header {...props} />)
     fireEvent.click(screen.getByRole('tab', { name: '消息统计' }))
     expect(props.onWorkspaceNavigate).toHaveBeenCalledWith('/extensions/test.plugin/overview')
-    expect(mocks.t).not.toHaveBeenCalledWith('消息统计')
   })
 
   it('最多展示两个插件工作区，当前工作区保持可见，其余进入更多菜单', () => {
@@ -266,13 +254,13 @@ describe('Header', () => {
     expect(screen.getByRole('tab', { name: 'first' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'third' })).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'second' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'pluginWebUI.more' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '更多插件工作区' })).toBeInTheDocument()
   })
   beforeEach(() => {
     mocks.pathname = '/'
     mocks.electron = false
     mocks.inheritedFrom = 'header'
-    mocks.language = 'zh-CN'
+
     mocks.getActiveBackend.mockResolvedValue({ name: '本地后端' })
     mocks.logout.mockResolvedValue(undefined)
     vi.spyOn(window, 'open').mockImplementation(() => null)
@@ -298,12 +286,12 @@ describe('Header', () => {
     expect(document.querySelector('[data-dashboard-header="true"]')).toHaveClass('bg-background')
     expect(document.querySelector('[data-dashboard-header="true"]')).not.toHaveClass('bg-card/80')
 
-    expect(screen.queryByRole('button', { name: 'header.switchSidebarToHover' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getAllByRole('button', { name: 'header.collapseTopbar' })[0])
-    fireEvent.click(screen.getByRole('button', { name: 'header.searchPlaceholder' }))
-    fireEvent.click(screen.getByRole('button', { name: 'header.viewDocs' }))
-    fireEvent.click(screen.getAllByRole('button', { name: 'header.switchToLight' })[0])
-    fireEvent.click(screen.getByRole('tab', { name: 'workspace.logs' }))
+    expect(screen.queryByRole('button', { name: '切换为悬浮模式' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: '收起顶栏' })[0])
+    fireEvent.click(screen.getByRole('button', { name: '问麦麦你想知道的一切' }))
+    fireEvent.click(screen.getByRole('button', { name: '查看麦麦文档' }))
+    fireEvent.click(screen.getAllByRole('button', { name: '切换到浅色模式' })[0])
+    fireEvent.click(screen.getByRole('tab', { name: '日志' }))
 
     expect(props.onSidebarToggle).not.toHaveBeenCalled()
     expect(props.onTopbarToggle).toHaveBeenCalledOnce()
@@ -323,10 +311,10 @@ describe('Header', () => {
     // 顶栏搜索是常驻输入框，折叠态由整块顶栏内容容器隐藏
     expect(
       container.querySelector('[data-dashboard-header-collapsed="true"] > div.hidden')
-    ).toContainElement(screen.getByRole('button', { name: 'header.searchPlaceholder' }))
+    ).toContainElement(screen.getByRole('button', { name: '问麦麦你想知道的一切' }))
 
-    expect(screen.queryByRole('button', { name: 'header.expandSidebar' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getAllByRole('button', { name: 'header.expandTopbar' })[0])
+    expect(screen.queryByRole('button', { name: '展开侧边栏' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: '展开顶栏' })[0])
     expect(props.onSidebarToggle).not.toHaveBeenCalled()
     expect(props.onTopbarToggle).toHaveBeenCalledOnce()
   })
@@ -351,7 +339,7 @@ describe('Header', () => {
     mocks.pathname = '/settings'
     const { rerender } = render(<Header {...makeProps({ searchOpen: false })} />)
 
-    const settingsTab = screen.getByRole('tab', { name: 'workspace.settings' })
+    const settingsTab = screen.getByRole('tab', { name: '麦麦' })
     expect(document.querySelector('[data-header-action-highlighted="true"]')).toBeNull()
     expect(settingsTab).toHaveAttribute('data-workspace-highlighted', 'true')
 
@@ -363,30 +351,29 @@ describe('Header', () => {
     expect(document.querySelectorAll('[data-layout-id="topbar-selection-pill"]')).toHaveLength(1)
   })
 
-  it('设置入口指向设置页，语言切换由设置页负责', () => {
+  it('设置入口指向设置页', () => {
     render(<Header {...makeProps()} />)
-    expect(screen.getByTitle('sidebar.menu.settings')).toHaveAttribute('href', '/settings')
-    expect(screen.queryByRole('button', { name: 'header.switchLanguage' })).not.toBeInTheDocument()
+    expect(screen.getByTitle('WEBUI设置')).toHaveAttribute('href', '/settings')
   })
 
   it('亮色主题走夜间切换，移动端更多菜单也能改主题', () => {
     const props = makeProps({ actualTheme: 'light' })
     render(<Header {...props} />)
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'header.switchToDark' })[0])
-    fireEvent.click(screen.getAllByRole('button', { name: 'header.switchToDark' })[1])
+    fireEvent.click(screen.getAllByRole('button', { name: '切换到深色模式' })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: '切换到深色模式' })[1])
 
     expect(mocks.toggleTheme).toHaveBeenCalledTimes(2)
     expect(mocks.toggleTheme).toHaveBeenNthCalledWith(1, 'dark', props.onThemeChange, expect.anything())
-    expect(screen.getByRole('button', { name: 'header.moreActions' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '更多操作' })).toBeInTheDocument()
   })
 
   it('日志工作区隐藏侧栏切换，日志槽位可见；手机导航交给底部标签栏，顶栏不再有菜单按钮', () => {
     const props = makeProps({ workspaceMode: 'logs', sidebarOpen: true })
     render(<Header {...props} />)
 
-    expect(screen.queryByRole('button', { name: 'a11y.closeMenu' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'header.switchSidebarToHover' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '关闭菜单' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '切换为悬浮模式' })).not.toBeInTheDocument()
     expect(document.getElementById('log-viewer-topbar-tabs')).toHaveClass('sm:flex')
   })
 
@@ -398,7 +385,7 @@ describe('Header', () => {
     const strip = document.querySelector('[data-dashboard-header-strip="true"]')
     expect(strip).toBeInTheDocument()
     expect(strip?.querySelector('[data-dashboard-sidebar-mode-switch="true"]')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'header.expandTopbar' }))
+    fireEvent.click(screen.getByRole('button', { name: '展开顶栏' }))
     expect(props.onTopbarToggle).toHaveBeenCalledOnce()
   })
 
@@ -408,21 +395,21 @@ describe('Header', () => {
     const props = makeProps({ searchOpen: true })
     render(<Header {...props} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'header.searchPlaceholder' }))
+    fireEvent.click(screen.getByRole('button', { name: '问麦麦你想知道的一切' }))
     expect(props.onSearchOpenChange).toHaveBeenCalledTimes(1)
     expect(props.onSearchOpenChange).toHaveBeenLastCalledWith(true)
     fireEvent.click(await screen.findByRole('button', { name: '关闭搜索对话框' }))
     expect(props.onSearchOpenChange).toHaveBeenLastCalledWith(false)
-    expect(await screen.findByText('header.notConnected')).toBeInTheDocument()
+    expect(await screen.findByText('未连接')).toBeInTheDocument()
   })
 
   it('当前工作区标签的普通点击不导航，修饰键点击也不拦截切换', () => {
     const props = makeProps({ workspaceMode: 'settings' })
     render(<Header {...props} />)
 
-    fireEvent.click(screen.getByRole('tab', { name: 'workspace.settings' }))
-    fireEvent.click(screen.getByRole('tab', { name: 'workspace.logs' }), { metaKey: true })
-    fireEvent.click(screen.getByRole('tab', { name: 'workspace.logs' }), { button: 1 })
+    fireEvent.click(screen.getByRole('tab', { name: '麦麦' }))
+    fireEvent.click(screen.getByRole('tab', { name: '日志' }), { metaKey: true })
+    fireEvent.click(screen.getByRole('tab', { name: '日志' }), { button: 1 })
     expect(props.onWorkspaceNavigate).not.toHaveBeenCalled()
   })
 
@@ -432,8 +419,8 @@ describe('Header', () => {
     const props = makeProps({ workspaceMode: 'settings' })
     const { rerender, unmount } = render(<Header {...props} />)
 
-    const logsTab = screen.getByRole('tab', { name: 'workspace.logs' })
-    const settingsTab = screen.getByRole('tab', { name: 'workspace.settings' })
+    const logsTab = screen.getByRole('tab', { name: '日志' })
+    const settingsTab = screen.getByRole('tab', { name: '麦麦' })
     const settingsLink = settingsTab
     const tabs = document.querySelector('[data-dashboard-workspace-tabs="true"]') as HTMLElement
 
@@ -483,8 +470,8 @@ describe('Header', () => {
     const props = makeProps()
     render(<Header {...props} />)
 
-    const logsTab = screen.getByRole('tab', { name: 'workspace.logs' })
-    const docsButton = screen.getByRole('button', { name: 'header.viewDocs' })
+    const logsTab = screen.getByRole('tab', { name: '日志' })
+    const docsButton = screen.getByRole('button', { name: '查看麦麦文档' })
 
     fireEvent.pointerEnter(logsTab)
     fireEvent.pointerEnter(docsButton)
@@ -517,7 +504,7 @@ describe('Header', () => {
     const measure = document.querySelector(
       '[data-dashboard-workspace-tabs-measure="true"]'
     ) as HTMLElement
-    const logsTab = screen.getByRole('tab', { name: 'workspace.logs' }) as HTMLElement
+    const logsTab = screen.getByRole('tab', { name: '日志' }) as HTMLElement
 
     const applyRects = (tabsRight: number, measureWidth: number, switcherRight: number) => {
       vi.spyOn(tabs, 'getBoundingClientRect').mockReturnValue(
@@ -537,7 +524,7 @@ describe('Header', () => {
       vi.advanceTimersByTime(0)
     })
     expect(logsTab).toHaveClass('px-1.5')
-    expect(screen.getByRole('tab', { name: 'workspace.logs' }).querySelector('span.hidden')).not.toHaveClass(
+    expect(screen.getByRole('tab', { name: '日志' }).querySelector('span.hidden')).not.toHaveClass(
       'sm:inline'
     )
 
@@ -555,7 +542,7 @@ describe('Header', () => {
       vi.advanceTimersByTime(0)
     })
     expect(logsTab).toHaveClass('px-2')
-    expect(screen.getByRole('tab', { name: 'workspace.logs' }).querySelector('span.hidden')).toHaveClass(
+    expect(screen.getByRole('tab', { name: '日志' }).querySelector('span.hidden')).toHaveClass(
       'sm:inline'
     )
 
@@ -603,7 +590,7 @@ describe('Header', () => {
     act(() => {
       vi.advanceTimersByTime(0)
     })
-    expect(screen.getByRole('tab', { name: 'workspace.logs' })).toHaveClass('px-2')
+    expect(screen.getByRole('tab', { name: '日志' })).toHaveClass('px-2')
     expect(observers[0]?.observe).toHaveBeenCalled()
 
     unmount()
@@ -616,8 +603,8 @@ describe('Header', () => {
     const props = makeProps({ workspaceMode: 'settings' })
     const { rerender, unmount } = render(<Header {...props} />)
 
-    const logsTab = screen.getByRole('tab', { name: 'workspace.logs' })
-    const settingsTab = screen.getByRole('tab', { name: 'workspace.settings' })
+    const logsTab = screen.getByRole('tab', { name: '日志' })
+    const settingsTab = screen.getByRole('tab', { name: '麦麦' })
     const tabs = document.querySelector('[data-dashboard-workspace-tabs="true"]') as HTMLElement
 
     fireEvent.pointerEnter(logsTab)
@@ -644,10 +631,10 @@ describe('Header', () => {
     const props = makeProps()
     render(<Header {...props} />)
 
-    const settingsAction = screen.getByTitle('sidebar.menu.settings')
-    const docsButton = screen.getByRole('button', { name: 'header.viewDocs' })
-    const themeButton = screen.getAllByRole('button', { name: 'header.switchToLight' })[0]
-    const settingsLink = screen.getByRole('tab', { name: 'workspace.settings' })
+    const settingsAction = screen.getByTitle('WEBUI设置')
+    const docsButton = screen.getByRole('button', { name: '查看麦麦文档' })
+    const themeButton = screen.getAllByRole('button', { name: '切换到浅色模式' })[0]
+    const settingsLink = screen.getByRole('tab', { name: '麦麦' })
 
     fireEvent.pointerEnter(settingsAction)
     fireEvent.pointerLeave(settingsAction)
@@ -685,7 +672,7 @@ describe('Header', () => {
     act(() => {
       vi.advanceTimersByTime(0)
     })
-    expect(screen.getByRole('tab', { name: 'workspace.logs' })).toHaveClass('px-2')
+    expect(screen.getByRole('tab', { name: '日志' })).toHaveClass('px-2')
   })
 
   it('折叠顶栏在非设置工作区隐藏侧栏按钮，深色更多菜单走对应样式', () => {
@@ -710,7 +697,7 @@ describe('Header', () => {
     })
     rerender(<Header {...expandedProps} />)
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'header.switchToLight' })[1])
+    fireEvent.click(screen.getAllByRole('button', { name: '切换到浅色模式' })[1])
     expect(mocks.toggleTheme).toHaveBeenCalledWith(
       'light',
       expandedProps.onThemeChange,

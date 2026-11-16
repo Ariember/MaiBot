@@ -24,13 +24,12 @@ def test_person_fact_parse_fact_list_deduplicates_and_filters_short_items():
     assert result == ["他喜欢猫", "他会弹吉他"]
 
 
-@pytest.mark.parametrize("locale", ["zh-CN", "en-US", "ja-JP"])
-def test_person_fact_prompt_carries_structured_claim_contract(locale):
-    from src.common.prompt_i18n import list_prompt_templates
+def test_person_fact_prompt_carries_structured_claim_contract():
+    from src.common.prompt_templates import list_prompt_templates
 
     rendered = memory_flow_module.load_prompt(
         "a_memorix_person_fact",
-        locale=locale,
+
         person_name="Alice",
         user_evidence_text="[2026-01-10] I moved to Shanghai yesterday.",
         reply_text="Understood.",
@@ -38,7 +37,7 @@ def test_person_fact_prompt_carries_structured_claim_contract(locale):
     assert "Alice" in rendered
     assert "2026-01-10" in rendered
     assert all(key in rendered for key in ("fact_key", "cardinality", "polarity", "valid_from", "valid_to", "replace"))
-    metadata = list_prompt_templates(locale=locale)["a_memorix_person_fact"].metadata
+    metadata = list_prompt_templates()["a_memorix_person_fact"].metadata
     assert metadata.display_name and metadata.description
 
 

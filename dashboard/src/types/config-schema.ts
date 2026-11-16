@@ -26,13 +26,12 @@ export type XWidgetType =
   | 'textarea'
   | 'comma-list'
 
-export type LocalizedText = string | Record<string, string>
 export type DescriptionDisplayMode = 'inline' | 'icon' | 'label-hover'
 
 export interface FieldSchema {
   name: string
   type: FieldType
-  label: LocalizedText
+  label: string
   description: string
   required: boolean
   readOnly?: boolean

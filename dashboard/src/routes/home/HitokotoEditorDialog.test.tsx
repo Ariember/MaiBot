@@ -5,10 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { HitokotoEditorDialog } from './HitokotoEditorDialog'
 import type { HitokotoSettings } from './hooks/useMaibotVersion'
 
-vi.mock('react-i18next', () => {
-  const t = (key: string) => key
-  return { useTranslation: () => ({ t }) }
-})
+
 
 function createDeferred<T>() {
   let resolve: (value: T | PromiseLike<T>) => void = () => {}
@@ -41,14 +38,14 @@ describe('HitokotoEditorDialog', () => {
     )
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('home.hitokoto.editor.title')).toBeInTheDocument()
-    expect(screen.getByText('home.hitokoto.editor.description')).toBeInTheDocument()
-    expect(screen.getByRole('switch', { name: 'home.hitokoto.editor.defaultSource' })).toBeChecked()
+    expect(screen.getByText('编辑一言')).toBeInTheDocument()
+    expect(screen.getByText('管理首页展示的一言来源与自定义内容。')).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: '使用默认一言' })).toBeChecked()
     expect(
-      screen.getByRole('button', { name: /home\.hitokoto\.editor\.empty/ })
+      screen.getByRole('button', { name: '还没有自定义内容，点击添加第一条' })
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'common.cancel' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'common.save' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '取消' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '保存' })).toBeInTheDocument()
   })
 
   it('取消关闭对话框且不保存', async () => {
@@ -63,7 +60,7 @@ describe('HitokotoEditorDialog', () => {
       />
     )
 
-    await user.click(screen.getByRole('button', { name: 'common.cancel' }))
+    await user.click(screen.getByRole('button', { name: '取消' }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
     expect(onSave).not.toHaveBeenCalled()
   })
@@ -80,7 +77,7 @@ describe('HitokotoEditorDialog', () => {
       />
     )
 
-    await user.click(screen.getByRole('button', { name: 'common.save' }))
+    await user.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith({
         defaultEnabled: true,
@@ -103,9 +100,9 @@ describe('HitokotoEditorDialog', () => {
       />
     )
 
-    await user.click(screen.getByRole('button', { name: 'common.save' }))
-    expect(screen.getByRole('button', { name: 'home.hitokoto.editor.saving' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'common.cancel' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: '保存' }))
+    expect(screen.getByRole('button', { name: '保存中...' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '取消' })).toBeDisabled()
     expect(onOpenChange).not.toHaveBeenCalled()
 
     await act(async () => {
@@ -130,29 +127,29 @@ describe('HitokotoEditorDialog', () => {
       />
     )
 
-    await user.click(screen.getByRole('switch', { name: 'home.hitokoto.editor.defaultSource' }))
+    await user.click(screen.getByRole('switch', { name: '使用默认一言' }))
     expect(
-      screen.getByRole('switch', { name: 'home.hitokoto.editor.defaultSource' })
+      screen.getByRole('switch', { name: '使用默认一言' })
     ).not.toBeChecked()
 
-    await user.clear(screen.getByRole('textbox', { name: 'home.hitokoto.editor.content' }))
+    await user.clear(screen.getByRole('textbox', { name: '内容 1 正文' }))
     await user.type(
-      screen.getByRole('textbox', { name: 'home.hitokoto.editor.content' }),
+      screen.getByRole('textbox', { name: '内容 1 正文' }),
       '改写的一言'
     )
-    await user.clear(screen.getByRole('textbox', { name: 'home.hitokoto.editor.source' }))
-    await user.type(screen.getByRole('textbox', { name: 'home.hitokoto.editor.source' }), '新出处')
-    await user.click(screen.getByRole('button', { name: /home\.hitokoto\.editor\.add/ }))
+    await user.clear(screen.getByRole('textbox', { name: '内容 1 出处' }))
+    await user.type(screen.getByRole('textbox', { name: '内容 1 出处' }), '新出处')
+    await user.click(screen.getByRole('button', { name: '新增内容' }))
     await user.type(
-      screen.getAllByRole('textbox', { name: 'home.hitokoto.editor.content' })[1],
+      screen.getByRole('textbox', { name: '内容 2 正文' }),
       '第二条'
     )
     await user.type(
-      screen.getAllByRole('textbox', { name: 'home.hitokoto.editor.source' })[1],
+      screen.getByRole('textbox', { name: '内容 2 出处' }),
       '二号'
     )
 
-    await user.click(screen.getByRole('button', { name: 'common.save' }))
+    await user.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1))
     expect(onSave).toHaveBeenCalledWith({
       defaultEnabled: false,
@@ -179,19 +176,19 @@ describe('HitokotoEditorDialog', () => {
       />
     )
 
-    await user.click(screen.getByRole('switch', { name: 'home.hitokoto.editor.defaultSource' }))
-    expect(screen.getByText('home.hitokoto.editor.blankHint')).toBeInTheDocument()
+    await user.click(screen.getByRole('switch', { name: '使用默认一言' }))
+    expect(screen.getByText('默认一言已停用且自定义列表为空，首页一言区域将保持留白。')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /home\.hitokoto\.editor\.empty/ }))
-    expect(screen.queryByText('home.hitokoto.editor.blankHint')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '还没有自定义内容，点击添加第一条' }))
+    expect(screen.queryByText('默认一言已停用且自定义列表为空，首页一言区域将保持留白。')).not.toBeInTheDocument()
     expect(
-      screen.getByRole('textbox', { name: 'home.hitokoto.editor.content' })
+      screen.getByRole('textbox', { name: '内容 1 正文' })
     ).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'home.hitokoto.editor.remove' }))
-    expect(screen.getByText('home.hitokoto.editor.blankHint')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '删除内容 1' }))
+    expect(screen.getByText('默认一言已停用且自定义列表为空，首页一言区域将保持留白。')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'common.save' }))
+    await user.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith({
         defaultEnabled: false,

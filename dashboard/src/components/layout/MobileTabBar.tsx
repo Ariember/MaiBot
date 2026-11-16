@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { ChevronRight, House, LayoutGrid, MessageCircle, Search } from 'lucide-react'
 import { AnimatePresence, LayoutGroup, MotionConfig, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import type { LucideIcon } from 'lucide-react'
 
 import { useAnimation } from '@/hooks/use-animation'
@@ -18,16 +18,16 @@ import type { MobileTab } from './mobile-nav-context'
 interface MobileTabDef {
   tab: MobileTab
   to: string
-  labelKey: string
+  label: string
   icon: LucideIcon
 }
 
 // 三个标签 + 独立的搜索键；「我的」从首页头像进入。
 // 观察麦麦的聊天流就在「聊天」里，不再单独设标签。
 const TABS: MobileTabDef[] = [
-  { tab: 'home', to: '/', labelKey: 'mobileNav.home', icon: House },
-  { tab: 'chat', to: '/chat', labelKey: 'mobileNav.chat', icon: MessageCircle },
-  { tab: 'manage', to: '/manage', labelKey: 'mobileNav.manage', icon: LayoutGrid },
+  { tab: 'home', to: '/', label: "首页", icon: House },
+  { tab: 'chat', to: '/chat', label: "聊天", icon: MessageCircle },
+  { tab: 'manage', to: '/manage', label: "管理", icon: LayoutGrid },
 ]
 
 // 与 Tailwind 的 lg 断点对齐：桌面端完全不挂载标签栏，也就不会订阅麦麦实时状态。
@@ -142,7 +142,6 @@ function pickLatestStageStatus(stageStatuses: Map<string, StageStatusInfo>) {
 }
 
 function TabBarDock({ onSearch }: Pick<MobileTabBarProps, 'onSearch'>) {
-  const { t } = useTranslation()
   const { enableAnimations } = useAnimation()
   const prefersReducedMotion = useReducedMotion()
   const animate = enableAnimations && !prefersReducedMotion
@@ -180,7 +179,7 @@ function TabBarDock({ onSearch }: Pick<MobileTabBarProps, 'onSearch'>) {
       type="button"
       data-mobile-live-strip="true"
       onClick={openLive}
-      aria-label={t('mobileNav.live')}
+      aria-label={'麦麦实时'}
       className={cn(
         'text-foreground flex h-[52px] min-w-0 items-center gap-3 rounded-full pr-1.5 pl-2 text-left',
         collapsed ? 'flex-1' : 'w-full',
@@ -192,7 +191,7 @@ function TabBarDock({ onSearch }: Pick<MobileTabBarProps, 'onSearch'>) {
         layoutDependency={collapsed}
         className="bg-foreground text-background flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
       >
-        {t('mobileNav.botInitial')}
+        {'麦'}
       </motion.span>
       <motion.span
         layout="position"
@@ -224,7 +223,7 @@ function TabBarDock({ onSearch }: Pick<MobileTabBarProps, 'onSearch'>) {
           className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+14px)] z-40 flex flex-col gap-2.5"
         >
           {showLive && !collapsed && liveStrip}
-          <nav aria-label={t('mobileNav.label')} className="flex items-center gap-2.5">
+          <nav aria-label={'主导航'} className="flex items-center gap-2.5">
             {/* 收起时只留下当前标签，其余标签淡出，容器宽度随之收缩成圆键 */}
             <motion.div
               layout
@@ -254,7 +253,7 @@ function TabBarDock({ onSearch }: Pick<MobileTabBarProps, 'onSearch'>) {
               )}
               <AnimatePresence initial={false} mode="popLayout">
                 {TABS.filter(({ tab }) => !collapsed || tab === activeTab).map(
-                  ({ tab, to, labelKey, icon: Icon }) => {
+                  ({ tab, to, label, icon: Icon }) => {
                     const active = activeTab === tab
                     return (
                       <motion.div
@@ -272,7 +271,7 @@ function TabBarDock({ onSearch }: Pick<MobileTabBarProps, 'onSearch'>) {
                           data-mobile-tab="true"
                           data-active={active ? 'true' : 'false'}
                           aria-current={active ? 'page' : undefined}
-                          aria-label={collapsed ? t(labelKey) : undefined}
+                          aria-label={collapsed ? label : undefined}
                           onClick={collapsed ? (event) => event.preventDefault() : undefined}
                           className={cn(
                             'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-semibold transition-colors duration-300',
@@ -287,7 +286,7 @@ function TabBarDock({ onSearch }: Pick<MobileTabBarProps, 'onSearch'>) {
                             />
                           </span>
                           {!collapsed && (
-                            <span className="relative truncate">{t(labelKey)}</span>
+                            <span className="relative truncate">{label}</span>
                           )}
                         </Link>
                       </motion.div>
@@ -301,7 +300,7 @@ function TabBarDock({ onSearch }: Pick<MobileTabBarProps, 'onSearch'>) {
               type="button"
               data-mobile-tabbar-search="true"
               onClick={onSearch}
-              aria-label={t('mobileNav.search')}
+              aria-label={'搜索'}
               className={cn(
                 'text-foreground flex shrink-0 items-center justify-center rounded-full',
                 collapsed ? 'h-[52px] w-[52px]' : 'h-[62px] w-[62px]',

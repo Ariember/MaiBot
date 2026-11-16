@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card'
 import { AlertTriangle, CheckCircle2, Download, Loader2, RefreshCw, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 
 import { RestartOverlay } from '@/components/restart-overlay'
 import {
@@ -34,6 +34,22 @@ import {
   type SelfUpdateSourceSelection,
 } from '@/lib/system-api'
 
+const SETTINGS_SELFUPDATE_BLOCKERS_LABELS: Record<string, string> = {
+  "package_update_removed": "Python 包自更新已移除，请迁移到本 fork 的 GHCR 镜像部署",
+  "image_updater_unavailable": "镜像更新服务未就绪，请检查 updater 容器日志",
+  "image_update_busy": "镜像正在更新，请等待完成",
+  "image_recovery_required": "上次更新中断或启动失败，请按部署文档恢复后再更新",
+  "git_missing": "未找到 Git，无法自更新",
+  "not_git_repo": "当前不是 Git 部署，请使用本 fork 的 GHCR 镜像或 Git 部署",
+  "detached_head": "当前不在任何分支上（分离头指针），无法自更新",
+  "unsupported_branch": "仅支持在 main 或 dev 分支上自更新",
+  "dirty_worktree": "存在未提交的本地改动，请先提交或还原",
+  "diverged": "本地存在 Ariember/MaiBot 分支没有的提交，无法快进更新",
+  "no_dependency_tool": "本次更新包含依赖变更，但未找到可用的依赖安装方式（uv 或 pip）",
+  "python_requirement_changed": "本次更新修改了 Python 版本要求，请手动更新",
+}
+
+
 // 更新要拉取代码并同步依赖，比普通重启慢得多：每 2 秒检查一次，最多等待约 15 分钟。
 const UPDATE_HEALTH_CHECK_ATTEMPTS = 450
 
@@ -51,21 +67,19 @@ function formatRevision(version: string, commit: string): string {
 
 /** 主程序自更新卡片：检查官方仓库的新版本，并在确认后更新、重启。 */
 export function SelfUpdateCard() {
-  const { t } = useTranslation()
 
   return (
     <RestartProvider>
       <SelfUpdateCardContent />
       <RestartOverlay
-        title={t('settings.selfUpdate.overlayTitle')}
-        description={t('settings.selfUpdate.overlayDesc')}
+        title={'正在更新麦麦'}
+        description={'正在拉取新版本并同步依赖，可能需要几分钟，请不要关闭麦麦'}
       />
     </RestartProvider>
   )
 }
 
 function SelfUpdateCardContent() {
-  const { t } = useTranslation()
   const { toast } = useToast()
   const { triggerRestart, isRestarting } = useRestart()
   const [status, setStatus] = useState<SelfUpdateStatus | null>(null)
@@ -110,14 +124,14 @@ function SelfUpdateCardContent() {
       if (Date.now() >= deadline) {
         setImageRequest(null)
         setApplying(false)
-        setOperationError(t('settings.selfUpdate.imageTimeout'))
+        setOperationError('等待镜像更新超时，请查看 updater 日志和 docker-update-state/last_result.json，不要重复提交。')
         return
       }
       timer = setTimeout(poll, 2000)
     }
     timer = setTimeout(poll, 2000)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [imageRequest, t, triggerRestart])
+  }, [imageRequest, triggerRestart])
 
   useEffect(() => {
     if (!checking) return
@@ -171,7 +185,7 @@ function SelfUpdateCardContent() {
     } catch (error) {
       setOperationError(errorMessage(error))
       toast({
-        title: t('settings.selfUpdate.checkFailed'),
+        title: '检查更新失败',
         description: errorMessage(error),
         variant: 'destructive',
       })
@@ -195,7 +209,7 @@ function SelfUpdateCardContent() {
     } catch (error) {
       setOperationError(errorMessage(error))
       toast({
-        title: t('settings.selfUpdate.applyFailed'),
+        title: '发起更新失败',
         description: errorMessage(error),
         variant: 'destructive',
       })
@@ -213,10 +227,10 @@ function SelfUpdateCardContent() {
     <Card className="p-4 sm:p-6" data-testid="self-update-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-base sm:text-lg font-semibold">{t('settings.selfUpdate.title')}</h3>
+          <h3 className="text-base sm:text-lg font-semibold">{'主程序更新'}</h3>
           {status && (
             <p className="mt-1 text-xs sm:text-sm text-muted-foreground break-all">
-              {t('settings.selfUpdate.current', { version: status.current_version })}
+              {`当前版本 ${status.current_version}`}
               {status.branch && ` · ${status.branch}`}
               {status.deployment_type === 'image'
                 ? ` · GHCR · ${status.current_commit?.replace(/^sha256:/, '').slice(0, 12) ?? ''}`
@@ -239,7 +253,7 @@ function SelfUpdateCardContent() {
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
           )}
-          {checking ? t('settings.selfUpdate.checking') : t('settings.selfUpdate.check')}
+          {checking ? '正在检查…' : '检查更新'}
         </Button>
       </div>
 
@@ -247,7 +261,7 @@ function SelfUpdateCardContent() {
         <DialogContent preventOutsideClose={checking} className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>选择本体更新源</DialogTitle>
-            <DialogDescription>{t('settings.selfUpdate.sourceHint')}</DialogDescription>
+            <DialogDescription>{'源码与镜像均跟随 Ariember/MaiBot；镜像从 GitHub Container Registry 下载。'}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -305,27 +319,27 @@ function SelfUpdateCardContent() {
         )}
         {loadError && (
           <p className="text-destructive">
-            {t('settings.selfUpdate.loadFailed')}: {loadError}
+            {'读取更新状态失败'}: {loadError}
           </p>
         )}
         {!status && !loadError && (
-          <p className="text-muted-foreground">{t('settings.selfUpdate.loading')}</p>
+          <p className="text-muted-foreground">{'正在读取更新状态…'}</p>
         )}
         {status && !status.supported && (
           <div className="rounded-md bg-muted/50 p-3 text-muted-foreground">
             {status.blockers.map((blocker) => (
-              <p key={blocker}>{t(`settings.selfUpdate.blockers.${blocker}`)}</p>
+              <p key={blocker}>{SETTINGS_SELFUPDATE_BLOCKERS_LABELS[blocker]}</p>
             ))}
           </div>
         )}
         {status?.supported && status.checked_at === null && (
-          <p className="text-muted-foreground">{t('settings.selfUpdate.notChecked')}</p>
+          <p className="text-muted-foreground">{'尚未检查更新'}</p>
         )}
         {status?.supported && status.checked_at !== null && !status.update_available && (
           <p className="flex items-center gap-2 text-muted-foreground">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
-            {t('settings.selfUpdate.upToDate')}
-            <span>· {t('settings.selfUpdate.checkedAt', { time: formatTime(status.checked_at) })}</span>
+            {'已是最新版本'}
+            <span>· {`检查于 ${formatTime(status.checked_at)}`}</span>
           </p>
         )}
         {status?.supported && status.update_available && (
@@ -334,7 +348,7 @@ function SelfUpdateCardContent() {
         {status?.last_result && <LastResult result={status.last_result} />}
         {status?.supported && status.source_name && (
           <p className="text-muted-foreground break-all">
-            {t('settings.selfUpdate.source', { name: status.source_name })}
+            {`更新来源：${status.source_name}`}
           </p>
         )}
       </div>
@@ -350,7 +364,6 @@ interface AvailableUpdateProps {
 }
 
 function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdateProps) {
-  const { t } = useTranslation()
   const image = status.deployment_type === 'image'
   const versionChanged =
     status.latest_version !== null && status.latest_version !== status.current_version
@@ -363,12 +376,12 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
     <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
       <div>
         <p className="font-medium text-foreground">
-          {image ? t('settings.selfUpdate.newImage') : versionChanged
-            ? t('settings.selfUpdate.newVersion', { version: status.latest_version })
-            : t('settings.selfUpdate.newCommits', { count: status.behind })}
+          {image ? '发现新的容器镜像' : versionChanged
+            ? `发现新版本 ${status.latest_version}`
+            : `有 ${status.behind} 个新提交`}
         </p>
         {!image && <p className="text-muted-foreground">
-          {t('settings.selfUpdate.behind', { branch: status.branch, count: status.behind })}
+          {`落后 Ariember/MaiBot 的 ${status.branch} 分支 ${status.behind} 个提交`}
         </p>}
       </div>
 
@@ -382,14 +395,14 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
         ))}
         {status.behind > status.commits.length && (
           <li className="text-muted-foreground">
-            {t('settings.selfUpdate.moreCommits', { count: status.commits.length })}
+            {`仅显示最近 ${status.commits.length} 个提交`}
           </li>
         )}
       </ul>}
 
       {status.dependencies_changed && status.dependency_tool && (
         <p className="text-muted-foreground">
-          {t('settings.selfUpdate.dependenciesChanged', { tool: status.dependency_tool })}
+          {`本次更新包含依赖变更，更新时会自动同步依赖（${status.dependency_tool}）`}
         </p>
       )}
 
@@ -397,16 +410,16 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
         <div className="space-y-1 rounded-md border border-destructive/30 bg-destructive/5 p-2">
           <p className="flex items-center gap-2 font-medium text-destructive">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            {t('settings.selfUpdate.cannotApply')}
+            {'暂时无法自动更新'}
           </p>
           <ul className="list-inside list-disc text-muted-foreground">
             {status.blockers.map((blocker) => (
-              <li key={blocker}>{t(`settings.selfUpdate.blockers.${blocker}`)}</li>
+              <li key={blocker}>{SETTINGS_SELFUPDATE_BLOCKERS_LABELS[blocker]}</li>
             ))}
           </ul>
           {status.dirty_files.length > 0 && (
             <p className="break-all text-muted-foreground">
-              {t('settings.selfUpdate.dirtyFiles')} {status.dirty_files.join(', ')}
+              {'有改动的文件：'} {status.dirty_files.join(', ')}
             </p>
           )}
         </div>
@@ -420,22 +433,20 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
             ) : (
               <Download className="mr-2 h-4 w-4" />
             )}
-            {t('settings.selfUpdate.apply')}
+            {'立即更新'}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader className="min-w-0">
             <AlertDialogTitle className="break-all">
-              {t('settings.selfUpdate.confirmTitle', { version: targetLabel })}
+              {`更新到 ${targetLabel}？`}
             </AlertDialogTitle>
-            <AlertDialogDescription>{t(image
-              ? 'settings.selfUpdate.imageConfirmDesc'
-              : 'settings.selfUpdate.confirmDesc')}</AlertDialogDescription>
+            <AlertDialogDescription>{(image ? '先下载确认的镜像，再停止麦麦、备份持久数据、替换容器并检查 WebUI。新版本启动失败时会停止运行并保留现场，请按部署文档恢复备份；不会直接用旧镜像打开已迁移的数据库。' : '更新期间麦麦会离线几分钟：先停止运行，再拉取新版本、同步依赖并重新启动。拉取或依赖同步失败时会自动回滚到当前版本。建议先备份 data 目录。')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('settings.selfUpdate.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{'取消'}</AlertDialogCancel>
             <AlertDialogAction onClick={onApply}>
-              {t('settings.selfUpdate.confirmAction')}
+              {'更新并重启'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -445,7 +456,6 @@ function AvailableUpdate({ status, busy, applying, onApply }: AvailableUpdatePro
 }
 
 function LastResult({ result }: { result: SelfUpdateResult }) {
-  const { t } = useTranslation()
   const time = formatTime(result.finished_at)
   const to = formatRevision(result.to_version || '?', result.to_commit)
 
@@ -453,11 +463,7 @@ function LastResult({ result }: { result: SelfUpdateResult }) {
     return (
       <p className="flex items-center gap-2 rounded-md bg-muted/50 p-3">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
-        {t('settings.selfUpdate.lastSuccess', {
-          time,
-          from: formatRevision(result.from_version, result.from_commit),
-          to,
-        })}
+        {`已于 ${time} 从 ${formatRevision(result.from_version, result.from_commit)} 更新到 ${to}`}
       </p>
     )
   }
@@ -466,18 +472,18 @@ function LastResult({ result }: { result: SelfUpdateResult }) {
     <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
       <p className="flex items-center gap-2 font-medium text-destructive">
         <XCircle className="h-4 w-4 shrink-0" />
-        {t('settings.selfUpdate.lastFailed', { time, to })}
+        {`${time} 更新到 ${to} 失败`}
       </p>
       <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-background/60 p-2 text-xs">
         {result.error}
       </pre>
       {result.rolled_back && (
-        <p className="text-muted-foreground">{t('settings.selfUpdate.rolledBack')}</p>
+        <p className="text-muted-foreground">{'已自动回滚到更新前的版本'}</p>
       )}
-      {result.backup_path && <p className="break-all">{t('settings.selfUpdate.imageBackup', { path: result.backup_path })}</p>}
+      {result.backup_path && <p className="break-all">{`升级前备份：${result.backup_path}`}</p>}
       {result.rollback_error && (
         <p className="text-destructive">
-          {t('settings.selfUpdate.rollbackFailed', { error: result.rollback_error })}
+          {`自动回滚失败，请手动检查仓库与依赖状态：${result.rollback_error}`}
         </p>
       )}
     </div>

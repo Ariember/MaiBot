@@ -6,7 +6,6 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Tabs } from '@/components/ui/tabs'
-import i18n from '@/i18n'
 import type { MemoryTaskPayload } from '@/lib/memory-api'
 
 import type { UseMemoryTuningResult } from '../../hooks/useMemoryTuning'
@@ -34,7 +33,7 @@ afterEach(() => {
 })
 
 beforeEach(async () => {
-  await i18n.changeLanguage('zh')
+
   if (!Element.prototype.hasPointerCapture) {
     Element.prototype.hasPointerCapture = () => false
   }

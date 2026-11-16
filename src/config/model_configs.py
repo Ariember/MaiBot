@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, List, Literal, Tuple
 
-from src.common.i18n import t
+
 from src.web_search.config import WebSearchTaskConfig
 
 from .config_base import ConfigBase, Field
@@ -197,11 +197,11 @@ class APIProvider(ConfigBase):
             ValueError: 当配置项缺失或组合不合法时抛出。
         """
         if self.auth_type != OpenAICompatibleAuthType.NONE and not self.api_key:
-            raise ValueError(t("config.api_key_empty"))
+            raise ValueError('API密钥不能为空，请在配置中设置有效的API密钥。')
         if not self.base_url and self.client_type != "gemini":  # TODO: 允许gemini使用base_url
-            raise ValueError(t("config.api_base_url_empty"))
+            raise ValueError('API基础URL不能为空，请在配置中设置有效的基础URL。')
         if not self.name:
-            raise ValueError(t("config.api_provider_name_empty"))
+            raise ValueError('API提供商名称不能为空，请在配置中设置有效的名称。')
         if self.auth_type == OpenAICompatibleAuthType.HEADER and not self.auth_header_name.strip():
             raise ValueError("当 auth_type=header 时，auth_header_name 不能为空")
         if self.auth_type == OpenAICompatibleAuthType.QUERY and not self.auth_query_name.strip():
@@ -362,11 +362,11 @@ class ModelInfo(ConfigBase):
     def model_post_init(self, context: Any = None):
         self.model_identifier = self.model_identifier.strip()
         if not self.model_identifier:
-            raise ValueError(t("config.model_identifier_empty_generic"))
+            raise ValueError('模型标识符不能为空，请在配置中设置有效的模型标识符。')
         if not self.name:
-            raise ValueError(t("config.model_name_empty"))
+            raise ValueError('模型名称不能为空，请在配置中设置有效的模型名称。')
         if not self.api_provider:
-            raise ValueError(t("config.model_api_provider_empty"))
+            raise ValueError('API提供商不能为空，请在配置中设置有效的API提供商。')
 
         # 将跨午夜的时段拆开，统一检查半开区间是否重叠。
         intervals: List[Tuple[str, str, int]] = []

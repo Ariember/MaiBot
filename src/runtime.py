@@ -28,7 +28,7 @@ FINAL_CLEANUP_TIMEOUT = 5.0
 _RunResultT = TypeVar("_RunResultT")
 # print("-----------------------------------------")
 # print("\n\n\n\n\n")
-# print(t("startup.dev_branch_warning"))
+# print("警告：Dev 进入不稳定开发状态，任何插件与 WebUI 均可能无法正常工作！")
 # print("\n\n\n\n\n")
 # print("-----------------------------------------")
 
@@ -94,7 +94,7 @@ if __name__ == "__main__" and os.environ.get("MAIBOT_WORKER_PROCESS") == "1":
 
 from src.common.paths import PACKAGED_INSTALL, SOURCE_ROOT, get_instance_root  # noqa: E402
 from src.common.instance_lock import register_instance  # noqa: E402
-from src.common.i18n import set_locale, t, tn  # noqa: E402
+  # noqa: E402
 from src.common.logger import get_logger, initialize_logging, shutdown_logging  # noqa: E402
 from src.common.runtime_loop import set_main_loop  # noqa: E402
 from src.common.process_runner import RESTART_EXIT_CODE, RUNNER_SUPERVISED_ENV, run_runner  # noqa: E402
@@ -106,7 +106,6 @@ from src.config.legacy_upgrade_confirmation import require_legacy_upgrade_confir
 # 设置工作目录为实例目录（源码和 OneKey 默认仍使用仓库目录）。
 script_dir = str(get_instance_root())
 os.chdir(script_dir)
-set_locale(os.getenv("MAIBOT_LOCALE", "zh-CN"))
 
 # Runner 只需要基本日志；详细组件初始化由 Worker 输出。
 is_worker = os.environ.get("MAIBOT_WORKER_PROCESS") == "1"
@@ -123,7 +122,7 @@ def run_runner_process():
     script_file = "src.runtime"
     python_executable = sys.executable
 
-    logger.info(t("startup.launching_script", script_file=script_file))
+    logger.info(f'正在启动MaiBot')
     cmd = [python_executable, "-m", script_file]
     worker_env = os.environ.copy()
     if not PACKAGED_INSTALL:
@@ -169,7 +168,7 @@ if os.environ.get("MAIBOT_WORKER_PROCESS") != "1":
 require_legacy_upgrade_confirmation(Path(script_dir))
 asyncio.run(emit_terminal_update_notice_if_needed())
 
-logger.info(t("startup.worker_dir_set", script_dir=script_dir))
+logger.info(f'已设置工作目录为: {script_dir}')
 
 from src.main import MainSystem  # noqa
 from src.manager.async_task_manager import async_task_manager  # noqa
@@ -201,15 +200,15 @@ def print_opensource_notice():
     notice_lines = [
         "",
         f"{Fore.CYAN}{'═' * 70}{Style.RESET_ALL}",
-        f"{Fore.GREEN}{t('startup.opensource_title')}{Style.RESET_ALL}",
+        f"{Fore.GREEN}  ★ MaiBot - Ariember 个人 Fork ★{Style.RESET_ALL}",
         f"{Fore.CYAN}{'─' * 70}{Style.RESET_ALL}",
-        f"{Fore.YELLOW}{t('startup.opensource_free_notice')}{Style.RESET_ALL}",
+        f"{Fore.YELLOW}  本项目是 MaiBot 的个人 Fork，基于 GPL-3.0 协议发布。{Style.RESET_ALL}",
         "",
-        f"{Fore.WHITE}{t('startup.opensource_repo')}{Fore.BLUE}{t('startup.opensource_repo_value')} {Style.RESET_ALL}",
-        f"{Fore.WHITE}{t('startup.opensource_docs')}{Fore.BLUE}{t('startup.opensource_docs_value')} {Style.RESET_ALL}",
-        f"{Fore.WHITE}{t('startup.opensource_upstream')}{Fore.BLUE}{t('startup.opensource_upstream_value')}{Style.RESET_ALL}",
+        f"{Fore.WHITE}  本分支仓库: {Fore.BLUE}https://github.com/Ariember/MaiBot {Style.RESET_ALL}",
+        f"{Fore.WHITE}  项目说明: {Fore.BLUE}https://github.com/Ariember/MaiBot#readme {Style.RESET_ALL}",
+        f"{Fore.WHITE}  上游仓库: {Fore.BLUE}https://github.com/Mai-with-u/MaiBot{Style.RESET_ALL}",
         f"{Fore.CYAN}{'─' * 70}{Style.RESET_ALL}",
-        f"{Fore.WHITE}{t('startup.opensource_attribution')}{Style.RESET_ALL}",
+        f"{Fore.WHITE}  感谢上游团队与贡献者；本 Fork 不代表上游官方发布。{Style.RESET_ALL}",
         f"{Fore.CYAN}{'═' * 70}{Style.RESET_ALL}",
         "",
     ]
@@ -223,7 +222,7 @@ def easter_egg():
     from colorama import init, Fore
 
     init()
-    text = t("startup.easter_egg")
+    text = '多年以后，面对AI行刑队，张三将会回想起他2023年在会议上讨论人工智能的那个下午'
     rainbow_colors = [Fore.RED, Fore.YELLOW, Fore.GREEN, Fore.CYAN, Fore.BLUE, Fore.MAGENTA]
     rainbow_text = ""
     for i, char in enumerate(text):
@@ -238,7 +237,7 @@ async def graceful_shutdown(main_system: MainSystem | None = None) -> bool:
     _shutdown_deadline = shutdown_deadline - MEMORY_WRITER_TIMEOUT - MEMORY_KERNEL_TIMEOUT - FINAL_CLEANUP_TIMEOUT
     try:
         request_shutdown("graceful_shutdown")
-        logger.info(t("startup.shutdown_started"))
+        logger.info('正在优雅关闭麦麦...')
         success = True
 
         from src.common.logger import stop_ws_broadcasts
@@ -368,7 +367,7 @@ async def graceful_shutdown(main_system: MainSystem | None = None) -> bool:
         remaining_tasks = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
 
         if remaining_tasks:
-            logger.info(tn("startup.remaining_tasks_cancelling", len(remaining_tasks)))
+            logger.info(f'正在取消 {len(remaining_tasks)} 个剩余任务...')
 
             # 取消所有剩余任务
             for task in remaining_tasks:
@@ -383,22 +382,22 @@ async def graceful_shutdown(main_system: MainSystem | None = None) -> bool:
                     await asyncio.wait_for(
                         asyncio.gather(*remaining_tasks, return_exceptions=True), timeout=_shutdown_time_left(5.0)
                     )
-                logger.info(t("startup.remaining_tasks_cancelled"))
+                logger.info('所有剩余任务已成功取消')
             except asyncio.TimeoutError:
-                logger.warning(t("startup.remaining_tasks_cancel_timeout"))
+                logger.warning('等待任务取消超时，强制继续关闭')
                 success = False
             except Exception as e:
-                logger.error(t("startup.remaining_tasks_cancel_error", error=e))
+                logger.error(f'等待任务取消时发生异常: {e}')
                 success = False
 
         if success:
-            logger.info(t("startup.shutdown_completed"))
+            logger.info('麦麦优雅关闭完成')
         else:
             logger.error("应用优雅关闭未完成；退出状态为失败")
         return success
 
     except Exception as e:
-        logger.error(t("startup.shutdown_failed", error=e), exc_info=True)
+        logger.error(f'麦麦关闭失败: {e}', exc_info=True)
         return False
 
 
@@ -488,7 +487,7 @@ def _run_graceful_shutdown(
     except asyncio.CancelledError:
         logger.error("应用优雅关闭任务被取消；关闭未完成")
     except Exception as ge:
-        logger.error(t("startup.graceful_shutdown_error", error=ge))
+        logger.error(f'优雅关闭时发生错误: {ge}')
     return False
 
 
@@ -500,7 +499,7 @@ def raw_main():
     # 打印开源提示（防止倒卖）
     print_opensource_notice()
 
-    logger.info(t("startup.usage_notice"))
+    logger.info('使用须知见 EULA.md，隐私说明见 PRIVACY.md。')
 
     easter_egg()
 
@@ -543,7 +542,7 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             request_shutdown("keyboard_interrupt")
             try:
-                logger.warning(t("startup.interrupt_received"))
+                logger.warning('收到中断信号，正在优雅关闭...')
             except KeyboardInterrupt:
                 raise
 
@@ -555,7 +554,7 @@ if __name__ == "__main__":
         except asyncio.CancelledError:
             request_shutdown("task_cancelled")
             try:
-                logger.warning(t("startup.interrupt_received"))
+                logger.warning('收到中断信号，正在优雅关闭...')
             except KeyboardInterrupt:
                 pass
 
@@ -569,14 +568,14 @@ if __name__ == "__main__":
         else:
             exit_code = 1 if e.code else 0
         if exit_code == RESTART_EXIT_CODE:
-            logger.info(t("startup.restart_signal_received"))
+            logger.info('收到重启信号，准备退出并请求重启...')
 
     except KeyboardInterrupt:
         request_shutdown("keyboard_interrupt")
         _print_interrupt_exit_notice()
     except Exception as e:
         try:
-            logger.error(t("startup.main_error", error=f"{str(e)} {str(traceback.format_exc())}"))
+            logger.error(f"主程序发生异常: {f'{str(e)} {str(traceback.format_exc())}'}")
         except KeyboardInterrupt:
             _print_interrupt_exit_notice()
         if not shutdown_completed:
@@ -597,7 +596,7 @@ if __name__ == "__main__":
                 _active_main_loop = None
                 set_main_loop(None)
                 loop.close()
-                print(t("startup.event_loop_closed"))
+                print('[主程序] 事件循环已关闭')
 
             # 关闭日志系统，释放文件句柄
             try:
@@ -606,9 +605,9 @@ if __name__ == "__main__":
                 stop_memory_diagnostics()
                 shutdown_logging()
             except Exception as e:
-                print(t("startup.logging_shutdown_error", error=e))
+                print(f'关闭日志系统时出错: {e}')
 
-            print(t("startup.prepare_exit"))
+            print('[主程序] 准备退出...')
         except KeyboardInterrupt:
             _print_interrupt_exit_notice()
 

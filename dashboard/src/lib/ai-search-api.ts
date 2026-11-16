@@ -10,7 +10,6 @@ export interface AISearchCandidate {
 
 export interface AISearchRequest {
   query: string
-  language: string
   candidates: AISearchCandidate[]
 }
 

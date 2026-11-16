@@ -100,7 +100,7 @@ describe('SurveyResults 统计展示', () => {
     expect(screen.getByText('10')).toBeInTheDocument()
     expect(screen.getByText('8')).toBeInTheDocument()
     expect(
-      screen.getByText(new Date('2026-07-01T00:00:00.000Z').toLocaleDateString())
+      screen.getByText(new Date('2026-07-01T00:00:00.000Z').toLocaleDateString('zh-CN'))
     ).toBeInTheDocument()
 
     // 选择题：选项计数与百分比
@@ -157,7 +157,7 @@ describe('SurveyResults 我的提交', () => {
 
     expect(await screen.findByText('ID: sub-42')).toBeInTheDocument()
     expect(
-      screen.getByText(new Date('2026-06-15T08:00:00.000Z').toLocaleString())
+      screen.getByText(new Date('2026-06-15T08:00:00.000Z').toLocaleString('zh-CN'))
     ).toBeInTheDocument()
     // 字符串答案匹配选项 → 展示标签
     expect(screen.getByText('选项A')).toBeInTheDocument()

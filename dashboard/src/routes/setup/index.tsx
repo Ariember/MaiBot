@@ -4,12 +4,11 @@ import {
   Brain,
   Bot,
   CheckCircle2,
-  Globe,
   ShieldCheck,
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
 import { Button } from '@/components/ui/button'
 import { SetupWizardLayout } from './SetupWizardLayout'
 import {
@@ -23,13 +22,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
 import { findTemplateByBaseUrl } from '@/routes/config/providerTemplates'
 import { APP_NAME } from '@/lib/version'
 import { useToast } from '@/hooks/use-toast'
@@ -65,13 +57,6 @@ import {
   updateAccessToken,
 } from './api'
 
-const LANGUAGE_CODES = ['zh', 'en', 'ja', 'ko'] as const
-const LANGUAGE_NAMES: Record<(typeof LANGUAGE_CODES)[number], string> = {
-  zh: '中文',
-  en: 'English',
-  ja: '日本語',
-  ko: '한국어',
-}
 
 export function SetupPage() {
   return <SetupPageContent />
@@ -81,13 +66,11 @@ export function SetupPage() {
 function SetupPageContent() {
   const navigate = useNavigate()
   const reduceMotion = useReducedMotion()
-  const { t, i18n: i18nInstance } = useTranslation()
   const { toast } = useToast()
-  const currentLang = i18nInstance.resolvedLanguage || i18nInstance.language || 'zh'
   const createDefaultPersonalityConfig = (): PersonalityConfig => ({
-    personality: t('setupPage.defaults.personality.personality'),
-    behavior_style: t('setupPage.defaults.personality.behaviorStyle'),
-    reply_style: t('setupPage.defaults.personality.replyStyle'),
+    personality: '是一个大二女大学生，现在正在上网和群友聊天。有轻微攻击性',
+    behavior_style: '自然参与日常聊天，不会没话题硬找话题；先理解上下文，再决定回复或保持安静。',
+    reply_style: '你的风格平淡简短。可以参考贴吧，知乎和微博的回复风格。不浮夸不长篇大论，不要过分修辞和复杂句。',
     dialogue_examples: [],
   })
   const [currentStep, setCurrentStep] = useState(0)
@@ -133,14 +116,14 @@ function SetupPageContent() {
   const setupSteps: SetupStep[] = [
     {
       id: 'bot-profile',
-      title: t('setupPage.steps.botProfile.title'),
-      description: t('setupPage.steps.botProfile.description'),
+      title: '基础与人格',
+      description: '',
       icon: Bot,
     },
     {
       id: 'model-setup',
-      title: t('setupPage.steps.modelSetup.title'),
-      description: t('setupPage.steps.modelSetup.description'),
+      title: '模型配置',
+      description: '',
       icon: Brain,
     },
   ]
@@ -148,8 +131,8 @@ function SetupPageContent() {
     ? [
         {
           id: 'custom-token',
-          title: t('setupPage.steps.customToken.title'),
-          description: t('setupPage.steps.customToken.description'),
+          title: '设置登录密码',
+          description: '不设置的话，每次启动都会换一个随机密码。',
           icon: ShieldCheck,
         },
         ...setupSteps,
@@ -257,9 +240,9 @@ function SetupPageContent() {
         setModelSetup(model)
       } catch (error) {
         toast({
-          title: t('setupPage.toast.loadFailedTitle'),
+          title: '加载配置失败',
           description:
-            error instanceof Error ? error.message : t('setupPage.toast.loadFailedDescription'),
+            error instanceof Error ? error.message : '无法加载现有配置，将使用默认值',
           variant: 'destructive',
         })
       } finally {
@@ -268,7 +251,7 @@ function SetupPageContent() {
     }
 
     loadConfigs()
-  }, [t, toast])
+  }, [toast])
 
   // 保存当前步骤配置
   const saveCurrentStep = async () => {
@@ -286,17 +269,15 @@ function SetupPageContent() {
       }
 
       toast({
-        title: t('setupPage.toast.saveSuccessTitle'),
-        description: t('setupPage.toast.saveSuccessDescription', {
-          step: steps[currentStep].title,
-        }),
+        title: '保存成功',
+        description: `${steps[currentStep].title} 配置已保存`,
         duration: 1000,
       })
       return true
     } catch (error) {
       toast({
-        title: t('setupPage.toast.saveFailedTitle'),
-        description: error instanceof Error ? error.message : t('setupPage.toast.unknownError'),
+        title: '保存失败',
+        description: error instanceof Error ? error.message : '未知错误',
         variant: 'destructive',
       })
       return false
@@ -314,8 +295,8 @@ function SetupPageContent() {
         .map((rule) => rule.label)
         .join(', ')
       toast({
-        title: t('setupPage.toast.validationFailedTitle'),
-        description: t('setupPage.validation.customTokenInvalid', { failedRules }),
+        title: '验证失败',
+        description: `密码不符合要求：${failedRules}`,
         variant: 'destructive',
       })
       return false
@@ -326,7 +307,7 @@ function SetupPageContent() {
       const result = await updateAccessToken(trimmedToken)
       if (!result.success) {
         toast({
-          title: t('setupPage.toast.saveFailedTitle'),
+          title: '保存失败',
           description: result.message,
           variant: 'destructive',
         })
@@ -334,16 +315,16 @@ function SetupPageContent() {
       }
 
       toast({
-        title: t('setupPage.toast.customTokenSuccessTitle'),
-        description: t('setupPage.toast.customTokenSuccessDescription'),
+        title: '密码已更新',
+        description: '已自动登录，请继续完成配置。',
       })
       setCustomToken('')
       setRequiresCustomToken(false)
       return true
     } catch (error) {
       toast({
-        title: t('setupPage.toast.saveFailedTitle'),
-        description: error instanceof Error ? error.message : t('setupPage.toast.unknownError'),
+        title: '保存失败',
+        description: error instanceof Error ? error.message : '未知错误',
         variant: 'destructive',
       })
       return false
@@ -354,14 +335,14 @@ function SetupPageContent() {
 
   // Step 1 验证
   function validateBotBasic(config: BotBasicConfig): string | null {
-    if (!config.nickname.trim()) return t('setupPage.validation.enterNickname')
+    if (!config.nickname.trim()) return '请输入昵称'
     return null
   }
 
   function validateApiProviderSetup(config: ApiProviderSetupConfig): string | null {
-    if (!config.provider_name.trim()) return t('setupPage.validation.enterProviderName')
-    if (!config.base_url.trim()) return t('setupPage.validation.enterBaseUrl')
-    if (!config.api_key.trim()) return t('setupPage.validation.enterApiKey')
+    if (!config.provider_name.trim()) return '请输入 API 提供商名称'
+    if (!config.base_url.trim()) return '请输入 API Base URL'
+    if (!config.api_key.trim()) return '请输入 API Key'
     return null
   }
 
@@ -373,12 +354,12 @@ function SetupPageContent() {
       !availableModels.some((model) => model.id === config.replyer_model_identifier)
     )) return '请选择用于规划和回复的模型'
     if (!config.planner_model_identifier.trim()) {
-      return t('setupPage.validation.enterPlannerModelIdentifier')
+      return '请输入 planner 模型标识符'
     }
     if (!config.replyer_model_identifier.trim()) {
-      return t('setupPage.validation.enterReplyerModelIdentifier')
+      return '请输入 replyer 模型标识符'
     }
-    if (!apiProviderSetup.provider_name.trim()) return t('setupPage.validation.enterProviderName')
+    if (!apiProviderSetup.provider_name.trim()) return '请输入 API 提供商名称'
     return null
   }
 
@@ -393,7 +374,7 @@ function SetupPageContent() {
       const error = validateBotBasic(botBasic)
       if (error) {
         toast({
-          title: t('setupPage.toast.validationFailedTitle'),
+          title: '验证失败',
           description: error,
           variant: 'destructive',
         })
@@ -404,7 +385,7 @@ function SetupPageContent() {
       const error = validateApiProviderSetup(apiProviderSetup) ?? validateModelSetup(modelSetup)
       if (error) {
         toast({
-          title: t('setupPage.toast.validationFailedTitle'),
+          title: '验证失败',
           description: error,
           variant: 'destructive',
         })
@@ -435,7 +416,7 @@ function SetupPageContent() {
       const error = validateApiProviderSetup(apiProviderSetup) ?? validateModelSetup(modelSetup)
       if (error) {
         toast({
-          title: t('setupPage.toast.validationFailedTitle'),
+          title: '验证失败',
           description: error,
           variant: 'destructive',
         })
@@ -454,18 +435,16 @@ function SetupPageContent() {
       await completeSetup()
 
       toast({
-        title: t('setupPage.toast.completeSuccessTitle'),
-        description: t('setupPage.toast.completeSuccessDescription', {
-          appName: APP_NAME,
-        }),
+        title: '配置完成',
+        description: `${APP_NAME} 配置已保存。先在「聊聊」发一句「你好」，试试麦麦的回复和说话风格。`,
       })
 
       // 3. 配置文件会被 MaiBot 热加载；完成后进入聊聊，先体验本地对话。
       navigate({ to: '/chat', search: { setupTrial: true } })
     } catch (error) {
       toast({
-        title: t('setupPage.toast.completeFailedTitle'),
-        description: error instanceof Error ? error.message : t('setupPage.toast.unknownError'),
+        title: '配置失败',
+        description: error instanceof Error ? error.message : '未知错误',
         variant: 'destructive',
       })
     } finally {
@@ -479,8 +458,8 @@ function SetupPageContent() {
       navigate({ to: '/' })
     } catch (error) {
       toast({
-        title: t('setupPage.toast.skipFailedTitle'),
-        description: error instanceof Error ? error.message : t('setupPage.toast.unknownError'),
+        title: '跳过失败',
+        description: error instanceof Error ? error.message : '未知错误',
         variant: 'destructive',
       })
     }
@@ -545,44 +524,14 @@ function SetupPageContent() {
 
   return (
     <div className="relative h-full min-h-screen overflow-x-hidden overflow-y-auto px-4">
-      {/* 语言切换 */}
-      <div className="absolute top-3 right-3 z-20">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Globe className="h-4 w-4" />
-              <span className="hidden text-xs sm:inline">
-                {LANGUAGE_NAMES[currentLang.split('-')[0] as (typeof LANGUAGE_CODES)[number]] ??
-                  currentLang}
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {LANGUAGE_CODES.map((code) => (
-              <DropdownMenuItem
-                key={code}
-                onClick={() => i18nInstance.changeLanguage(code)}
-                className={cn(
-                  'cursor-pointer',
-                  currentLang.split('-')[0] === code && 'text-primary font-semibold'
-                )}
-              >
-                {currentLang.split('-')[0] === code && <span className="mr-2">✓</span>}
-                {LANGUAGE_NAMES[code]}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
       {/* 加载状态 */}
       {isLoading ? (
         <div className="relative z-10 flex min-h-screen flex-col items-center justify-center text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
             <div className="border-primary h-12 w-12 animate-spin rounded-full border-4 border-t-transparent" />
           </div>
-          <p className="text-lg font-medium">{t('setupPage.loading.title')}</p>
-          <p className="text-muted-foreground mt-2 text-sm">{t('setupPage.loading.description')}</p>
+          <p className="text-lg font-medium">{'加载中...'}</p>
+          <p className="text-muted-foreground mt-2 text-sm">{'正在读取已有配置'}</p>
         </div>
       ) : (
         <SetupWizardLayout
@@ -600,20 +549,20 @@ function SetupPageContent() {
                     className="px-1"
                     disabled={isSaving || isCompleting || currentStepId === 'custom-token'}
                   >
-                    {t('setupPage.actions.skip')}
+                    {'跳过向导'}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>{t('setupPage.skipDialog.title')}</AlertDialogTitle>
+                    <AlertDialogTitle>{'确认跳过配置向导'}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      {t('setupPage.skipDialog.description')}
+                      {'您可以随时在 WEBUI设置中重新进入配置向导。确定要跳过吗？'}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                    <AlertDialogCancel>{'取消'}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleSkip}>
-                      {t('setupPage.skipDialog.confirm')}
+                      {'确认跳过'}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -622,7 +571,7 @@ function SetupPageContent() {
               <div className="ml-auto flex items-center gap-3">
                 {currentStep > 0 && (
                   <Button variant="outline" onClick={handlePrevious} disabled={isSaving}>
-                    {t('setupPage.actions.previous')}
+                    {'上一步'}
                   </Button>
                 )}
                 {currentStep === steps.length - 1 && currentStepId !== 'custom-token' ? (
@@ -635,12 +584,12 @@ function SetupPageContent() {
                       <>
                         <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                         {isSaving
-                          ? t('setupPage.actions.saving')
-                          : t('setupPage.actions.completing')}
+                          ? '保存中...'
+                          : '完成中...'}
                       </>
                     ) : (
                       <>
-                        {t('setupPage.actions.complete')}
+                        {'完成配置'}
                         <CheckCircle2 className="ml-2 h-4 w-4" strokeWidth={2} fill="none" />
                       </>
                     )}
@@ -659,13 +608,13 @@ function SetupPageContent() {
                     {isSaving ? (
                       <>
                         <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        {t('setupPage.actions.saving')}
+                        {'保存中...'}
                       </>
                     ) : (
                       <>
                         {currentStepId === 'custom-token'
-                          ? t('setupPage.actions.saveToken')
-                          : t('setupPage.actions.next')}
+                          ? '保存并继续'
+                          : '下一步'}
                         <ArrowRight className="ml-2 h-4 w-4" strokeWidth={2} fill="none" />
                       </>
                     )}

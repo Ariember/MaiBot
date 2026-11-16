@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
 
-from src.common.prompt_i18n import clear_prompt_cache
+from src.common.prompt_templates import clear_prompt_cache
 from src.webui.dependencies import require_auth
 from src.webui.routers import config as config_router_module
 
@@ -29,7 +29,7 @@ def client_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClien
 
 def test_update_prompt_file_saves_custom_version(client: TestClient) -> None:
     response = client.put(
-        "/api/webui/config/prompts/zh-CN/replyer.prompt",
+        "/api/webui/config/prompts/replyer.prompt",
         json={"content": "Hi {name}", "create_version": True, "label": "测试版本"},
     )
 
@@ -44,7 +44,7 @@ def test_update_prompt_file_saves_custom_version(client: TestClient) -> None:
 
     catalog_response = client.get("/api/webui/config/prompts")
     assert catalog_response.status_code == 200
-    [file_info] = catalog_response.json()["files"]["zh-CN"]
+    [file_info] = catalog_response.json()["files"]
     assert file_info["customized"] is True
     assert file_info["custom_version_count"] == 1
 
@@ -57,27 +57,27 @@ def test_prompt_catalog_reports_invalid_active_template(client: TestClient, cust
 
     response = client.get("/api/webui/config/prompts")
     assert response.status_code == 200
-    [file_info] = response.json()["files"]["zh-CN"]
-    detail = client.get("/api/webui/config/prompts/zh-CN/replyer.prompt").json()
+    [file_info] = response.json()["files"]
+    detail = client.get("/api/webui/config/prompts/replyer.prompt").json()
     assert file_info["validation"] == detail["validation"]
     assert file_info["validation"]["valid"] is False
     assert file_info["validation"]["message"]
 
-    client.delete("/api/webui/config/prompts/zh-CN/replyer.prompt")
-    [reset_info] = client.get("/api/webui/config/prompts").json()["files"]["zh-CN"]
+    client.delete("/api/webui/config/prompts/replyer.prompt")
+    [reset_info] = client.get("/api/webui/config/prompts").json()["files"]
     assert reset_info["validation"]["valid"] is True
 
 
 def test_prompt_catalog_detects_default_template_upgrade(client: TestClient) -> None:
     client.put(
-        "/api/webui/config/prompts/zh-CN/replyer.prompt",
+        "/api/webui/config/prompts/replyer.prompt",
         json={"content": "Hi {name}", "create_version": True},
     )
     (config_router_module.PROMPTS_DIR / "zh-CN" / "replyer.prompt").write_text(
         "Hello {name} {context}", encoding="utf-8"
     )
 
-    [file_info] = client.get("/api/webui/config/prompts").json()["files"]["zh-CN"]
+    [file_info] = client.get("/api/webui/config/prompts").json()["files"]
     assert file_info["validation"]["missing_placeholders"] == ["context"]
     assert file_info["validation"]["valid"] is False
 
@@ -104,7 +104,7 @@ description = "用于分析表情包图片内容的模板。"
     assert response.status_code == 200
     file_info = next(
         item
-        for item in response.json()["files"]["zh-CN"]
+        for item in response.json()["files"]
         if item["name"] == "emoji_content_analysis.prompt"
     )
     assert file_info["display_name"] == "表情包内容分析"
@@ -114,7 +114,7 @@ description = "用于分析表情包图片内容的模板。"
 
 def test_update_prompt_file_rejects_placeholder_mismatch(client: TestClient) -> None:
     response = client.put(
-        "/api/webui/config/prompts/zh-CN/replyer.prompt",
+        "/api/webui/config/prompts/replyer.prompt",
         json={"content": "Hi {other}", "create_version": True},
     )
 
@@ -125,7 +125,7 @@ def test_update_prompt_file_rejects_placeholder_mismatch(client: TestClient) -> 
 
 def test_activate_prompt_version_rejects_placeholder_mismatch(client: TestClient) -> None:
     save_response = client.put(
-        "/api/webui/config/prompts/zh-CN/replyer.prompt",
+        "/api/webui/config/prompts/replyer.prompt",
         json={"content": "Hi {name}", "create_version": True, "label": "有效版本"},
     )
     version_id = save_response.json()["active_version_id"]
@@ -134,7 +134,7 @@ def test_activate_prompt_version_rejects_placeholder_mismatch(client: TestClient
     version_path = custom_root / "zh-CN" / ".versions" / "replyer" / f"{version_id}.prompt"
     version_path.write_text("Hi {other}", encoding="utf-8")
 
-    response = client.post(f"/api/webui/config/prompts/zh-CN/replyer.prompt/versions/{version_id}/activate")
+    response = client.post(f"/api/webui/config/prompts/replyer.prompt/versions/{version_id}/activate")
 
     assert response.status_code == 400
     assert "缺少参数: name" in response.json()["detail"]
@@ -143,13 +143,13 @@ def test_activate_prompt_version_rejects_placeholder_mismatch(client: TestClient
 
 def test_delete_prompt_version_removes_active_override_and_restores_default(client: TestClient) -> None:
     save_response = client.put(
-        "/api/webui/config/prompts/zh-CN/replyer.prompt",
+        "/api/webui/config/prompts/replyer.prompt",
         json={"content": "Hi {name}", "create_version": True, "label": "待删除版本"},
     )
     version_id = save_response.json()["active_version_id"]
 
     response = client.delete(
-        f"/api/webui/config/prompts/zh-CN/replyer.prompt/versions/{version_id}"
+        f"/api/webui/config/prompts/replyer.prompt/versions/{version_id}"
     )
 
     assert response.status_code == 200
@@ -160,25 +160,25 @@ def test_delete_prompt_version_removes_active_override_and_restores_default(clie
     assert payload["versions"] == []
 
     catalog_response = client.get("/api/webui/config/prompts")
-    [file_info] = catalog_response.json()["files"]["zh-CN"]
+    [file_info] = catalog_response.json()["files"]
     assert file_info["customized"] is False
     assert file_info["custom_version_count"] == 0
 
 
 def test_delete_inactive_prompt_version_keeps_active_override(client: TestClient) -> None:
     first_response = client.put(
-        "/api/webui/config/prompts/zh-CN/replyer.prompt",
+        "/api/webui/config/prompts/replyer.prompt",
         json={"content": "First {name}", "create_version": True, "label": "第一个版本"},
     )
     first_version_id = first_response.json()["active_version_id"]
     second_response = client.put(
-        "/api/webui/config/prompts/zh-CN/replyer.prompt",
+        "/api/webui/config/prompts/replyer.prompt",
         json={"content": "Second {name}", "create_version": True, "label": "第二个版本"},
     )
     second_version_id = second_response.json()["active_version_id"]
 
     response = client.delete(
-        f"/api/webui/config/prompts/zh-CN/replyer.prompt/versions/{first_version_id}"
+        f"/api/webui/config/prompts/replyer.prompt/versions/{first_version_id}"
     )
 
     assert response.status_code == 200
