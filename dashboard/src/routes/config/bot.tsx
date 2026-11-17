@@ -1131,7 +1131,10 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
   const basicChatPromptFieldNames = new Set(['group_chat_prompt', 'private_chat_prompts'])
   const chatQuoteFieldNames = new Set(['private_quote_frequency', 'group_quote_frequency'])
   const chatDebounceFieldNames = new Set(['message_debounce_seconds', 'private_message_debounce_seconds'])
-  const basicChatContextFieldNames = new Set(['max_context_size', 'max_private_context_size'])
+  const basicChatContextFieldNames = new Set([
+    'max_context_size', 'max_private_context_size', 'use_token_limit', 'private_use_token_limit',
+    'max_context_tokens', 'private_max_context_tokens',
+  ])
   const basicChatTimingFieldNames = new Set([
     'talk_value', 'private_reply_paused', 'mentioned_bot_reply', 'inevitable_at_reply',
   ])
@@ -1142,7 +1145,14 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
     ...chatSchema,
     fields: chatSchema.fields
       .filter((field) => basicChatContextFieldNames.has(field.name))
-      .map((field) => ({ ...field, advanced: false })),
+      .map((field) => {
+        const tokenEnabled = field.name.startsWith('private_') || field.name === 'max_private_context_size'
+          ? sectionValues.chat?.private_use_token_limit === true
+          : sectionValues.chat?.use_token_limit === true
+        const isCount = field.name === 'max_context_size' || field.name === 'max_private_context_size'
+        const isTokenCount = field.name === 'max_context_tokens' || field.name === 'private_max_context_tokens'
+        return { ...field, advanced: false, readOnly: isCount ? tokenEnabled : isTokenCount ? !tokenEnabled : field.readOnly }
+      }),
     nested: {},
   } : null
   const basicChatTimingSchema: ConfigSchema | null = replyTimingSchema ? {

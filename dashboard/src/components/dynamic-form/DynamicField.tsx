@@ -587,6 +587,7 @@ export const DynamicField: React.FC<DynamicFieldProps> = ({
     return (
       <DraftNumberInput
         className={inlineRightInputClassName}
+        disabled={schema.readOnly}
         value={value}
         defaultValue={schema.default}
         integer={schema.type === 'integer'}

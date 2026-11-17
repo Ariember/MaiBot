@@ -74,6 +74,7 @@ export interface ModelFormErrors {
   api_provider?: string
   model_identifier?: string
   price_periods?: string
+  image_limits?: string
 }
 
 function validatePricePeriods(periods: ModelPricePeriod[] = []): string | undefined {
@@ -953,6 +954,9 @@ export function useModelConfig() {
           send_temperature: true,
           max_tokens: null,
           visual: false,
+          max_images: 0,
+          image_max_side: 8000,
+          image_min_side: 1,
           force_stream_mode: false,
           extra_params: {},
         }
@@ -1102,6 +1106,9 @@ export function useModelConfig() {
     }
     const pricePeriodsError = validatePricePeriods(editingModel.price_periods)
     if (pricePeriodsError) errors.price_periods = pricePeriodsError
+    if ((editingModel.image_min_side ?? 1) > (editingModel.image_max_side ?? 8000)) {
+      errors.image_limits = '图片最小边长不得超过最大边长'
+    }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors)

@@ -29,7 +29,7 @@ async def test_correction_stays_separate_through_post_processing(monkeypatch, mo
         utils,
         "global_config",
         SimpleNamespace(
-            response_post_process=SimpleNamespace(enable_response_post_process=True),
+            response_post_process=SimpleNamespace(enable_response_post_process=True, remove_bracket_content=True),
             response_splitter=SimpleNamespace(
                 mode=mode,
                 enable=True,

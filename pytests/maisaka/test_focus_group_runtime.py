@@ -34,6 +34,7 @@ from src.maisaka.context.messages import (
     InternalContextMessage,
     ModelOutputContextMessage,
     SessionBackedMessage,
+    ToolResultMediaMessage,
     ToolResultMessage,
 )
 from src.maisaka.context.emoji_candidates import EmojiCandidateMessage
@@ -474,9 +475,12 @@ def _seed_planner_snapshot(group):
 
 
 @pytest.mark.asyncio
-async def test_compaction_keeps_source_progress_and_recent_complete_tool_turn(setup_group, monkeypatch):
+@pytest.mark.parametrize("token_mode", [False, True])
+async def test_compaction_keeps_source_progress_and_recent_complete_tool_turn(setup_group, monkeypatch, token_mode):
     group, _, _ = setup_group
-    monkeypatch.setattr(global_config.chat, "max_context_size", 4)
+    monkeypatch.setattr(global_config.chat, "max_context_size", 300 if token_mode else 4)
+    monkeypatch.setattr(global_config.chat, "use_token_limit", token_mode)
+    group._service.last_planner_prompt_tokens = global_config.chat.max_context_tokens
     summary_requests = []
 
     class SummaryClient:
@@ -521,6 +525,43 @@ async def test_compaction_keeps_source_progress_and_recent_complete_tool_turn(se
     assert "Focus" in "\n".join(summary_requests)
     clients.assert_called_once_with(task_name="planner", request_type="maisaka.context_compaction", session_id=group.scope_id)
     assert isinstance(group.entries[0].messages[0], ContextSummaryMessage)
+    assert group._service.last_planner_prompt_tokens == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("restored", [False, True])
+async def test_token_compaction_bounds_member_chat_and_media_cache(setup_group, monkeypatch, restored):
+    group, members, _ = setup_group
+    monkeypatch.setattr(global_config.chat, "use_token_limit", True)
+    group._service.last_planner_prompt_tokens = global_config.chat.max_context_tokens
+    messages = [_chat_history(str(index), "A") for index in range(30)]
+    group.entries = [FocusContextEntry([message], {"A"}, index) for index, message in enumerate(messages, 1)]
+    cached = []
+    for message in messages:
+        cached.extend([
+            message,
+            EmojiCandidateMessage(
+                item=message.to_context_item(), emoji_hashes={1: "emoji-A"}, visible_text="表情候选",
+                timestamp=message.timestamp, session_id="A",
+            ),
+            ToolResultMediaMessage(
+                raw_message=MessageSequence([TextComponent("媒体")]), visible_text="媒体",
+                timestamp=message.timestamp, tool_call_id="media-call", session_id="A",
+            ),
+        ])
+    members["A"]._chat_history = list(cached)
+    if restored:
+        group._store.save(group.entries, {})
+        group.entries = group._store.load()["entries"]
+        assert all(isinstance(message, context_module.RestoredContextMessage) for message in group.history)
+    monkeypatch.setattr(group_module, "build_context_summary", AsyncMock(return_value=ContextSummaryMessage(
+        content="既有对话摘要", timestamp=datetime.now(),
+    )))
+    _seed_planner_snapshot(group)
+    await group._compact()
+    assert members["A"]._chat_history == cached[-20:]
+    assert isinstance(group.entries[0].messages[0], ContextSummaryMessage)
+    assert group._service.last_planner_prompt_tokens == 0
 
 
 @pytest.mark.asyncio

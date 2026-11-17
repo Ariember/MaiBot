@@ -1216,28 +1216,33 @@ class LLMOrchestrator:
                     await asyncio.sleep(api_provider.retry_interval)
                     continue
 
-                # 特殊处理413，尝试压缩
+                # 特殊处理图片大小限制和 413，压缩本身不消耗重试次数。
                 data_uri_limit_bytes = self._extract_data_uri_limit_bytes(e)
-                if data_uri_limit_bytes is not None and can_retry_with_compression:
-                    target_size = self._build_data_uri_retry_target_size(data_uri_limit_bytes)
-                    logger.warning(
-                        f"任务 '{task_display}' 的模型 '{model_info.name}' 返回 data URI 图片过大错误，"
-                        f"检测到单项上限 {data_uri_limit_bytes} 字节，尝试压缩图片后重试..."
-                    )
-                    compressed_messages = compress_messages(
-                        active_request.context_items,
-                        img_target_size=target_size,
-                    )
-                    active_request = active_request.copy_with(context_items=compressed_messages)
-                    await asyncio.to_thread(update_failed_request_attempt, e, status="retrying")
-                    continue
+                if can_retry_with_compression and (data_uri_limit_bytes is not None or e.status_code == 413):
+                    target_size = 1 * 1024 * 1024
+                    if data_uri_limit_bytes is not None:
+                        target_size = self._build_data_uri_retry_target_size(data_uri_limit_bytes)
+                        logger.warning(
+                            f"任务 '{task_display}' 的模型 '{model_info.name}' 返回 data URI 图片过大错误，"
+                            f"检测到单项上限 {data_uri_limit_bytes} 字节，尝试压缩图片后重试..."
+                        )
+                    else:
+                        logger.warning(
+                            f"任务 '{task_display}' 的模型 '{model_info.name}' 返回413请求体过大，尝试压缩后重试..."
+                        )
 
-                if e.status_code == 413 and can_retry_with_compression:
-                    logger.warning(
-                        f"任务 '{task_display}' 的模型 '{model_info.name}' 返回413请求体过大，尝试压缩后重试..."
+                    def compress_for_retry(items: List[ContextItem], img_target_size: int) -> List[ContextItem]:
+                        # 压缩可能缩小到模型短边限制以下，重发前仍需满足当前模型的图片约束。
+                        return normalize_context_images(
+                            compress_messages(items, img_target_size=img_target_size),
+                            max_images=model_info.max_images,
+                            max_side=model_info.image_max_side,
+                            min_side=model_info.image_min_side,
+                        )
+
+                    compressed_messages = await asyncio.to_thread(
+                        compress_for_retry, active_request.context_items, target_size,
                     )
-                    # 压缩消息本身不消耗重试次数
-                    compressed_messages = compress_messages(active_request.context_items)
                     active_request = active_request.copy_with(context_items=compressed_messages)
                     await asyncio.to_thread(update_failed_request_attempt, e, status="retrying")
                     continue
@@ -1406,7 +1411,13 @@ class LLMOrchestrator:
                         context_items = context_result
                 if request_type == RequestType.RESPONSE and context_items:
                     # 图片解码、缩放及切图在线程池执行，避免阻塞 Bot 或 WebUI 事件循环。
-                    context_items = await asyncio.to_thread(normalize_context_images, context_items)
+                    context_items = await asyncio.to_thread(
+                        normalize_context_images,
+                        context_items,
+                        max_images=model_info.max_images,
+                        max_side=model_info.image_max_side,
+                        min_side=model_info.image_min_side,
+                    )
                 request = self._build_client_request(
                     request_type=request_type,
                     model_info=model_info,

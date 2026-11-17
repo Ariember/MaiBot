@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.chat.utils import utils
+from src.config.official_configs import ResponsePostProcessConfig
 
 
 @pytest.mark.parametrize(
@@ -84,7 +85,7 @@ async def test_mixed_reply_keeps_phrases_and_punctuation_when_compressed(monkeyp
         utils,
         "global_config",
         SimpleNamespace(
-            response_post_process=SimpleNamespace(enable_response_post_process=True),
+            response_post_process=SimpleNamespace(enable_response_post_process=True, remove_bracket_content=True),
             response_splitter=SimpleNamespace(
                 mode="rule",
                 enable=True,
@@ -107,3 +108,54 @@ async def test_mixed_reply_keeps_phrases_and_punctuation_when_compressed(monkeyp
         "你下午在忙什么呢？",
     ]
     assert "".join(segment.text + segment.separator for segment in segments) == text
+
+
+@pytest.mark.parametrize("remove_bracket_content", [True, False])
+@pytest.mark.parametrize("opening,closing", [("(", ")"), ("[", "]"), ("（", "）")])
+def test_bracket_cleanup_keeps_sentence_splitting_and_kaomoji(
+    monkeypatch, remove_bracket_content: bool, opening: str, closing: str,
+) -> None:
+    monkeypatch.setattr(utils.random, "random", lambda: 0.99)
+    monkeypatch.setattr(
+        utils,
+        "global_config",
+        SimpleNamespace(
+            response_post_process=ResponsePostProcessConfig(remove_bracket_content=remove_bracket_content),
+            response_splitter=SimpleNamespace(
+                enable=True,
+                enable_kaomoji_protection=True,
+                enable_overflow_return_all=False,
+                max_length=512,
+                max_sentence_num=8,
+                max_split_num=8,
+            ),
+            chinese_typo=SimpleNamespace(enable=False),
+        ),
+    )
+    action = f"{opening}挥手{closing}"
+    text = f"你好{action}，下次见(^_^)"
+
+    segments = utils.process_llm_response_segments(text)
+
+    assert [segment.text for segment in segments] == [
+        "你好" if remove_bracket_content else f"你好{action}",
+        "下次见(^_^)",
+    ]
+
+
+@pytest.mark.parametrize("opening,closing", [("(", ")"), ("[", "]"), ("（", "）")])
+def test_default_cleanup_preserves_english_brackets_before_chinese(monkeypatch, opening: str, closing: str) -> None:
+    monkeypatch.setattr(
+        utils,
+        "global_config",
+        SimpleNamespace(
+            response_post_process=ResponsePostProcessConfig(),
+            response_splitter=utils.global_config.response_splitter,
+            chinese_typo=SimpleNamespace(enable=False),
+        ),
+    )
+    text = f"使用 {opening}API{closing} 请求中文模型{opening}点头{closing}"
+
+    segments = utils.process_llm_response_segments(text, enable_splitter=False, enable_chinese_typo=False)
+
+    assert [segment.text for segment in segments] == [f"使用 {opening}API{closing} 请求中文模型"]

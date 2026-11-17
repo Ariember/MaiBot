@@ -2146,6 +2146,36 @@ function ModelConfigPageContent() {
 
             {!editingModelIsEmbedding && advancedModelSettingsVisible && (
               <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-500/40 dark:bg-amber-500/10 sm:space-y-4 sm:p-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {([
+                    ['max_images', '最大图片数量', 0, 0],
+                    ['image_max_side', '图片最大边长（像素）', 8000, 1],
+                    ['image_min_side', '图片最小边长（像素）', 1, 1],
+                  ] as const).map(([field, label, defaultValue, minimum]) => (
+                    <div key={field} className="space-y-2">
+                      <Label htmlFor={field}>{label}</Label>
+                      <Input
+                        id={field}
+                        type="number"
+                        min={minimum}
+                        step="1"
+                        value={editingModel?.[field] ?? defaultValue}
+                        onChange={(e) => {
+                          const value = Number(e.target.value)
+                          if (Number.isInteger(value) && value >= minimum) {
+                            setEditingModel((prev) => prev ? { ...prev, [field]: value } : null)
+                          }
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  数量为 0 时不限制，长图切片计入数量，超限保留最近的图片。长边超限时缩小或分段，短边不足时放大，受长边限制时补边。
+                </p>
+                {formErrors.image_limits && (
+                  <p role="alert" className="text-xs text-destructive">{formErrors.image_limits}</p>
+                )}
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="force_stream_mode" className="cursor-pointer">强制流式输出模式</Label>

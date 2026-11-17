@@ -712,6 +712,54 @@ class ChatConfig(ConfigBase):
     )
     """私聊回复时参考的最近消息数量。"""
 
+    use_token_limit: bool = Field(
+        default=False,
+        json_schema_extra={
+            "label": "群聊使用 Token 阈值",
+            "x-widget": "switch",
+            "x-row": "chat-token-mode",
+        },
+    )
+    """开启后按 Planner 返回的实际输入 Token 用量触发上下文裁切与摘要，不再按群聊消息条数裁切。"""
+
+    private_use_token_limit: bool = Field(
+        default=False,
+        json_schema_extra={
+            "label": "私聊使用 Token 阈值",
+            "x-widget": "switch",
+            "x-row": "chat-token-mode",
+        },
+    )
+    """开启后按 Planner 返回的实际输入 Token 用量触发上下文裁切与摘要，不再按私聊消息条数裁切。"""
+
+    max_context_tokens: int = Field(
+        default=128000,
+        ge=16000,
+        le=1000000,
+        json_schema_extra={
+            "label": "群聊 Token 阈值",
+            "x-widget": "input",
+            "x-layout": "inline-right",
+            "x-input-width": "8rem",
+            "x-row": "chat-token-limits",
+        },
+    )
+    """群聊输入达到此 Token 数后裁切旧历史；Focus 共享组也使用此值。范围 16K–1M，单次请求可能超过阈值；模型不返回用量时不会按 Token 裁切。"""
+
+    private_max_context_tokens: int = Field(
+        default=128000,
+        ge=16000,
+        le=1000000,
+        json_schema_extra={
+            "label": "私聊 Token 阈值",
+            "x-widget": "input",
+            "x-layout": "inline-right",
+            "x-input-width": "8rem",
+            "x-row": "chat-token-limits",
+        },
+    )
+    """私聊输入达到此 Token 数后裁切旧历史。范围 16K–1M，单次请求可能超过阈值；模型不返回用量时不会按 Token 裁切。"""
+
     context_compaction_summary_max_chars: int = Field(
         default=6000,
         ge=1000,
@@ -3539,6 +3587,15 @@ class ResponsePostProcessConfig(ConfigBase):
         },
     )
     """开启后会对回复做错别字、分段等后处理。"""
+
+    remove_bracket_content: bool = Field(
+        default=True,
+        json_schema_extra={
+            "label": "清理括号内容",
+            "x-widget": "switch",
+        },
+    )
+    """规则后处理时去除回复中括号内的中文内容；关闭后保留，颜文字不受影响。"""
 
     typing_speed: float = Field(
         default=1.0,

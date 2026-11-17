@@ -818,6 +818,8 @@ class FocusGroupRuntime:
         history = self.history
         plan = process_chat_history_after_cycle(
             history, max_context_size=self.max_context_size,
+            max_context_tokens=global_config.chat.max_context_tokens if global_config.chat.use_token_limit else None,
+            prompt_tokens=self._service.last_planner_prompt_tokens,
             consume_references=False,
         )
         if not plan.removed_messages:
@@ -875,6 +877,7 @@ class FocusGroupRuntime:
             entry = FocusContextEntry(summaries, related, watermarks=watermarks)
         self.entries[:split] = [entry]
         self._service.planner_request_snapshot = None
+        self._service.last_planner_prompt_tokens = 0
         if self.members:
             await emit_flow_step(
                 session_id=next(iter(self.members)),
@@ -897,7 +900,7 @@ class FocusGroupRuntime:
             ]
             if own:
                 await runtime._trigger_trimmed_history_learning(own)
-            # Focus 成员历史只保存本聊天材料；不包含组级模型—工具协议段。
+            # 成员材料缓存独立于组级 Token 窗口，包含聊天消息与媒体候选，统一限制数量。
             keep = max(20, runtime._max_context_size * 2)
             if len(runtime._chat_history) > keep:
                 runtime._chat_history = runtime._chat_history[-keep:]
