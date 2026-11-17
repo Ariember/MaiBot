@@ -1,6 +1,6 @@
 """Maisaka 历史消息处理辅助工具。"""
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Dict, Optional, cast
 
 from src.common.data_models.message_component_data_model import MessageSequence, ReplyComponent, TextComponent
 from src.llm_models.payload_content.context_item import ContextItem, FunctionCallItem, RoleType
@@ -60,7 +60,7 @@ def build_session_message_visible_text(
             visible_message_id,
         )
     )
-    for component in clone_message_sequence(normalized_sequence).components:
+    for component in normalized_sequence.components:
         if not include_reply_components and isinstance(component, ReplyComponent):
             continue
         visible_sequence.components.append(component)
@@ -161,20 +161,24 @@ def collect_tool_turn_anchor_indices(
 ) -> dict[str, int]:
     """定位每个工具轮次之前最近的 user 上下文索引。"""
 
-    first_turn_index_by_id: dict[str, int] = {}
+    if not logical_turn_ids:
+        return {}
+
+    remaining_turn_ids = logical_turn_ids.copy()
+    anchor_index_by_turn_id: Dict[str, int] = {}
+    last_user_index: Optional[int] = None
+    user_role = RoleType.User.value
     for index, message in enumerate(chat_history):
         logical_turn_id = _get_logical_turn_id(message)
-        if logical_turn_id in logical_turn_ids and logical_turn_id not in first_turn_index_by_id:
-            first_turn_index_by_id[logical_turn_id] = index
-
-    anchor_index_by_turn_id: dict[str, int] = {}
-    for logical_turn_id, first_turn_index in first_turn_index_by_id.items():
-        anchor_index = next(
-            (index for index in range(first_turn_index - 1, -1, -1) if chat_history[index].role == RoleType.User.value),
-            None,
-        )
-        if anchor_index is not None:
-            anchor_index_by_turn_id[logical_turn_id] = anchor_index
+        if logical_turn_id in remaining_turn_ids:
+            remaining_turn_ids.remove(logical_turn_id)
+            if last_user_index is not None:
+                anchor_index_by_turn_id[logical_turn_id] = last_user_index
+            if not remaining_turn_ids:
+                break
+        # 带逻辑轮次的模型输出和工具结果都不是 user 消息。
+        if logical_turn_id is None and message.role == user_role:
+            last_user_index = index
     return anchor_index_by_turn_id
 
 

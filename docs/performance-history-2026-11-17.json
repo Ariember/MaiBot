@@ -1,0 +1,342 @@
+{
+  "created_at_utc": "2026-11-17T03:01:13.126730+00:00",
+  "baseline_sha": "b476c42a4e26b58baf6891c37b9b0174b217c7be",
+  "working_tree_head": "b476c42a4e26b58baf6891c37b9b0174b217c7be",
+  "environment": {
+    "python": "3.13.6 (main, Aug 14 2025, 16:22:54) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "method": {
+    "warmup_rounds": 2,
+    "measurement_rounds": 9,
+    "order": "alternating AB/BA",
+    "timing": "warm-cache median via perf_counter; output serialization/equality excluded",
+    "memory": "separate tracemalloc peak; Python allocations only; excludes native and filesystem caches",
+    "scope": "AST-extracted actual functions/classes; same synthetic inputs; temporary log tree",
+    "visible_text_scope": "actual components/renderers; session scalar fields supplied by SimpleNamespace",
+    "forward_scope": "visible-text renderer already skips forward nodes; deep copying their tree is unnecessary",
+    "anchor_scope": "actual context classes/role properties; no tools, alternating user/tool turns, consecutive tools",
+    "isolation": "no production database/config imports or external model requests"
+  },
+  "limitations": [
+    "Synthetic data and warm caches; not an end-to-end measurement of live platforms or model providers.",
+    "Memory is peak Python allocation during each call, not process RSS or total retained application memory."
+  ],
+  "results": [
+    {
+      "scenario": "visible_message_text",
+      "message_kind": "plain",
+      "calls_per_sample": 200,
+      "top_level_components": 1,
+      "forward_messages": 0,
+      "before": {
+        "median_ms": 6.420400000934023,
+        "samples_ms": [
+          6.290900000749389,
+          6.194599998707417,
+          6.476500000644592,
+          5.874800001038238,
+          6.191299999045441,
+          6.420400000934023,
+          8.535099999789963,
+          7.043999999950756,
+          6.445099999837112
+        ],
+        "peak_python_bytes": 46656
+      },
+      "after": {
+        "median_ms": 3.045699999347562,
+        "samples_ms": [
+          3.166499998769723,
+          3.031399999599671,
+          3.045699999347562,
+          2.951099999336293,
+          3.9372999999613967,
+          3.196800000296207,
+          3.194499999153777,
+          2.989700000398443,
+          2.9532999997172737
+        ],
+        "peak_python_bytes": 37094
+      },
+      "speedup": 2.10802114532271,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "visible_message_text",
+      "message_kind": "mixed",
+      "calls_per_sample": 200,
+      "top_level_components": 7,
+      "forward_messages": 0,
+      "before": {
+        "median_ms": 25.262799999836716,
+        "samples_ms": [
+          24.989600000481005,
+          27.023900000131107,
+          24.29170000141312,
+          26.409400001284666,
+          25.69519999997283,
+          24.948100000983686,
+          24.68060000137484,
+          25.262799999836716,
+          27.28670000033162
+        ],
+        "peak_python_bytes": 112277
+      },
+      "after": {
+        "median_ms": 5.470100000820821,
+        "samples_ms": [
+          5.470100000820821,
+          5.1318000005267095,
+          6.886299999678158,
+          5.505600000105915,
+          5.245600001217099,
+          4.997500000172295,
+          5.737299999964307,
+          5.3674999999202555,
+          5.953300000328454
+        ],
+        "peak_python_bytes": 43519
+      },
+      "speedup": 4.618343356802597,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "visible_message_text",
+      "message_kind": "forward_tree",
+      "calls_per_sample": 20,
+      "top_level_components": 8,
+      "forward_messages": 440,
+      "before": {
+        "median_ms": 291.20379999949364,
+        "samples_ms": [
+          290.72330000053626,
+          286.7131999992125,
+          291.20379999949364,
+          335.7132000001002,
+          292.9760000006354,
+          289.2877000012959,
+          295.04670000096667,
+          380.8621000007406,
+          288.47120000136783
+        ],
+        "peak_python_bytes": 867452
+      },
+      "after": {
+        "median_ms": 0.614099999438622,
+        "samples_ms": [
+          0.6481000000349013,
+          0.6097000004956499,
+          0.638999999864609,
+          0.58319999880041,
+          0.614099999438622,
+          0.5851000005350215,
+          0.6537000008393079,
+          0.5750000000261934,
+          0.643899998976849
+        ],
+        "peak_python_bytes": 7514
+      },
+      "speedup": 474.1960597063945,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "tool_turn_anchors",
+      "history_pattern": "no_tools",
+      "logical_turns": 0,
+      "history_messages": 21,
+      "user_messages": 21,
+      "before": {
+        "median_ms": 0.01720000000204891,
+        "samples_ms": [
+          0.01849999898695387,
+          0.017600001228856854,
+          0.017499998648418114,
+          0.017300000763498247,
+          0.017099999240599573,
+          0.01720000000204891,
+          0.017099999240599573,
+          0.017100001059588976,
+          0.016999998479150236
+        ],
+        "peak_python_bytes": 344
+      },
+      "after": {
+        "median_ms": 0.0004000012268079445,
+        "samples_ms": [
+          0.0006999998731771484,
+          0.0005000001692678779,
+          0.0005000001692678779,
+          0.00039999940781854093,
+          0.00039999940781854093,
+          0.00030000046535860747,
+          0.0005000001692678779,
+          0.00039999940781854093,
+          0.0004000012268079445
+        ],
+        "peak_python_bytes": 64
+      },
+      "speedup": 42.99986812367271,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "tool_turn_anchors",
+      "history_pattern": "alternating",
+      "logical_turns": 20,
+      "history_messages": 60,
+      "user_messages": 20,
+      "before": {
+        "median_ms": 0.03220000144210644,
+        "samples_ms": [
+          0.06120000034570694,
+          0.060200000007171184,
+          0.05860000055690762,
+          0.05500000042957254,
+          0.03220000144210644,
+          0.03149999974993989,
+          0.03169999945384916,
+          0.03169999945384916,
+          0.03130000004603062
+        ],
+        "peak_python_bytes": 1664
+      },
+      "after": {
+        "median_ms": 0.0228000008064555,
+        "samples_ms": [
+          0.042800000301213004,
+          0.04079999962414149,
+          0.04149999949731864,
+          0.21099999867146835,
+          0.0228000008064555,
+          0.021800000467919745,
+          0.022500000341096893,
+          0.021800000467919745,
+          0.02240000139863696
+        ],
+        "peak_python_bytes": 2208
+      },
+      "speedup": 1.4122807150510917,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "tool_turn_anchors",
+      "history_pattern": "consecutive",
+      "logical_turns": 20,
+      "history_messages": 41,
+      "user_messages": 1,
+      "before": {
+        "median_ms": 0.32809999902383424,
+        "samples_ms": [
+          0.3271999994467478,
+          0.33799999982875306,
+          0.3643000000010943,
+          0.3316999991511693,
+          0.32479999936185777,
+          0.3412000005482696,
+          0.32809999902383424,
+          0.32639999881212134,
+          0.3240999994886806
+        ],
+        "peak_python_bytes": 1664
+      },
+      "after": {
+        "median_ms": 0.020700001186924055,
+        "samples_ms": [
+          0.021600000764010474,
+          0.02010000025620684,
+          0.022199999875738285,
+          0.020700001186924055,
+          0.02099999983329326,
+          0.0197000008483883,
+          0.020600000425474718,
+          0.0197000008483883,
+          0.020700001186924055
+        ],
+        "peak_python_bytes": 2208
+      },
+      "speedup": 15.850240589893836,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "tool_turn_anchors",
+      "history_pattern": "consecutive",
+      "logical_turns": 500,
+      "history_messages": 1001,
+      "user_messages": 1,
+      "before": {
+        "median_ms": 189.88639999952284,
+        "samples_ms": [
+          190.16410000040196,
+          189.88639999952284,
+          189.03680000039458,
+          187.83820000135165,
+          187.5676999989082,
+          190.49380000069505,
+          190.03950000114855,
+          192.79070000084175,
+          188.252800000555
+        ],
+        "peak_python_bytes": 43404
+      },
+      "after": {
+        "median_ms": 0.5383999996411148,
+        "samples_ms": [
+          0.575300000491552,
+          0.44460000026447233,
+          0.539099999514292,
+          0.44499999967229087,
+          0.5383999996411148,
+          0.4478999999264488,
+          0.8700999987922842,
+          0.2455000012560049,
+          0.5454000001918757
+        ],
+        "peak_python_bytes": 36492
+      },
+      "speedup": 352.686478688887,
+      "outputs_equal": true
+    },
+    {
+      "scenario": "log_directory_statistics",
+      "chats_per_task": 100,
+      "tasks": 2,
+      "files_per_chat": 5,
+      "file_bytes": 1024,
+      "total_files": 1001,
+      "directories_including_root": 205,
+      "layout": "logs/maisaka_prompt/{planner,replyer}/{chat}; root file and empty directory",
+      "before": {
+        "median_ms": 426.5602999985276,
+        "samples_ms": [
+          426.5602999985276,
+          425.7089000002452,
+          442.5173999989056,
+          444.04689999828406,
+          481.90969999996014,
+          486.1291999986861,
+          397.44620000055875,
+          422.03110000082233,
+          421.84070000075735
+        ],
+        "peak_python_bytes": 499789
+      },
+      "after": {
+        "median_ms": 147.50650000132737,
+        "samples_ms": [
+          145.14450000024226,
+          146.65849999983038,
+          156.8674000009196,
+          147.50650000132737,
+          149.1757999992842,
+          145.27330000055372,
+          141.22689999931026,
+          153.86360000047716,
+          149.81389999957173
+        ],
+        "peak_python_bytes": 394502
+      },
+      "speedup": 2.8918068016981566,
+      "outputs_equal": true
+    }
+  ]
+}

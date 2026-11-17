@@ -114,7 +114,7 @@ function BotActivityOrbit({ state }: { state: BotRuntimeState }) {
       aria-hidden="true"
       data-maibot-activity-orbit="true"
       data-state={state}
-      className="relative h-[72px] w-[72px] shrink-0"
+      className="relative h-18 w-18 shrink-0"
     >
       <span />
       <span />
@@ -195,7 +195,7 @@ function BotStatusFlipCard({
       data-maibot-status-flip-card="true"
       aria-label={(isFlipped ? '返回活动状态' : '查看最近在线图表')}
       aria-pressed={isFlipped}
-      className="group focus-visible:ring-primary/55 focus-visible:ring-offset-background relative isolate block h-full min-h-[136px] w-full overflow-visible rounded-lg text-left [perspective:900px] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="group focus-visible:ring-primary/55 focus-visible:ring-offset-background relative isolate block h-full min-h-34 w-full overflow-visible rounded-lg text-left perspective-[900px] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       onClick={() => {
         setIsFlipping(!prefersReducedMotion)
         setIsFlipped((current) => !current)
@@ -203,7 +203,7 @@ function BotStatusFlipCard({
     >
       <motion.div
         data-maibot-status-rotor="true"
-        className="relative z-10 h-full min-h-[136px] w-full [will-change:transform] [transform-style:preserve-3d]"
+        className="relative z-10 h-full min-h-34 w-full will-change-transform transform-3d"
         animate={{ rotateY: prefersReducedMotion ? 0 : isFlipped ? 180 : 0 }}
         transition={{ duration: prefersReducedMotion ? 0 : 0.46, ease: [0.22, 1, 0.36, 1] }}
         onAnimationComplete={() => setIsFlipping(false)}
@@ -597,7 +597,7 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
                         variant="outline"
                         size="sm"
                         asChild
-                        className="max-w-[14rem] justify-start gap-2 overflow-hidden sm:max-w-[18rem]"
+                        className="max-w-56 justify-start gap-2 overflow-hidden sm:max-w-[18rem]"
                       >
                         {internalUrl ? (
                           <Link
@@ -629,7 +629,7 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
                       size="sm"
                       onClick={shortcut.action}
                       disabled={shortcut.disabled}
-                      className="max-w-[14rem] justify-start gap-2 overflow-hidden sm:max-w-[18rem]"
+                      className="max-w-56 justify-start gap-2 overflow-hidden sm:max-w-[18rem]"
                       title={shortcut.label}
                     >
                       {content}
@@ -955,7 +955,7 @@ const IndexPageContent = memo(function IndexPageContent({ botVersion }: { botVer
               aria-label={'WebUI 设置'}
               className="bg-muted text-foreground flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
             >
-              <Settings className="h-[22px] w-[22px]" strokeWidth={1.7} aria-hidden="true" />
+              <Settings className="h-5.5 w-5.5" strokeWidth={1.7} aria-hidden="true" />
             </Link>
           }
         />

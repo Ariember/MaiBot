@@ -7,7 +7,7 @@
 from dataclasses import asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Annotated, List, Literal
+from typing import Annotated, Dict, List, Literal, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -711,40 +711,39 @@ def _build_log_directory_items() -> list[LocalCacheLogDirectoryItem]:
 
     root_path = _LOG_DIR.resolve()
     items: list[LocalCacheLogDirectoryItem] = []
-    root_files = [path for path in _LOG_DIR.iterdir() if path.is_file()]
-    root_file_count, root_total_size, root_modified_time = _get_files_stats(root_files)
-    if root_file_count > 0:
-        items.append(
-            LocalCacheLogDirectoryItem(
-                relative_path="",
-                name="根目录文件",
-                full_path=str(root_path),
-                depth=0,
-                file_count=root_file_count,
-                total_size=root_total_size,
-                modified_time=root_modified_time,
-                root_files_only=True,
-            )
-        )
+    directory_stats: Dict[Path, Tuple[int, int, float]] = {}
+    # 每个文件只读取一次元数据，再将子目录统计合并到父目录。
+    for directory_name, child_names, file_names in os.walk(_LOG_DIR, topdown=False):
+        directory = Path(directory_name)
+        file_count, total_size, modified_time = _get_files_stats([directory / name for name in file_names])
+        root_files_only = directory == _LOG_DIR
+        if not root_files_only:
+            for child_name in child_names:
+                child_count, child_size, child_modified_time = directory_stats.pop(directory / child_name, (0, 0, 0.0))
+                file_count += child_count
+                total_size += child_size
+                modified_time = max(modified_time, child_modified_time)
+            directory_stats[directory] = file_count, total_size, modified_time
+        elif file_count == 0:
+            continue
 
-    for directory in sorted((path for path in _LOG_DIR.rglob("*") if path.is_dir()), key=lambda path: path.as_posix()):
         try:
             resolved_path = directory.resolve()
-            relative_path = resolved_path.relative_to(root_path).as_posix()
+            relative_path = "" if root_files_only else resolved_path.relative_to(root_path).as_posix()
         except (OSError, RuntimeError, ValueError) as exc:
             logger.warning(f"读取日志目录信息失败: {directory}, error={exc}")
             continue
 
-        file_count, total_size, modified_time = _get_files_stats(_iter_files(directory))
         items.append(
             LocalCacheLogDirectoryItem(
                 relative_path=relative_path,
-                name=directory.name,
+                name="根目录文件" if root_files_only else directory.name,
                 full_path=str(resolved_path),
                 depth=len(Path(relative_path).parts),
                 file_count=file_count,
                 total_size=total_size,
                 modified_time=modified_time,
+                root_files_only=root_files_only,
             )
         )
 
