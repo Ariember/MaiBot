@@ -634,6 +634,15 @@ class ChatReplyStyleConfig(ConfigBase):
     )
     """全局私聊引用频率：不引用、偶尔引用、经常引用。结合用户连发条数、发言间隔和回复目标位置随机决定；经常引用的概率为偶尔引用的两倍。"""
 
+    enable_reply_experience_learning: bool = Field(
+        default=False,
+        json_schema_extra={
+            "label": '启用回复经验学习',
+            "x-widget": "switch",
+        },
+    )
+    """使用学习模型对比被拦截的草稿与通过检查并发出的回复，提炼供同一会话、对象及人设使用的回复经验。"""
+
     group_chat_prompt: str = Field(
         default=(
             "下面是聊天中的的内容，聊天中包含文字，图片和表情包等消息。\n"

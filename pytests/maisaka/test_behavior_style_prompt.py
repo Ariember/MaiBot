@@ -5,13 +5,19 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.chat.replyer.document_generator import DocumentReplyGenerator
-from src.chat.replyer.maisaka_generator_base import BaseMaisakaReplyGenerator, MaisakaReplyContext, select_persona_expressions
+from src.chat.replyer.maisaka_generator_base import (
+    REPLYER_MAX_HOOK_RETRIES,
+    BaseMaisakaReplyGenerator,
+    MaisakaReplyContext,
+    select_persona_expressions,
+)
 from src.common.data_models.llm_service_data_models import LLMResponseResult
 from src.common.prompt_templates import load_prompt
 from src.config.config import global_config
 from src.llm_models.payload_content.context_item import CONTEXT_ITEM_SCHEMA_VERSION, ContextItemBuilder, RoleType, get_item_text
 from src.maisaka.builtin_tool import reply
 from src.maisaka.chat_loop_service import MaisakaChatLoopService
+from src.plugin_runtime.host.hook_dispatcher import HookDispatchResult
 from src.plugin_runtime.prompt_sources import collect_prompt_changes
 
 
@@ -186,10 +192,18 @@ def test_only_selected_scene_and_slang_reach_replyer(monkeypatch, mode, selected
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("record_sources", [False, True])
-async def test_persona_expressions_stay_consistent_across_builds_and_retry(monkeypatch, record_sources):
+@pytest.mark.parametrize(
+    ("record_sources", "final_review"),
+    [
+        (False, "passed"), (True, "passed"), (False, "error"), (False, "rejected"),
+        (False, "rewritten"), (False, "different_model"), (False, "retro_repeat"), (False, "retro_passed"),
+    ],
+)
+async def test_replyer_keeps_prompt_guidance_and_records_only_validated_retries(monkeypatch, record_sources, final_review):
+    retro = final_review.startswith("retro_")
+    first_response = "给我发个句号吧" if retro else "我会逐条讲解这个问题"
     monkeypatch.setattr(global_config.personality, "dialogue_examples", ["安慰朋友", "黑话：破防"])
-    monkeypatch.setattr(global_config.debug, "replyer_retro_prompt", False)
+    monkeypatch.setattr(global_config.debug, "replyer_retro_prompt", retro)
     monkeypatch.setattr(global_config.debug, "save_maisaka_reasoning", record_sources)
     monkeypatch.setattr(
         "src.chat.replyer.maisaka_generator_base.get_chat_type_and_target_info", lambda session_id: (False, None),
@@ -205,15 +219,21 @@ async def test_persona_expressions_stay_consistent_across_builds_and_retry(monke
 
     async def invoke_hook(name, **kwargs):
         original = deepcopy(kwargs)
+        errors = []
         if name == "maisaka.replyer.before_request":
             kwargs["extra_prompt"] = "插件背景"
         if name == "maisaka.replyer.before_model_request":
             kwargs["items"][0]["parts"].append({"type": "text", "text": "本轮语气要求"})
-        if name == "maisaka.replyer.after_response":
-            kwargs["retry"] = kwargs["retry_count"] == 0
-            kwargs["retry_reason"] = "测试重试"
+        if name == "maisaka.replyer.after_response" and not retro:
+            kwargs["retry"] = kwargs["retry_count"] == 0 or final_review == "rejected"
+            if kwargs["retry"]:
+                kwargs["retry_reason"] = "对方只需要简短的回应"
+            elif final_review == "error":
+                errors.append("审核异常")
+            elif final_review == "rewritten":
+                kwargs["response"] = "已由审核插件代写"
         sources = collect_prompt_changes(original, kwargs, source="test.plugin", hook=name) if record_sources else []
-        return SimpleNamespace(kwargs=kwargs, prompt_sources=sources)
+        return HookDispatchResult(hook_name=name, kwargs=kwargs, errors=errors, prompt_sources=sources)
 
     monkeypatch.setattr(generator, "_get_runtime_manager", lambda: SimpleNamespace(invoke_hook=invoke_hook))
     monkeypatch.setattr("src.desktop_pet.service.desktop_pet_service.notify_thinking", AsyncMock())
@@ -226,16 +246,26 @@ async def test_persona_expressions_stay_consistent_across_builds_and_retry(monke
     async def generate_response(*, context_factory, options):
         await context_factory(SimpleNamespace())
         await context_factory(SimpleNamespace())
-        return LLMResponseResult.from_portable_output(response="可以一起想想")
+        if generate.await_count == 1:
+            return LLMResponseResult.from_portable_output(response=first_response, model_name="test-model")
+        model = "other-model" if final_review == "different_model" else "test-model"
+        response = "可以发一个句号吗？" if final_review == "retro_repeat" else "可以一起想想"
+        return LLMResponseResult.from_portable_output(response=response, model_name=model)
 
     generate = AsyncMock(side_effect=generate_response)
     generator.express_model = SimpleNamespace(task_name="replyer", generate_response_with_context=generate)
+    experience = "【回复经验】朋友提出简短的问题时，先用一句话回答。"
     success, result = await generator.generate_reply_with_context(
         chat_history=[], stream_id="test", reply_tool_args={"persona_expressions": ["安慰朋友", "黑话：破防"]},
+        experience_guidance=experience,
     )
     assert success, result.error_message
-    assert generate.await_count == 2
-    assert build_request.call_count == 6
+    attempt_count = REPLYER_MAX_HOOK_RETRIES + 1 if final_review == "rejected" else 2
+    assert generate.await_count == attempt_count
+    assert build_request.call_count == 3 * attempt_count
+    assert all(experience in call.kwargs["reply_requirements"] for call in build_request.call_args_list)
+    assert result.metrics.extra["replyer_retry_events"][0]["rejected_response"] == first_response
+    assert result.metrics.extra.get("replyer_retry_accepted", False) is (final_review in {"passed", "retro_passed"})
     selected_prompts = {call.kwargs["persona_expressions_prompt"] for call in build_request.call_args_list}
     assert len(selected_prompts) == 1
     selected_prompt = next(iter(selected_prompts))

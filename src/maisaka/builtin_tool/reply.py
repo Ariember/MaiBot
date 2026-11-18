@@ -18,6 +18,8 @@ from src.common.llm_json import parse_llm_json
 from src.common.logger import get_logger
 from src.config import config as config_module
 from src.core.tooling import ToolAvailabilityContext, ToolExecutionContext, ToolExecutionResult, ToolInvocation, ToolSpec
+from src.learners.learning_text import extract_learning_text
+from src.learners.reply_experience_learner import ReplyExperienceProbe, ReplyExperienceScope, reply_experience_learner
 from src.maisaka.quote import decide_quote
 from src.maisaka.context.message_adapter import build_visible_text_from_sequence, parse_speaker_content
 from src.maisaka.context.message_id_alias import to_display_message_id
@@ -523,6 +525,23 @@ async def execute_reply(
     )
     if previous_target_reply:
         reply_tool_args = _with_duplicate_target_reply_reminder(reply_tool_args, previous_target_reply)
+    experience_scope: Optional[ReplyExperienceScope] = None
+    experience_target = target_message
+    experience_guidance = ""
+    # 群聊补充器会并行选择引用对象，生成正文时还无法确定经验应归属哪位用户。
+    if (
+        config_module.global_config.chat.reply_style.enable_reply_experience_learning
+        and experience_target is not None
+        and (supplement_runner is None or not tool_ctx.runtime.chat_stream.is_group_session)
+    ):
+        user_id = experience_target.message_info.user_info.user_id
+        if user_id and not is_bot_self(experience_target.platform, user_id):
+            experience_scope = (
+                tool_ctx.runtime.session_id,
+                user_id,
+                config_module.global_config.personality.selected_profile,
+            )
+            experience_guidance = await reply_experience_learner.build_guidance(experience_scope)
     supplement: Optional["ReplySupplement"] = None
     try:
         tool_ctx.runtime._update_stage_status("Replyer", "生成可见回复及富文本编排" if supplement_runner else "生成可见回复")
@@ -538,6 +557,7 @@ async def execute_reply(
                 )
             ),
             reply_tool_args=reply_tool_args,
+            experience_guidance=experience_guidance,
             sub_agent_runner=lambda system_prompt: _run_expression_selector(
                 tool_ctx,
                 system_prompt,
@@ -591,6 +611,7 @@ async def execute_reply(
             metadata=reply_metadata,
         )
 
+    reviewed_reply_text = reply_text
     if supplement is not None:
         # msg_id 只决定发送时的引用；正文仍根据 Planner 指导生成，不等待补充器。
         if supplement.quote_message is not None:
@@ -811,6 +832,22 @@ async def execute_reply(
     if tool_ctx.runtime.chat_stream.platform == CLI_PLATFORM_NAME:
         tool_ctx.append_guided_reply_to_chat_history(combined_reply_text)
     tool_ctx.runtime.record_planner_reply()
+    if (
+        experience_scope is not None
+        and experience_target is not None
+        and target_message is experience_target
+        and not extension_execution.targets
+        and reply_text == reviewed_reply_text
+        and reply_result.metrics.extra.get("replyer_retry_accepted")
+    ):
+        event = reply_result.metrics.extra["replyer_retry_events"][0]
+        rejected = event["rejected_response"].strip()
+        reason = event["retry_reason"] or event["matched_regex_description"]
+        if rejected and rejected != reviewed_reply_text and reason:
+            reply_experience_learner.schedule(
+                experience_scope,
+                ReplyExperienceProbe(extract_learning_text(experience_target.raw_message), rejected, reviewed_reply_text, reason),
+            )
     return tool_ctx.build_success_result(
         "reply",
         reply_receipt,

@@ -840,10 +840,10 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         return dict(raw_value) if isinstance(raw_value, dict) else {}
 
     @staticmethod
-    def _build_reply_requirements(extra_prompt: str, retry_constraints: List[str]) -> str:
+    def _build_reply_requirements(extra_prompt: str, retry_constraints: List[str], experience_guidance: str = "") -> str:
         """构建 replyer 本轮额外回复要求。"""
 
-        blocks: List[str] = []
+        blocks: List[str] = [experience_guidance] if experience_guidance else []
         normalized_extra_prompt = extra_prompt.strip()
         if normalized_extra_prompt:
             blocks.append(f"【额外回复要求】\n{normalized_extra_prompt}")
@@ -1033,6 +1033,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         sub_agent_runner: Optional[Callable[[str], Awaitable[str]]] = None,
         reply_tool_args: Optional[Dict[str, Any]] = None,
         image_recognition_refresher: Optional[Callable[[List[LLMContextMessage]], Awaitable[int]]] = None,
+        experience_guidance: str = "",
     ) -> Tuple[bool, ReplyGenerationResult]:
         def finalize(success_value: bool) -> Tuple[bool, ReplyGenerationResult]:
             self._persist_reply_preview(result, stream_id=stream_id, reply_reason=reply_reason)
@@ -1104,6 +1105,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         retry_constraints: List[str] = []
         retry_reasons: List[str] = []
         retry_events: List[Dict[str, Any]] = []
+        rejected_probe_model: Optional[str] = None
         hook_rewrite_events: List[Dict[str, str]] = []
         retry_count = 0
         all_generation_attempts = []
@@ -1153,6 +1155,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             active_reply_requirements = self._build_reply_requirements(
                 str(before_request_kwargs.get("extra_prompt") or ""),
                 retry_constraints,
+                experience_guidance,
             )
 
             prompt_started_at = time.perf_counter()
@@ -1323,6 +1326,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             llm_ms = round((time.perf_counter() - llm_started_at) * 1000, 2)
             response_text = (generation_result.response or "").strip()
             hook_original_response = response_text
+            review_completed = False
             serialized_output_items = serialize_prompt_items(generation_result.output_items)
 
             try:
@@ -1346,6 +1350,7 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                     total_tokens=generation_result.total_tokens,
                 )
                 after_response_kwargs = after_response_result.kwargs
+                review_completed = not (after_response_result.errors or after_response_result.aborted)
             except Exception as exc:
                 logger.warning(f"Maisaka 回复器 after_response Hook 调用失败，将继续使用当前回复: {exc}")
                 after_response_kwargs = {}
@@ -1394,10 +1399,12 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             matched_regex_description = str(after_response_kwargs.get("matched_regex_description") or "").strip()
             retry_reason = str(after_response_kwargs.get("retry_reason") or "").strip()
             # 复古回复偶尔会脱离话题询问句号；每次生成流程仅为这两种句式重生成一次。
+            retro_period_violation = self._uses_retro_prompt() and any(
+                phrase in response_text for phrase in ("发个句号", "一个句号")
+            )
             if (
-                self._uses_retro_prompt()
+                retro_period_violation
                 and not retro_period_regeneration_requested
-                and any(phrase in response_text for phrase in ("发个句号", "一个句号"))
                 and retry_count < REPLYER_MAX_HOOK_RETRIES
             ):
                 retro_period_regeneration_requested = True
@@ -1422,6 +1429,8 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
                     "上一次只返回了思考内容，正文为空。请生成要发送的回复正文，不要只输出思考过程。",
                 )))
             if retry_requested and retry_count < REPLYER_MAX_HOOK_RETRIES:
+                if retry_count == 0 and review_completed and response_text == hook_original_response:
+                    rejected_probe_model = generation_result.model_name or ""
                 reason_parts = []
                 if matched_regex:
                     reason_parts.append(f"命中规则: {matched_regex}")
@@ -1515,6 +1524,16 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
             result.metrics.extra["replyer_retry_reasons"] = list(retry_reasons)
         if retry_events:
             result.metrics.extra["replyer_retry_events"] = list(retry_events)
+        if (
+            len(retry_events) == 1
+            and review_completed
+            and not retry_requested
+            and not matched_regex
+            and not retro_period_violation
+            and rejected_probe_model == (generation_result.model_name or "")
+            and response_text == hook_original_response
+        ):
+            result.metrics.extra["replyer_retry_accepted"] = True
         if retry_constraints:
             result.metrics.extra["replyer_retry_constraints"] = list(retry_constraints)
         if hook_rewrite_events:

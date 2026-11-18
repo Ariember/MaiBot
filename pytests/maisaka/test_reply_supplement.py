@@ -164,3 +164,83 @@ async def test_supplement_failure_keeps_body_and_quote_respects_frequency(monkey
     tool_ctx.build_failure_result.assert_not_called()
     assert quote.await_count == int(supplement_kind != "no_quote")
     assert not tool_ctx.build_success_result.call_args.kwargs["structured_content"]["effective_set_quote"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("learning_enabled", "review_accepted", "send_all", "group_supplement"),
+    [
+        (True, True, True, False), (True, True, False, False), (True, False, True, False),
+        (False, True, True, False), (True, True, True, True),
+    ],
+)
+async def test_reply_experience_requires_review_and_complete_send(
+    monkeypatch, learning_enabled, review_accepted, send_all, group_supplement,
+):
+    config = reply.config_module.global_config
+    monkeypatch.setattr(config.chat.reply_style, "enable_reply_experience_learning", learning_enabled)
+    monkeypatch.setattr(config.personality, "selected_profile", "profile")
+    monkeypatch.setattr(config.debug, "replyer_retro_prompt", False)
+    scope = ("session", "user", "profile")
+    guidance = AsyncMock(return_value="按场景参考已有经验。")
+    schedule = Mock()
+    monkeypatch.setattr(reply, "reply_experience_learner", SimpleNamespace(build_guidance=guidance, schedule=schedule))
+    target_text = "可以帮忙看一下吗？"
+    target = SimpleNamespace(
+        message_id="message",
+        platform="qq",
+        raw_message=MessageSequence([TextComponent(target_text)]),
+        message_info=SimpleNamespace(user_info=SimpleNamespace(user_id="user", user_cardname="用户")),
+    )
+    rejected, revised, reason = "我将说明完整流程。", "可以。稍等一下。", "使用简短的回应"
+    body = ReplyGenerationResult(completion=LLMCompletionResult(response_text=revised))
+    body.metrics.extra.update(
+        replyer_retry_accepted=review_accepted,
+        replyer_retry_events=[{"rejected_response": rejected, "retry_reason": reason}],
+    )
+    generate = AsyncMock(return_value=(True, body))
+    monkeypatch.setattr(reply.replyer_manager, "get_replyer", Mock(return_value=SimpleNamespace(generate_reply_with_context=generate)))
+    monkeypatch.setattr(reply, "ReplyExtensionExecution", Mock(return_value=SimpleNamespace(
+        prepare=AsyncMock(), targets=[], reply_id="reply",
+    )))
+    monkeypatch.setattr(reply, "_invoke_before_post_process_hook", AsyncMock(return_value=(revised, {})))
+    monkeypatch.setattr(reply, "is_bot_self", lambda *args: False)
+    monkeypatch.setattr(reply, "_resolve_reply_quote", AsyncMock(return_value=(False, 0.0)))
+    tool_ctx = SimpleNamespace(
+        runtime=SimpleNamespace(
+            session_id="session", chat_stream=SimpleNamespace(platform="qq", is_group_session=group_supplement),
+            _chat_history=[], log_prefix="test",
+            record_planner_reply=Mock(), _update_stage_status=Mock(),
+        ),
+        build_failure_result=Mock(return_value="failed"),
+        build_success_result=Mock(return_value="sent"),
+        post_process_reply_message_items_async=AsyncMock(return_value=[
+            PostProcessedReplyMessage(sequence=MessageSequence([TextComponent(text)]))
+            for text in ("可以。", "稍等一下。")
+        ]),
+    )
+    sent = iter([SimpleNamespace(message_id="sent-1"), SimpleNamespace(message_id="sent-2") if send_all else None])
+
+    async def send(**kwargs):
+        schedule.assert_not_called()
+        return next(sent)
+
+    send_message = AsyncMock(side_effect=send)
+    monkeypatch.setattr(reply.send_service, "_send_to_target_with_message", send_message)
+    result = await reply.execute_reply(
+        tool_ctx, {"msg_id": "message", "reply_reference": "回答对方"}, call_id="test", target_message=target,
+        supplement_runner=AsyncMock(return_value=None) if group_supplement else None,
+    )
+
+    assert result == ("sent" if send_all else "failed")
+    assert send_message.await_count == 2
+    if learning_enabled and not group_supplement:
+        guidance.assert_awaited_once_with(scope)
+        assert generate.call_args.kwargs["experience_guidance"] == guidance.return_value
+    else:
+        guidance.assert_not_called()
+        assert generate.call_args.kwargs.get("experience_guidance", "") == ""
+    if learning_enabled and review_accepted and send_all and not group_supplement:
+        schedule.assert_called_once_with(scope, reply.ReplyExperienceProbe(target_text, rejected, revised, reason))
+    else:
+        schedule.assert_not_called()
