@@ -482,6 +482,7 @@ describe('ModelConfigPage 特征化', () => {
     const thinkingSwitch = within(dialog).getByRole('switch', { name: '启用思考' })
     const effortSelect = within(dialog).getByRole('combobox', { name: '思考力度' })
     const webSearchSwitch = within(dialog).getByRole('switch', { name: '启用联网搜索' })
+    fireEvent.change(within(dialog).getByLabelText('模型标识符 *'), { target: { value: 'deepseek-v4-pro' } })
     expect(thinkingSwitch).toBeChecked()
     expect(effortSelect).toBeEnabled()
     expect(webSearchSwitch).not.toBeChecked()
@@ -1481,7 +1482,7 @@ describe('ModelConfigPage 特征化', () => {
     )
   })
 
-  it('DeepSeek Chat 模板写入 thinking 参数，且联网搜索不可用', async () => {
+  it('DeepSeek Chat 模板写入 thinking 参数，并按模型启用联网搜索', async () => {
     const user = userEvent.setup()
     const deepSeekChatConfig = {
       ...baseConfig(),
@@ -1505,9 +1506,11 @@ describe('ModelConfigPage 特征化', () => {
 
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('写入 thinking.type')).toBeInTheDocument()
-    expect(within(dialog).getByText('仅 DeepSeek Responses API 支持原生联网搜索')).toBeInTheDocument()
+    expect(within(dialog).getByText('先选择模型标识符')).toBeInTheDocument()
     const webSearchSwitch = within(dialog).getByRole('switch', { name: '启用联网搜索' })
     expect(webSearchSwitch).toBeDisabled()
+    fireEvent.change(within(dialog).getByLabelText('模型标识符 *'), { target: { value: 'deepseek-v4-flash' } })
+    expect(webSearchSwitch).toBeEnabled()
 
     await user.click(within(dialog).getByRole('combobox', { name: '思考力度' }))
     await user.click(screen.getByRole('option', { name: '低' }))

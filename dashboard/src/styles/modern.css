@@ -12,24 +12,29 @@
   --accent: var(--color-muted);
   --accent-foreground: var(--color-foreground);
 
-  /* 雾面分层海拔：发丝描边 + 分层柔影 + 顶部内高光，卡片和小贴片共用。 */
-  --mdn-elev-1: 0 0 0 0.5px hsl(228 20% 20% / 0.04), 0 1px 2px hsl(228 30% 20% / 0.05),
-    0 6px 16px -8px hsl(228 30% 20% / 0.1);
-  --mdn-elev-2: 0 0 0 0.5px hsl(228 20% 20% / 0.05), 0 2px 4px hsl(228 30% 20% / 0.06),
-    0 16px 32px -12px hsl(228 40% 20% / 0.18);
-  --mdn-elev-chip: 0 0 0 0.5px hsl(228 20% 20% / 0.08), 0 1px 2px hsl(228 30% 20% / 0.1);
-  --mdn-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.6);
-  --mdn-hairline: hsl(var(--foreground) / 0.07);
+  /* 柔雾分层海拔：极淡描边 + 大半径低浓度扩散柔影 + 顶部内高光，卡片和小贴片共用。 */
+  --mdn-elev-1: 0 0 0 0.5px hsl(222 24% 30% / 0.035), 0 1px 2px hsl(222 30% 30% / 0.035),
+    0 8px 24px -12px hsl(222 36% 30% / 0.1);
+  --mdn-elev-2: 0 0 0 0.5px hsl(222 24% 30% / 0.04), 0 2px 6px hsl(222 30% 30% / 0.045),
+    0 20px 40px -16px hsl(222 40% 30% / 0.16);
+  --mdn-elev-chip: 0 0 0 0.5px hsl(222 24% 30% / 0.07), 0 1px 3px hsl(222 30% 30% / 0.08);
+  --mdn-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.7);
+  --mdn-hairline: hsl(var(--foreground) / 0.06);
+  /* 子界面分层：页面外框（表面）→ 内嵌区块（凹槽）→ 区块里的行与格子（回到表面色）。 */
+  --mdn-inset-bg: hsl(var(--muted) / 0.6);
+  --mdn-inset-line: hsl(var(--foreground) / 0.045);
 }
 
 :root.dark[data-dashboard-style='modern'] {
-  --mdn-elev-1: 0 0 0 0.5px hsl(0 0% 0% / 0.3), 0 1px 2px hsl(0 0% 0% / 0.25),
-    0 8px 20px -10px hsl(0 0% 0% / 0.5);
-  --mdn-elev-2: 0 0 0 0.5px hsl(0 0% 0% / 0.3), 0 1px 2px hsl(0 0% 0% / 0.25),
-    0 18px 36px -12px hsl(0 0% 0% / 0.6);
-  --mdn-elev-chip: 0 0 0 0.5px hsl(0 0% 0% / 0.4), 0 1px 2px hsl(0 0% 0% / 0.35);
-  --mdn-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.05);
-  --mdn-hairline: hsl(0 0% 100% / 0.06);
+  --mdn-elev-1: 0 0 0 0.5px hsl(0 0% 0% / 0.24), 0 1px 2px hsl(0 0% 0% / 0.18),
+    0 10px 28px -14px hsl(0 0% 0% / 0.45);
+  --mdn-elev-2: 0 0 0 0.5px hsl(0 0% 0% / 0.26), 0 2px 6px hsl(0 0% 0% / 0.2),
+    0 22px 44px -16px hsl(0 0% 0% / 0.55);
+  --mdn-elev-chip: 0 0 0 0.5px hsl(0 0% 0% / 0.34), 0 1px 3px hsl(0 0% 0% / 0.28);
+  --mdn-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.045);
+  --mdn-hairline: hsl(0 0% 100% / 0.055);
+  --mdn-inset-bg: hsl(0 0% 100% / 0.025);
+  --mdn-inset-line: hsl(0 0% 100% / 0.04);
 }
 
 /* 连续曲线用于矩形容器，圆形和胶囊保留圆弧。 */
@@ -462,9 +467,9 @@
     --mdn-glass-surface-alpha: 0.5;
     --mdn-glass-chart-alpha: 0.6;
     --mdn-glass-edge: var(--foreground) / 0.1;
-    --mdn-glass-shadow: 0 0 0 0.5px hsl(228 20% 20% / 0.08), 0 16px 40px -12px hsl(228 30% 10% / 0.22);
+    --mdn-glass-shadow: 0 0 0 0.5px hsl(222 20% 20% / 0.08), 0 16px 40px -12px hsl(222 30% 10% / 0.22);
     --mdn-glass-filter: blur(calc(var(--visual-blur-md) * 1.5)) saturate(160%);
-    --mdn-scrim: 0 0% 0% / 0.32;
+    --mdn-scrim: 222 30% 14% / 0.26;
   }
 
   :root.dark[data-dashboard-style='modern'] {
@@ -474,7 +479,7 @@
     --mdn-glass-chart-alpha: 0.5;
     --mdn-glass-edge: var(--foreground) / 0.14;
     --mdn-glass-shadow: 0 0 0 0.5px hsl(0 0% 0% / 0.5), 0 16px 40px -12px hsl(0 0% 0% / 0.6);
-    --mdn-scrim: 0 0% 0% / 0.5;
+    --mdn-scrim: 222 30% 3% / 0.48;
   }
 
   /* ---------- 画布与页面层次 ---------- */
@@ -999,7 +1004,7 @@
   transform: none;
 }
 
-/* 主按钮保持墨黑（暗色浅色），顶部加一道高光让它在表面上有厚度。
+/* 主按钮为柔和石板色（暗色浅色），顶部加一道高光让它在表面上有厚度。
    只在仍带组件默认令牌时生效：bg-primary 没了说明调用方给了自定义底色，shadow 没了说明自定义了投影。 */
 :root[data-dashboard-style='modern']
   .dashboard-button--default:not([data-dashboard-header='true'] *)[class~='bg-primary'] {
@@ -1013,17 +1018,17 @@
 :root[data-dashboard-style='modern']
   .dashboard-button--default:not([data-dashboard-header='true'] *)[class~='shadow'] {
   box-shadow:
-    0 1px 2px hsl(228 30% 10% / 0.18),
-    0 4px 10px -4px hsl(228 30% 10% / 0.25),
-    inset 0 1px 0 hsl(0 0% 100% / 0.14);
+    0 1px 2px hsl(222 30% 20% / 0.12),
+    0 6px 14px -6px hsl(222 30% 20% / 0.22),
+    inset 0 1px 0 hsl(0 0% 100% / 0.16);
 }
 
 :root.dark[data-dashboard-style='modern']
   .dashboard-button--default:not([data-dashboard-header='true'] *)[class~='shadow'] {
   box-shadow:
-    0 1px 2px hsl(0 0% 0% / 0.4),
-    0 4px 10px -4px hsl(0 0% 0% / 0.5),
-    inset 0 1px 0 hsl(0 0% 100% / 0.5);
+    0 1px 2px hsl(0 0% 0% / 0.3),
+    0 6px 14px -6px hsl(0 0% 0% / 0.4),
+    inset 0 1px 0 hsl(0 0% 100% / 0.4);
 }
 
 :root[data-dashboard-style='modern']
@@ -1064,7 +1069,7 @@
 
 :root[data-dashboard-style='modern']
   .dashboard-button--outline:not([data-dashboard-header='true'] *):not([aria-pressed='true'])[class~='shadow-sm'] {
-  box-shadow: 0 1px 2px hsl(228 30% 20% / 0.05);
+  box-shadow: 0 1px 2px hsl(222 30% 20% / 0.05);
 }
 
 :root[data-dashboard-style='modern']
@@ -1261,4 +1266,53 @@
 :root[data-dashboard-style='modern'] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--foreground) / 0.32);
   background-clip: content-box;
+}
+
+/* ---------- 子界面分层 ----------
+   页面外框、卡片和弹窗是第一层表面；嵌在里面的卡片退成浅凹槽（--mdn-inset-bg），
+   不再叠第二层阴影，层次靠底色明暗而不是一圈圈描边。
+   只改仍带默认 bg-card 的卡片；市场卡片、首页卡片和可悬停的多彩单元保留自身海拔。 */
+:root[data-dashboard-style='modern']
+  :is([data-dashboard-page-frame='true'], [data-dashboard-card='true'], [data-dashboard-dialog-content='true'])
+  [data-dashboard-card='true'][class~='bg-card']:not([data-plugin-market-card='true']):not([data-colorful-item]):not([data-home-card-id]) {
+  background-color: var(--mdn-inset-bg);
+  border-color: var(--mdn-inset-line);
+  box-shadow: none !important;
+}
+
+/* 暗色下凹槽里的输入框与下拉回到表面色，像浮在凹槽上，读得出前后关系。 */
+:root.dark[data-dashboard-style='modern']
+  :is([data-dashboard-page-frame='true'], [data-dashboard-card='true'])
+  [data-dashboard-card='true'][class~='bg-card']
+  :is([data-dashboard-input='true'], [data-dashboard-select-trigger='true'])[class~='bg-transparent'] {
+  background-color: hsl(var(--card));
+}
+
+/* 弹窗内各区块间距放宽一档；调用方改过 gap-* 时不动。 */
+:root[data-dashboard-style='modern'] [data-dashboard-dialog-content='true'][class~='gap-4'] {
+  gap: 1.125rem;
+}
+
+/* ---------- 排版 ---------- */
+
+/* 说明文字放宽行高，长段落更易读；标题保持紧凑。 */
+:root[data-dashboard-style='modern'] [data-dashboard-main='true']
+  :is(p[class~='text-muted-foreground'], [data-section-part='description']):not([class*='leading-']) {
+  line-height: 1.6;
+}
+
+:root[data-dashboard-style='modern'] [data-dashboard-main='true'] h1:not([class*='font-']) {
+  font-weight: 650;
+}
+
+:root[data-dashboard-style='modern'] [data-dashboard-card-header='true'] + [data-dashboard-card-content='true'] {
+  padding-top: 0.125rem;
+}
+
+/* 分区面板正文在宽屏多留一点边距，和卡片内距对齐。 */
+@media (min-width: 640px) {
+  :root[data-dashboard-style='modern'] [data-section-part='header'][class~='p-4'],
+  :root[data-dashboard-style='modern'] [data-section-part='body'][class~='p-4'] {
+    padding: 1.125rem 1.25rem;
+  }
 }

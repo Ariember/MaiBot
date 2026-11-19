@@ -103,6 +103,9 @@ logger = get_logger("maisaka_reasoning_engine")
 HISTORY_DEFERRED_TOOL_RESULT_NAMES = {"wait"}
 TOOL_RESULT_MEDIA_TYPES = {"image", "audio", "resource_link", "resource", "binary"}
 STOP_AFTER_EXECUTION_PAUSE_REASON = "stop_after_execution"
+MAX_INTERNAL_ROUNDS = 16
+LOW_FREQUENCY_GROUP_ROUNDS = 8
+TurnTrigger = Literal["message", "proactive"] | Tuple[Literal["timeout"], str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,6 +162,7 @@ class MaisakaReasoningEngine:
         self._runtime = runtime
         self._last_reasoning_content: str = ""
         self._active_logical_turn_id: str | None = None
+        self._paused_group_round: Optional[Tuple[str, int]] = None
         self._turn_passive_replyer: Optional[bool] = None
 
     @property
@@ -813,12 +817,16 @@ class MaisakaReasoningEngine:
 
     async def _prepare_turn_start_context(
         self,
-        queued_trigger: Literal["message", "timeout", "proactive"],
+        queued_trigger: TurnTrigger,
     ) -> TurnStartContext:
         """消费触发信号并准备本轮初始消息与触发消息。"""
 
-        message_triggered, timeout_triggered, proactive_triggered = self._drain_ready_turn_triggers(queued_trigger)
+        message_triggered, wait_call_id, proactive_triggered = self._drain_ready_turn_triggers(queued_trigger)
+        timeout_triggered = wait_call_id is not None
         silent_reply_frequency = self._runtime._is_reply_frequency_silent()
+
+        if not (message_triggered or timeout_triggered or proactive_triggered):
+            return TurnStartContext([], None, False, False, silent_reply_frequency)
 
         if (
             self._runtime._agent_state == self._runtime._STATE_WAIT
@@ -837,6 +845,10 @@ class MaisakaReasoningEngine:
         if self._runtime._has_pending_messages():
             # 消息、timeout、主动任务都可能带走消息缓存，不能绕过当前批次的防抖等待。
             await self._runtime._wait_for_message_quiet_period()
+            if timeout_triggered and wait_call_id != self._runtime._pending_wait_tool_call_id:
+                timeout_triggered = False
+                if not (message_triggered or proactive_triggered):
+                    return TurnStartContext([], None, False, False, silent_reply_frequency)
         if message_triggered:
             self._runtime._mark_message_turn_unscheduled()
 
@@ -877,6 +889,7 @@ class MaisakaReasoningEngine:
                 logger.warning(f"{self._runtime.log_prefix} wait 超时后没有可复用的触发消息，跳过本轮")
                 return TurnStartContext([], None, timeout_triggered, proactive_triggered, silent_reply_frequency)
             logger.info(f"{self._runtime.log_prefix} 等待结束，再看一眼！")
+            self._runtime._enter_running_state()
             wait_message = self._build_wait_completed_message(has_new_messages=False)
             continuation_logical_turn_id = wait_message.logical_turn_id
             self._runtime._chat_history.append(wait_message)
@@ -904,7 +917,26 @@ class MaisakaReasoningEngine:
 
         completed_cycle = await self._end_cycle(cycle_detail)
         cycle_end = state.cycle_end
-        if round_index + 1 >= self._runtime._max_internal_rounds and cycle_end.reason in {
+        completed_rounds = round_index + 1
+        if (
+            cycle_end.reason == "tool_pause:wait" and self._runtime.chat_stream.is_group_session
+            and (wait_turn_id := self._runtime._pending_wait_logical_turn_id) is not None
+        ):
+            if completed_rounds < self._runtime._max_internal_rounds:
+                self._paused_group_round = (wait_turn_id, completed_rounds)
+            else:
+                # 最后一轮直接回填 wait 回执，避免定时唤醒后再领取一轮额度。
+                self._runtime._chat_history.append(
+                    self._build_wait_completed_message(
+                        has_new_messages=self._runtime._has_pending_messages(), round_limit_reached=True
+                    )
+                )
+                self._runtime._end_planner_continuation()
+                self._runtime._enter_stop_state()
+                if self._runtime._has_pending_messages():
+                    self._runtime._schedule_message_turn()
+                cycle_end = self._cycle_end_for_max_rounds(self._runtime._max_internal_rounds)
+        elif completed_rounds >= self._runtime._max_internal_rounds and cycle_end.reason in {
             "continue",
             "tool_continue",
         }:
@@ -962,6 +994,19 @@ class MaisakaReasoningEngine:
         self._runtime._idle_backoff.record_cycle_result(cycle_end.reason)
         return cycle_end
 
+    def _start_planner_turn(self, logical_turn_id: str) -> int:
+        """群聊 wait 续用挂起时的上限和轮数，新回合按当前频率设置轮数上限。"""
+
+        self._active_logical_turn_id = logical_turn_id
+        paused_round = self._paused_group_round
+        self._paused_group_round = None
+        if paused_round is not None and paused_round[0] == logical_turn_id:
+            return paused_round[1]
+        if self._runtime.chat_stream.is_group_session:
+            frequency = self._runtime._get_effective_reply_frequency()
+            self._runtime._max_internal_rounds = LOW_FREQUENCY_GROUP_ROUNDS if frequency < 0.5 else MAX_INTERNAL_ROUNDS
+        return 0
+
     async def run_loop(self) -> None:
         """独立消费消息批次，并执行对应的内部思考轮次。"""
         try:
@@ -985,10 +1030,9 @@ class MaisakaReasoningEngine:
                 try:
                     self._turn_passive_replyer = global_config.experimental.passive_replyer
                     self._runtime._chat_loop_service.passive_replyer_override = self._turn_passive_replyer
-                    self._active_logical_turn_id = turn_start_context.logical_turn_id or uuid.uuid4().hex
+                    round_index = self._start_planner_turn(turn_start_context.logical_turn_id or uuid.uuid4().hex)
                     if force_continue_reason := self._runtime._consume_forced_turn_reason():
                         logger.info(f"{self._runtime.log_prefix} {force_continue_reason}")
-                    round_index = 0
                     while round_index < self._runtime._max_internal_rounds:
                         # 工具执行或整理上下文期间收到的消息，在下一次模型请求前补齐。
                         pending_round_messages = await self._ingest_pending_messages() if round_index > 0 else []
@@ -1122,42 +1166,37 @@ class MaisakaReasoningEngine:
 
     def _drain_ready_turn_triggers(
         self,
-        queued_trigger: Literal["message", "timeout", "proactive"],
-    ) -> tuple[bool, bool, bool]:
+        queued_trigger: TurnTrigger,
+    ) -> Tuple[bool, Optional[str], bool]:
         """合并当前已就绪的消息触发信号。"""
 
-        message_triggered = queued_trigger == "message"
-        timeout_triggered = queued_trigger == "timeout"
-        proactive_triggered = queued_trigger == "proactive"
+        message_triggered = proactive_triggered = False
+        wait_call_id = None
 
         while True:
-            try:
-                next_trigger = self._runtime._internal_turn_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                break
-
-            if next_trigger == "message":
+            if queued_trigger == "message":
                 message_triggered = True
-                continue
-            if next_trigger == "timeout":
-                timeout_triggered = True
-                continue
-            if next_trigger == "proactive":
+            elif queued_trigger == "proactive":
                 proactive_triggered = True
-                continue
+            elif queued_trigger[1] == self._runtime._pending_wait_tool_call_id:
+                # 每个超时只可唤醒创建它的 wait。防抖或工具收尾期间可能已切换到下一次等待。
+                wait_call_id = queued_trigger[1]
+            try:
+                queued_trigger = self._runtime._internal_turn_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                return message_triggered, wait_call_id, proactive_triggered
 
-        return message_triggered, timeout_triggered, proactive_triggered
-
-    def _build_wait_completed_message(self, *, has_new_messages: bool) -> ToolResultMessage:
+    def _build_wait_completed_message(self, *, has_new_messages: bool, round_limit_reached: bool = False) -> ToolResultMessage:
         """构造 wait 完成后的工具结果消息。"""
         tool_call_id, logical_turn_id, elapsed_seconds, requested_seconds = self._runtime._consume_pending_wait_state()
         elapsed_text = f"{elapsed_seconds:.1f} 秒"
         requested_text = f"，原计划等待 {requested_seconds:.1f} 秒" if requested_seconds is not None else ""
-        content = (
-            f"等待已结束，实际等待 {elapsed_text}{requested_text}，期间收到了新的用户输入。请结合这些新消息继续下一轮思考。"
-            if has_new_messages
-            else f"等待已超时，实际等待 {elapsed_text}{requested_text}，期间没有收到新的用户输入。请基于现有上下文继续下一轮思考。"
-        )
+        if round_limit_reached:
+            content = f"已达到本轮思考上限，等待已取消，实际等待 {elapsed_text}{requested_text}。"
+        elif has_new_messages:
+            content = f"等待已结束，实际等待 {elapsed_text}{requested_text}，期间收到了新的用户输入。请结合这些新消息继续下一轮思考。"
+        else:
+            content = f"等待已超时，实际等待 {elapsed_text}{requested_text}，期间没有收到新的用户输入。请基于现有上下文继续下一轮思考。"
         return ToolResultMessage(
             content=content,
             timestamp=datetime.now(),

@@ -106,6 +106,7 @@ import {
 import { resolveThinkingFormatForModel } from './providerTemplates'
 import {
   getDeepSeekReasoningEffort,
+  getDeepSeekSearchTool,
   isDeepSeekThinkingEnabled,
   isDeepSeekWebSearchEnabled,
   setDeepSeekReasoningEffort,
@@ -544,9 +545,14 @@ function ModelConfigPageContent() {
   const thinkingExtraParamsError = thinkingFormatActive
     ? validateThinkingParams(modelExtraParams, thinkingFormatActive)
     : null
-  const deepSeekWebSearchEnabled = deepSeekClientType === 'openai_responses'
-    ? isDeepSeekWebSearchEnabled(modelExtraParams)
-    : false
+  const modelIdentifier = editingModel?.model_identifier.trim() ?? ''
+  const deepSeekSearchTool = deepSeekClientType ? getDeepSeekSearchTool(modelIdentifier, deepSeekClientType) : null
+  const deepSeekWebSearchEnabled = isDeepSeekWebSearchEnabled(modelExtraParams)
+  const deepSeekSearchHint = deepSeekSearchTool
+    ? `由 DeepSeek 在服务端搜索（${deepSeekSearchTool}）`
+    : !modelIdentifier ? '先选择模型标识符'
+      : modelIdentifier === 'deepseek-v4-pro' ? 'DeepSeek V4 Pro 的联网搜索需要 Responses API'
+        : '当前模型未提供原生联网搜索'
   const deepSeekThinkingEnabled = deepSeekClientType
     ? isDeepSeekThinkingEnabled(modelExtraParams, deepSeekClientType)
     : false
@@ -554,7 +560,7 @@ function ModelConfigPageContent() {
     ? getDeepSeekReasoningEffort(modelExtraParams, deepSeekClientType)
     : 'high'
   const deepSeekExtraParamsError = deepSeekClientType
-    ? validateDeepSeekExtraParams(modelExtraParams, deepSeekClientType)
+    ? validateDeepSeekExtraParams(modelExtraParams, deepSeekClientType, deepSeekSearchTool)
     : null
   const deepSeekToolsInvalid =
     modelExtraParams.tools !== undefined && !Array.isArray(modelExtraParams.tools)
@@ -2028,17 +2034,15 @@ function ModelConfigPageContent() {
                     <div className="space-y-1">
                       <Label htmlFor="deepseek_web_search" className="cursor-pointer">启用联网搜索</Label>
                       <p className="text-xs text-muted-foreground">
-                        {deepSeekClientType === 'openai_responses'
-                          ? '添加 DeepSeek 原生 web_search 工具，并保留其他工具配置'
-                          : '仅 DeepSeek Responses API 支持原生联网搜索'}
+                        {deepSeekSearchHint}
                       </p>
                     </div>
                     <Switch
                       id="deepseek_web_search"
                       checked={deepSeekWebSearchEnabled}
-                      disabled={deepSeekClientType !== 'openai_responses' || deepSeekToolsInvalid}
+                      disabled={(!deepSeekSearchTool && !deepSeekWebSearchEnabled) || deepSeekToolsInvalid}
                       onCheckedChange={(checked) => updateModelExtraParams((params) =>
-                        setDeepSeekWebSearchEnabled(params, checked)
+                        setDeepSeekWebSearchEnabled(params, checked ? deepSeekSearchTool : null)
                       )}
                     />
                   </div>
@@ -2522,7 +2526,7 @@ function ModelConfigPageContent() {
         value={editingModel?.extra_params || {}}
         validate={
           deepSeekClientType
-            ? (params) => validateDeepSeekExtraParams(params, deepSeekClientType)
+            ? (params) => validateDeepSeekExtraParams(params, deepSeekClientType, deepSeekSearchTool)
             : thinkingFormatActive
               ? (params) => validateThinkingParams(params, thinkingFormatActive)
               : undefined

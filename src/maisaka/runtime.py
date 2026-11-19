@@ -77,7 +77,7 @@ from src.plugin_runtime.tool_provider import PluginToolProvider
 from src.services.message_word_frequency_service import update_high_frequency_terms_from_context_messages
 
 from .chat_loop_service import ChatResponse, MaisakaChatLoopService
-from .reasoning_engine import MaisakaReasoningEngine
+from .reasoning_engine import MAX_INTERNAL_ROUNDS, MaisakaReasoningEngine, TurnTrigger
 from .subagent_tasks import SubAgentTask, SubAgentTaskManager, format_tool_usage
 
 if TYPE_CHECKING:
@@ -85,7 +85,6 @@ if TYPE_CHECKING:
 
 logger = get_logger("maisaka_runtime")
 
-MAX_INTERNAL_ROUNDS = 16
 MAX_RETAINED_MESSAGE_CACHE_SIZE = 200
 CONTEXT_RESTORE_FILL_RATIO = 0.5
 CONTEXT_RESTORE_SHORT_RESTART_SECONDS = 5 * 60
@@ -156,7 +155,7 @@ class MaisakaHeartFlowChatting(MaisakaRuntimeDisplayMixin):
         # Keep all original messages for batching and later learning.
         self.message_cache: list[SessionMessage] = []
         self._last_processed_index = 0
-        self._internal_turn_queue: asyncio.Queue[Literal["message", "timeout", "proactive"]] = asyncio.Queue()
+        self._internal_turn_queue: asyncio.Queue[TurnTrigger] = asyncio.Queue()
         self._proactive_trigger_message: Optional[SessionMessage] = None
         self._proactive_logical_turn_id: Optional[str] = None
         self._subagent_tasks = SubAgentTaskManager()
@@ -1804,7 +1803,7 @@ class MaisakaHeartFlowChatting(MaisakaRuntimeDisplayMixin):
         self._wait_timeout_task.cancel()
         self._wait_timeout_task = None
 
-    async def _schedule_wait_timeout(self, seconds: float, tool_call_id: Optional[str]) -> None:
+    async def _schedule_wait_timeout(self, seconds: float, tool_call_id: str) -> None:
         """在 wait 到期后向内部循环投递 timeout 触发。"""
         try:
             if seconds > 0:
@@ -1817,8 +1816,7 @@ class MaisakaHeartFlowChatting(MaisakaRuntimeDisplayMixin):
                 return
 
             logger.debug(f"{self.log_prefix} Maisaka 等待已超时")
-            self._enter_running_state()
-            await self._internal_turn_queue.put("timeout")
+            self._internal_turn_queue.put_nowait(("timeout", tool_call_id))
         except asyncio.CancelledError:
             return
         finally:

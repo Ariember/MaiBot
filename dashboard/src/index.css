@@ -278,31 +278,31 @@
 @layer base {
   :root {
     /* Color Tokens */
-    --color-primary: 228 18% 13%;
+    --color-primary: 222 18% 24%;
     --color-primary-foreground: 0 0% 100%;
     --color-primary-gradient: none;
-    --color-secondary: 228 20% 94.5%;
-    --color-secondary-foreground: 228 14% 22%;
-    --color-muted: 228 22% 95.5%;
-    --color-muted-foreground: 228 9% 45%;
-    --color-accent: 228 20% 94%;
-    --color-accent-foreground: 228 18% 13%;
+    --color-secondary: 222 22% 95%;
+    --color-secondary-foreground: 222 14% 28%;
+    --color-muted: 222 24% 95.5%;
+    --color-muted-foreground: 222 10% 47%;
+    --color-accent: 222 22% 94.5%;
+    --color-accent-foreground: 222 18% 20%;
     --color-destructive: 0 84.2% 45%;
     --color-destructive-foreground: 210 40% 98%;
-    --color-background: 228 24% 96.5%;
-    --color-foreground: 228 18% 13%;
+    --color-background: 222 26% 97%;
+    --color-foreground: 222 18% 20%;
     --color-card: 0 0% 100%;
-    --color-card-foreground: 228 18% 13%;
+    --color-card-foreground: 222 18% 20%;
     --color-popover: 0 0% 100%;
-    --color-popover-foreground: 228 18% 13%;
-    --color-border: 228 16% 90%;
-    --color-input: 228 14% 86.5%;
-    --color-ring: 221 83% 56%;
-    --color-chart-1: 217 91% 53%;
-    --color-chart-2: 189 94% 34%;
-    --color-chart-3: 258 90% 60%;
-    --color-chart-4: 322 81% 43%;
-    --color-chart-5: 160 84% 32%;
+    --color-popover-foreground: 222 18% 20%;
+    --color-border: 222 18% 91.5%;
+    --color-input: 222 15% 88%;
+    --color-ring: 218 72% 60%;
+    --color-chart-1: 218 72% 60%;
+    --color-chart-2: 190 58% 44%;
+    --color-chart-3: 256 58% 66%;
+    --color-chart-4: 330 52% 60%;
+    --color-chart-5: 160 46% 44%;
 
     /* Typography Tokens */
     --typography-font-family-base:
@@ -409,31 +409,31 @@
 
   .dark {
     /* Color Tokens */
-    --color-primary: 228 20% 93%;
-    --color-primary-foreground: 228 12% 10%;
+    --color-primary: 222 22% 88%;
+    --color-primary-foreground: 222 14% 13%;
     --color-primary-gradient: none;
-    --color-secondary: 228 9% 18%;
-    --color-secondary-foreground: 228 15% 92%;
-    --color-muted: 228 9% 16%;
-    --color-muted-foreground: 228 8% 64%;
-    --color-accent: 228 9% 19%;
-    --color-accent-foreground: 228 20% 95%;
+    --color-secondary: 222 10% 19%;
+    --color-secondary-foreground: 222 16% 88%;
+    --color-muted: 222 10% 17%;
+    --color-muted-foreground: 222 9% 63%;
+    --color-accent: 222 10% 20%;
+    --color-accent-foreground: 222 18% 92%;
     --color-destructive: 0 62.8% 30.6%;
     --color-destructive-foreground: 210 40% 98%;
-    --color-background: 228 12% 8.5%;
-    --color-foreground: 228 20% 95%;
-    --color-card: 228 10% 12.5%;
-    --color-card-foreground: 228 20% 95%;
-    --color-popover: 228 10% 15%;
-    --color-popover-foreground: 228 20% 95%;
-    --color-border: 228 8% 20%;
-    --color-input: 228 8% 24%;
-    --color-ring: 213 94% 68%;
-    --color-chart-1: 213 94% 68%;
-    --color-chart-2: 188 86% 60%;
-    --color-chart-3: 255 96% 76%;
-    --color-chart-4: 325 86% 72%;
-    --color-chart-5: 158 70% 60%;
+    --color-background: 222 14% 10.5%;
+    --color-foreground: 222 18% 91%;
+    --color-card: 222 12% 14%;
+    --color-card-foreground: 222 18% 91%;
+    --color-popover: 222 12% 16.5%;
+    --color-popover-foreground: 222 18% 91%;
+    --color-border: 222 9% 21.5%;
+    --color-input: 222 9% 25%;
+    --color-ring: 215 78% 70%;
+    --color-chart-1: 215 78% 70%;
+    --color-chart-2: 188 56% 62%;
+    --color-chart-3: 256 70% 78%;
+    --color-chart-4: 326 60% 74%;
+    --color-chart-5: 158 46% 62%;
 
     /* Visual Tokens (dark mode shadows) */
     --visual-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);

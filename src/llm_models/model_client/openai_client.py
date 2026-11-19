@@ -1586,6 +1586,14 @@ class OpenaiClient(AdapterClient[AsyncStream[ChatCompletionChunk], ChatCompletio
                 request.extra_params,
                 reserved_body_keys=CHAT_COMPLETIONS_RESERVED_EXTRA_BODY_KEYS,
             )
+            if self.client.base_url.host == "api.deepseek.com":
+                configured_tools = request.extra_params.get("tools", request_overrides.extra_body.get("tools"))
+                if isinstance(configured_tools, list) and any(
+                    isinstance(tool, dict) and tool.get("type") == "deepseek_web_search" for tool in configured_tools
+                ):
+                    # 将服务端搜索与 MaiBot 函数一起发送，避免 extra_body.tools 覆盖 SDK 工具。
+                    request_overrides.extra_body.pop("tools", None)
+                    tools_payload = [*(tools_payload or []), *configured_tools]
 
             temperature_argument = (
                 omit if "temperature" in request_overrides.extra_body else _coerce_openai_argument(request.temperature)

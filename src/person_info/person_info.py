@@ -191,7 +191,7 @@ class Person:
         nickname: str,
         group_id: Optional[str] = None,
         group_nick_name: Optional[str] = None,
-    ):
+    ) -> Optional["Person"]:
         """
         注册新用户的类方法
         必须输入 platform、user_id 和 nickname 参数
@@ -242,7 +242,7 @@ class Person:
 
         # 如果是群聊，添加群昵称
         if group_id and group_nick_name:
-            person.add_group_nick_name(group_id, group_nick_name)
+            person.group_cardname_list.append({"group_id": group_id, "group_cardname": group_nick_name})
 
         # 同步到数据库
         person.sync_to_database()
@@ -453,7 +453,7 @@ class Person:
             logger.error(f"从数据库加载用户 {self.person_id} 信息时出错: {e}")
             # 出错时保持默认值
 
-    def sync_to_database(self):
+    def sync_to_database(self) -> None:
         """将所有属性同步回数据库"""
         if not self.is_known:
             return
@@ -485,7 +485,6 @@ class Person:
                     record.memory_points = memory_points_value
                     record.group_cardname = group_cardname_value
                     session.add(record)
-                    logger.debug(f"已同步用户 {self.person_id} 的信息到数据库")
                 else:
                     record = PersonInfo(
                         person_id=self.person_id,
@@ -502,10 +501,11 @@ class Person:
                         group_cardname=group_cardname_value,
                     )
                     session.add(record)
-                    logger.debug(f"已创建用户 {self.person_id} 的信息到数据库")
 
         except Exception as e:
             logger.error(f"同步用户 {self.person_id} 信息到数据库时出错: {e}")
+            raise
+        logger.debug(f"已同步用户 {self.person_id} 的信息到数据库")
 
 
 async def store_person_memory_from_answer(

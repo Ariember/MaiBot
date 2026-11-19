@@ -700,6 +700,8 @@ class ChatConfig(ConfigBase):
     max_context_size: int = Field(
         default=50,
         json_schema_extra={
+            "minValue": 30,
+            "maxValue": 300,
             "label": '群聊上下文',
             "x-widget": "input",
             "x-layout": "inline-right",
@@ -712,6 +714,8 @@ class ChatConfig(ConfigBase):
     max_private_context_size: int = Field(
         default=75,
         json_schema_extra={
+            "minValue": 30,
+            "maxValue": 300,
             "label": '私聊上下文',
             "x-widget": "input",
             "x-layout": "inline-right",

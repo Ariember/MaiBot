@@ -140,7 +140,7 @@ def get_registered_client_types():
         ensure_client_type_loaded(client_type)
 
     client_types = []
-    for registration in client_registry.client_registry.values():
+    for registration in client_registry.client_registry.copy().values():
         client_types.append(
             {
                 "client_type": registration.client_type,
